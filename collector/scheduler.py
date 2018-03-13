@@ -22,6 +22,7 @@ schedule.every(3).seconds.do(run_threaded, collector.collect_kb_orderbook)
 schedule.every().hour.do(run_threaded, collector.collect_kb_filled_orders)
 
 # run initial
+print("Collector Bot started at " + time.ctime())
 schedule.run_all()
 
 while True:
