@@ -1,4 +1,4 @@
-from .market_api import Machine
+from api.market_api import Machine
 import requests
 import time
 import configparser

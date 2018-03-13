@@ -14,5 +14,5 @@ class MarketApi(ABC):
         pass
 
     @abstractmethod
-    def get_filled_orders(self, currency: Currency):
+    def get_filled_orders(self, currency: Currency, time_range: str):
         pass
