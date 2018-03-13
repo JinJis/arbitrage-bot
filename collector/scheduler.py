@@ -1,4 +1,4 @@
-from collector import Collector
+from .collector import Collector
 import threading
 import schedule
 import time
