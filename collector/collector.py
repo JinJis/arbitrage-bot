@@ -23,13 +23,13 @@ def catch_exceptions(cancel_on_failure=False):
 
 
 class Collector:
-    def __init__(self, currency: str):
+    def __init__(self, mongo_host, currency: str):
         # make sure currency is in lower-case format
         if not currency.islower():
             raise Exception("<currency> parameter should be a lower-cased symbol of the target currency!")
 
         # init mongo client
-        self.client = MongoClient("127.0.0.1", 27017)
+        self.client = MongoClient(mongo_host)
 
         # init coinone related
         self.co_api = CoinoneApi()

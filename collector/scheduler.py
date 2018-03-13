@@ -2,6 +2,9 @@ from collector import Collector
 import threading
 import schedule
 import time
+import urllib.parse
+
+is_remote = True
 
 
 def run_threaded(job_func):
@@ -9,7 +12,17 @@ def run_threaded(job_func):
     job_thread.start()
 
 
-collector = Collector("eth")
+# local
+mongo_host = "mongodb://127.0.0.1"
+
+# remote
+if is_remote:
+    username = urllib.parse.quote_plus("bot1")
+    password = urllib.parse.quote_plus("GeTrIcHyO111!")
+    mongo_host = "mongodb://%s:%s@127.0.0.1" % (username, password)
+
+# init collector
+collector = Collector(mongo_host, "eth")
 
 # coinone
 schedule.every(3).seconds.do(run_threaded, collector.collect_co_ticker)
