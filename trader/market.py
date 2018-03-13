@@ -3,6 +3,8 @@ import logging
 import os
 import glob
 import re 
+import sys
+from ..api.coinone_api import CoinoneApi
 
 class Market(object):
     def __init__(self, name, fee=0, krw_balance=3000., eth_balance=10., persistent=True):
