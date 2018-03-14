@@ -3,6 +3,8 @@ from .market_api import MarketApi
 from .currency import CoinoneCurrency
 from bson import Decimal128
 
+orderbook_item_limit = 30
+
 
 class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
@@ -42,7 +44,7 @@ class CoinoneApi(MarketApi):
         # normalize asks
         _asks = res_json["ask"]
         asks = list()
-        for _ask in _asks:
+        for _ask in _asks[:orderbook_item_limit]:
             ask = {
                 "price": Decimal128(_ask["price"]),
                 "amount": Decimal128(_ask["qty"])
@@ -52,7 +54,7 @@ class CoinoneApi(MarketApi):
         # normalize bids
         _bids = res_json["bid"]
         bids = list()
-        for _bid in _bids:
+        for _bid in _bids[:orderbook_item_limit]:
             bid = {
                 "price": Decimal128(_bid["price"]),
                 "amount": Decimal128(_bid["qty"])

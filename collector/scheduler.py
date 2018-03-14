@@ -36,13 +36,13 @@ if is_remote:
 collector = Collector(mongo_host, "eth")
 
 # coinone
-schedule.every(3).seconds.do(run_threaded, collector.collect_co_ticker)
-schedule.every(3).seconds.do(run_threaded, collector.collect_co_orderbook)
+schedule.every(5).seconds.do(run_threaded, collector.collect_co_ticker)
+schedule.every(5).seconds.do(run_threaded, collector.collect_co_orderbook)
 schedule.every().hour.do(run_threaded, collector.collect_co_filled_orders)
 
 # korbit
-schedule.every(3).seconds.do(run_threaded, collector.collect_kb_ticker)
-schedule.every(3).seconds.do(run_threaded, collector.collect_kb_orderbook)
+schedule.every(5).seconds.do(run_threaded, collector.collect_kb_ticker)
+schedule.every(5).seconds.do(run_threaded, collector.collect_kb_orderbook)
 schedule.every().hour.do(run_threaded, collector.collect_kb_filled_orders)
 
 signal.signal(signal.SIGTERM, handle_sigterm)
