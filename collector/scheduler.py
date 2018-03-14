@@ -54,5 +54,5 @@ schedule.run_all()
 while True:
     try:
         schedule.run_pending()
-    except (KeyboardInterrupt, SystemExit):
+    except KeyboardInterrupt:
         handle_exit()
