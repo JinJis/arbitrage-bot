@@ -3,6 +3,8 @@ import threading
 import schedule
 import time
 import urllib.parse
+import signal
+import sys
 
 is_remote = True
 
@@ -10,6 +12,11 @@ is_remote = True
 def run_threaded(job_func):
     job_thread = threading.Thread(target=job_func)
     job_thread.start()
+
+
+def signal_term_handler():
+    print("Collector Bot stopped at " + time.ctime())
+    sys.exit(0)
 
 
 # local
@@ -34,6 +41,8 @@ schedule.every(3).seconds.do(run_threaded, collector.collect_kb_ticker)
 schedule.every(3).seconds.do(run_threaded, collector.collect_kb_orderbook)
 schedule.every().hour.do(run_threaded, collector.collect_kb_filled_orders)
 
+signal.signal(signal.SIGTERM, signal_term_handler)
+
 # run initial
 print("Collector Bot started at " + time.ctime())
 schedule.run_all()
@@ -42,5 +51,4 @@ while True:
     try:
         schedule.run_pending()
     except (KeyboardInterrupt, SystemExit):
-        print("Collector Bot stopped at " + time.ctime())
-        exit(0)
+        signal_term_handler()
