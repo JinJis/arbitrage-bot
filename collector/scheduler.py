@@ -41,6 +41,6 @@ schedule.run_all()
 while True:
     try:
         schedule.run_pending()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         print("Collector Bot stopped at " + time.ctime())
         exit(0)
