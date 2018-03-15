@@ -5,8 +5,22 @@ import time
 import urllib.parse
 import signal
 import sys
+import configparser
 
-is_remote = True
+
+def read_mongodb_uri():
+    config = configparser.ConfigParser()
+    mongo = config["MONGO"]
+    host = mongo["Host"]
+    port = mongo.getint("Port")
+    use_auth = mongo.getboolean("UseAuth")
+
+    if use_auth:
+        username = urllib.parse.quote_plus(mongo["Username"])
+        password = urllib.parse.quote_plus(mongo["Password"])
+        return "mongodb://%s:%s@%s:%d" % (username, password, host, port)
+    else:
+        return "mongodb://%s:%d" % (host, port)
 
 
 def run_threaded(job_func):
@@ -23,17 +37,9 @@ def handle_sigterm(signal, frame):
     handle_exit()
 
 
-# local
-mongo_host = "mongodb://127.0.0.1"
-
-# remote
-if is_remote:
-    username = urllib.parse.quote_plus("bot1")
-    password = urllib.parse.quote_plus("GeTrIcHyO111!")
-    mongo_host = "mongodb://%s:%s@127.0.0.1" % (username, password)
-
 # init collector
-collector = Collector(mongo_host, "eth")
+mongodb_uri = read_mongodb_uri()
+collector = Collector(mongodb_uri, "eth")
 
 # coinone
 schedule.every(5).seconds.do(run_threaded, collector.collect_co_ticker)
