@@ -10,6 +10,8 @@ import configparser
 
 def read_mongodb_uri():
     config = configparser.ConfigParser()
+    config.read("config.ini")
+
     mongo = config["MONGO"]
     host = mongo["Host"]
     port = mongo.getint("Port")
