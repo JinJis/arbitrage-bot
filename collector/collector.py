@@ -34,12 +34,8 @@ class Collector:
         # init last_* for fallback
         self.last_co_ticker = dict()
         self.last_co_orderbook = dict()
-        self.last_co_ma_mb = dict()
-        self.last_co_filled_orders = list()
         self.last_kb_ticker = dict()
         self.last_kb_orderbook = dict()
-        self.last_kb_ma_mb = dict()
-        self.last_kb_filled_orders = list()
 
     def collect_co_ticker(self, request_time: int):
         co_ticker = None
@@ -51,7 +47,9 @@ class Collector:
             print(e)
         finally:
             co_ticker["requestTime"] = request_time
-            self.last_co_ticker = co_ticker
+            # need to copy the mutable dict because in `insert`,
+            # mongo is adding `_id` property, which would eventually cause DuplicateKeyError
+            self.last_co_ticker = dict(co_ticker)
             self.co_ticker_col.insert_one(co_ticker)
 
     def collect_co_orderbook(self, request_time: int):
@@ -64,7 +62,7 @@ class Collector:
             print(e)
         finally:
             co_orderbook["requestTime"] = request_time
-            self.last_co_orderbook = co_orderbook
+            self.last_co_orderbook = dict(co_orderbook)
             self.co_orderbook_col.insert_one(co_orderbook)
             co_ma_mb = {
                 "timestamp": co_orderbook["timestamp"],
@@ -88,7 +86,7 @@ class Collector:
             print(e)
         finally:
             kb_ticker["requestTime"] = request_time
-            self.last_kb_ticker = kb_ticker
+            self.last_kb_ticker = dict(kb_ticker)
             self.kb_ticker_col.insert_one(kb_ticker)
 
     def collect_kb_orderbook(self, request_time: int):
@@ -101,7 +99,7 @@ class Collector:
             print(e)
         finally:
             kb_orderbook["requestTime"] = request_time
-            self.last_kb_orderbook = kb_orderbook
+            self.last_kb_orderbook = dict(kb_orderbook)
             self.kb_orderbook_col.insert_one(kb_orderbook)
             kb_ma_mb = {
                 "timestamp": kb_orderbook["timestamp"],
