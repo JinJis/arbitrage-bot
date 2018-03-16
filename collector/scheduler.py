@@ -25,8 +25,8 @@ def read_mongodb_uri():
         return "mongodb://%s:%d" % (host, port)
 
 
-def run_threaded(job_func):
-    job_thread = threading.Thread(target=job_func)
+def run_threaded(job_func, args=()):
+    job_thread = threading.Thread(target=job_func, args=args)
     job_thread.start()
 
 
@@ -41,17 +41,25 @@ def handle_sigterm(signal, frame):
 
 # init collector
 mongodb_uri = read_mongodb_uri()
+# currency param should be a lower-cased currency symbol listed in api.currency
 collector = Collector(mongodb_uri, "eth")
 
-# coinone
-schedule.every(5).seconds.do(run_threaded, collector.collect_co_ticker)
-schedule.every(5).seconds.do(run_threaded, collector.collect_co_orderbook)
-schedule.every().hour.do(run_threaded, collector.collect_co_filled_orders)
 
-# korbit
-schedule.every(5).seconds.do(run_threaded, collector.collect_kb_ticker)
-schedule.every(5).seconds.do(run_threaded, collector.collect_kb_orderbook)
-schedule.every().hour.do(run_threaded, collector.collect_kb_filled_orders)
+def every_5_sec():
+    request_time = int(time.time())
+    run_threaded(collector.collect_co_ticker, [request_time])
+    run_threaded(collector.collect_co_orderbook, [request_time])
+    run_threaded(collector.collect_kb_ticker, [request_time])
+    run_threaded(collector.collect_kb_orderbook, [request_time])
+
+
+def every_hour():
+    run_threaded(collector.collect_co_filled_orders)
+    run_threaded(collector.collect_kb_filled_orders)
+
+
+schedule.every(5).seconds.do(every_5_sec)
+# schedule.every().hour.do(every_hour)
 
 signal.signal(signal.SIGTERM, handle_sigterm)
 
