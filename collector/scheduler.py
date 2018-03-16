@@ -59,7 +59,7 @@ def every_hour():
 
 
 schedule.every(5).seconds.do(every_5_sec)
-# schedule.every().hour.do(every_hour)
+schedule.every().hour.do(every_hour)
 
 signal.signal(signal.SIGTERM, handle_sigterm)
 
