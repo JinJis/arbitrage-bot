@@ -4,6 +4,11 @@ from .currency import CoinoneCurrency
 from bson import Decimal128
 import configparser
 from datetime import date
+import hmac
+import json
+import base64
+import hashlib
+import time
 
 orderbook_item_limit = 30
 
@@ -16,7 +21,9 @@ class CoinoneApi(MarketApi):
         self._access_token_refresh_interval = access_token_refresh_interval
         self._access_token = None
         self._access_token_last_updated = None
+        self._secret_key = None
         self.set_access_token()
+        self.set_secret_key()
 
     def get_ticker(self, currency: CoinoneCurrency):
         res = requests.get(self.BASE_URL + "/ticker", params={
@@ -122,3 +129,31 @@ class CoinoneApi(MarketApi):
         if delta.days >= self._access_token_refresh_interval:
             self.set_access_token(should_refresh=True)
         return self._access_token
+
+    def set_secret_key(self):
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+        self._secret_key = config["COINONE"]["SecretKey"]
+
+    @staticmethod
+    def encode_payload(payload):
+        payload_json = json.dumps(payload)
+        return base64.b64encode(payload_json.encode("utf-8"))
+
+    def get_signature(self, encoded_payload):
+        secret_key_processed = str(self._secret_key).upper().encode("utf-8")
+        return hmac.new(secret_key_processed, encoded_payload, hashlib.sha512).hexdigest()
+
+    def get_balance(self):
+        payload = {
+            "access_token": self.get_access_token(),
+            "nonce": int(time.time())
+        }
+        encoded_payload = self.encode_payload(payload)
+        signature = self.get_signature(encoded_payload)
+
+        res = requests.post(self.BASE_URL + "/v2/account/balance", headers={
+            "X-COINONE-PAYLOAD": encoded_payload,
+            "X-COINONE-SIGNATURE": signature
+        }, json=payload)
+        return res.json()
