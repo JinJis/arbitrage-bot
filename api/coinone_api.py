@@ -2,6 +2,8 @@ import requests
 from .market_api import MarketApi
 from .currency import CoinoneCurrency
 from bson import Decimal128
+import configparser
+from datetime import date
 
 orderbook_item_limit = 30
 
@@ -10,7 +12,9 @@ class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
     def __init__(self):
-        pass
+        self._access_token = None
+        self._access_token_last_updated = None
+        self.set_access_token()
 
     def get_ticker(self, currency: CoinoneCurrency):
         res = requests.get(self.BASE_URL + "/ticker", params={
@@ -88,3 +92,31 @@ class CoinoneApi(MarketApi):
             result.append(item)
 
         return result
+
+    def set_access_token(self, should_refresh=False):
+        config = configparser.ConfigParser()
+        config.read("config.ini")
+        # request for refresh if needed
+        # then save in config file
+        if should_refresh:
+            res = requests.post(self.BASE_URL + "/oauth/refresh_token", headers={
+                "content-type": "application/x-www-form-urlencoded"
+            }, data={
+                "access_token": self._access_token
+            })
+            res_json = res.json()
+            self._access_token = res_json["accessToken"]
+            config["COINONE"]["AccessToken"] = self._access_token
+            with open("config.ini", "w") as config_file:
+                config.write(config_file)
+        # read directly from config file
+        else:
+            self._access_token = config["COINONE"]["AccessToken"]
+        # save the current date for record
+        self._access_token_last_updated = date.today()
+
+    def get_access_token(self):
+        delta = date.today() - self._access_token_last_updated
+        if delta.days > 5:
+            self.set_access_token(should_refresh=True)
+        return self._access_token
