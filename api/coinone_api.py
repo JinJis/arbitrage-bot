@@ -17,7 +17,8 @@ class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
     def __init__(self, access_token_refresh_interval=5):
-        # in days, initial access token should have more grace time than this number
+        # in number of days
+        # make sure initial access token have more grace time than the given duration
         self._access_token_refresh_interval = access_token_refresh_interval
         self._access_token = None
         self._access_token_last_updated = None
@@ -137,23 +138,25 @@ class CoinoneApi(MarketApi):
 
     @staticmethod
     def encode_payload(payload):
-        payload_json = json.dumps(payload)
-        return base64.b64encode(payload_json.encode("utf-8"))
+        return base64.b64encode(json.dumps(payload))
 
     def get_signature(self, encoded_payload):
-        secret_key_processed = str(self._secret_key).upper().encode("utf-8")
-        return hmac.new(secret_key_processed, encoded_payload, hashlib.sha512).hexdigest()
+        return hmac.new(self._secret_key.upper(), encoded_payload, hashlib.sha512).hexdigest()
 
-    def get_balance(self):
-        payload = {
-            "access_token": self.get_access_token(),
-            "nonce": int(time.time())
-        }
+    def coinone_post(self, url, payload=None):
+        if payload is None:
+            payload = dict()
+        payload["access_token"] = self.get_access_token()
+        payload["nonce"] = int(time.time())
         encoded_payload = self.encode_payload(payload)
         signature = self.get_signature(encoded_payload)
 
-        res = requests.post(self.BASE_URL + "/v2/account/balance", headers={
+        res = requests.post(url, headers={
             "X-COINONE-PAYLOAD": encoded_payload,
             "X-COINONE-SIGNATURE": signature
         }, json=payload)
+
         return res.json()
+
+    def get_balance(self):
+        return self.coinone_post(self.BASE_URL + "/v2/account/balance")
