@@ -11,7 +11,9 @@ orderbook_item_limit = 30
 class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
-    def __init__(self):
+    def __init__(self, access_token_refresh_interval=5):
+        # in days, initial access token should have more grace time than this number
+        self._access_token_refresh_interval = access_token_refresh_interval
         self._access_token = None
         self._access_token_last_updated = None
         self.set_access_token()
@@ -117,6 +119,6 @@ class CoinoneApi(MarketApi):
 
     def get_access_token(self):
         delta = date.today() - self._access_token_last_updated
-        if delta.days > 5:
+        if delta.days >= self._access_token_refresh_interval:
             self.set_access_token(should_refresh=True)
         return self._access_token
