@@ -162,3 +162,88 @@ class CoinoneApi(MarketApi):
 
     def get_balance(self):
         return self.coinone_post(self.BASE_URL + "/v2/account/balance")
+
+    def order_buy(self, currency: CoinoneCurrency, price, amount, order_type):
+
+        if order_type != "limit":
+            raise Exception("Coinone order type support only limit.")
+
+        buy_limit_api_path = "/v2/order/limit_buy/"
+        url_path = self.BASE_API_URL + buy_limit_api_path
+        payload = {
+            "access_token": self.access_token,
+            "price": int(price),
+            "qty": float(qty),
+            "currency": currency_type,
+            'nonce': self.get_nonce()
+        }
+        dumped_json = json.dumps(payload)
+        encoded_payload = base64.b64encode(dumped_json.encode('utf-8'))
+
+        headers = {'Content-type': 'application/json',
+                   'X-COINONE-PAYLOAD': encoded_payload,
+                   'X-COINONE-SIGNATURE': self.get_signature(encoded_payload, self.secret_key.encode('utf-8'))}
+
+        res = requests.post(url_path, headers=headers, data=payload)
+        result = res.json()
+        return result
+
+    def sell_order(self, currency_type=None, price=None, qty=None, order_type="limit"):
+        """
+        sell_coin_order
+        """
+        if order_type != "limit":
+            raise Exception("Coinone order type support only limit.")
+        time.sleep(1)
+        sell_limit_api_path = "/v2/order/limit_sell/"
+        url_path = self.BASE_API_URL + sell_limit_api_path
+        payload = {
+            "access_token": self.access_token,
+            "price": int(price),
+            "qty": float(qty),
+            "currency": currency_type,
+            'nonce': self.get_nonce()
+        }
+        dumped_json = json.dumps(payload)
+        encoded_payload = base64.b64encode(dumped_json.encode('utf-8'))
+
+        headers = {'Content-type': 'application/json',
+                   'X-COINONE-PAYLOAD': encoded_payload,
+                   'X-COINONE-SIGNATURE': self.get_signature(encoded_payload, self.secret_key.encode('utf-8'))}
+
+        res = requests.post(url_path, headers=headers, data=payload)
+        result = res.json()
+        return result
+
+    def cancel_order(self, currency_type=None, price=None, qty=None, order_type=None, order_id=None):
+        """
+        cancel_coin_order
+        """
+        if currency_type is None or price is None or qty is None or order_type is None or order_id is None:
+            raise Exception("Need to parameter")
+        time.sleep(1)
+        cancel_api_path = "/v2/order/cancel/"
+        url_path = self.BASE_API_URL + cancel_api_path
+        if order_type == "sell":
+            is_ask = 1
+        else:
+            is_ask = 0
+        payload = {
+            "access_token": self.access_token,
+            "order_id": order_id,
+            "price": int(price),
+            "qty": float(qty),
+            "currency": currency_type,
+            "is_ask": is_ask,
+            'nonce': self.get_nonce()
+        }
+        dumped_json = json.dumps(payload)
+        encoded_payload = base64.b64encode(dumped_json.encode('utf-8'))
+
+        headers = {'Content-type': 'application/json',
+                   'X-COINONE-PAYLOAD': encoded_payload,
+                   'X-COINONE-SIGNATURE': self.get_signature(encoded_payload, self.secret_key.encode('utf-8'))}
+
+        res = requests.post(url_path, headers=headers, data=payload)
+        result = res.json()
+        return result
