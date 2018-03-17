@@ -138,10 +138,12 @@ class CoinoneApi(MarketApi):
 
     @staticmethod
     def encode_payload(payload):
-        return base64.b64encode(json.dumps(payload))
+        payload_json_bytes = json.dumps(payload).encode("utf-8")
+        return base64.b64encode(payload_json_bytes)
 
     def get_signature(self, encoded_payload):
-        return hmac.new(self._secret_key.upper(), encoded_payload, hashlib.sha512).hexdigest()
+        secret_key_processed = str(self._secret_key).upper().encode("utf-8")
+        return hmac.new(secret_key_processed, encoded_payload, hashlib.sha512).hexdigest()
 
     def coinone_post(self, url, payload=None):
         if payload is None:
