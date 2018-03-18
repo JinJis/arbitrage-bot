@@ -33,5 +33,5 @@ class MarketApi(ABC):
         pass
 
     @abstractmethod
-    def cancel_order(self, currency: Currency, price: int, amount: float, order_type: str, order_id: int):
+    def cancel_order(self, currency: Currency, price: int, amount: float, order_id: str, is_sell_order: bool):
         pass
