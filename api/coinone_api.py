@@ -28,7 +28,7 @@ class CoinoneApi(MarketApi):
 
     def get_ticker(self, currency: CoinoneCurrency):
         res = requests.get(self.BASE_URL + "/ticker", params={
-            "currency": currency
+            "currency": currency.value
         })
         res_json = res.json()
 
@@ -51,7 +51,7 @@ class CoinoneApi(MarketApi):
 
     def get_orderbook(self, currency: CoinoneCurrency):
         res = requests.get(self.BASE_URL + "/orderbook", params={
-            "currency": currency
+            "currency": currency.value
         })
         res_json = res.json()
 
@@ -87,7 +87,7 @@ class CoinoneApi(MarketApi):
     # time_range can be "hour" or "day"
     def get_filled_orders(self, currency: CoinoneCurrency, time_range: str):
         res = requests.get(self.BASE_URL + "/trades", params={
-            "currency": currency,
+            "currency": currency.value,
             "period": time_range
         })
         res_json = res.json()
@@ -170,7 +170,7 @@ class CoinoneApi(MarketApi):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_buy", payload={
             "price": price,
             "qty": amount,
-            "currency": currency,
+            "currency": currency.value,
         })
 
     def order_sell(self, currency: CoinoneCurrency, price: int, amount: float, order_type: str = "limit"):
@@ -180,7 +180,7 @@ class CoinoneApi(MarketApi):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_sell", payload={
             "price": price,
             "qty": amount,
-            "currency": currency,
+            "currency": currency.value,
         })
 
     def cancel_order(self, currency: CoinoneCurrency, price: int, amount: float, order_id: str, is_sell_order: bool):
@@ -189,21 +189,21 @@ class CoinoneApi(MarketApi):
             "price": price,
             "qty": amount,
             "is_ask": 1 if is_sell_order else 0,
-            "currency": currency
+            "currency": currency.value
         })
 
     def get_order_info(self, currency: CoinoneCurrency, order_id: str):
         return self.coinone_post(self.BASE_URL + "/v2/order/order_info", payload={
             "order_id": order_id,
-            "currency": currency
+            "currency": currency.value
         })
 
     def get_active_orders(self, currency: CoinoneCurrency):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_orders", payload={
-            "currency": currency
+            "currency": currency.value
         })
 
     def get_past_trades(self, currency: CoinoneCurrency):
         return self.coinone_post(self.BASE_URL + "/v2/order/complete_orders", payload={
-            "currency": currency
+            "currency": currency.value
         })

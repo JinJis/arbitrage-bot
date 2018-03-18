@@ -12,7 +12,7 @@ class KorbitApi(MarketApi):
 
     def get_ticker(self, currency: KorbitCurrency):
         res = requests.get(self.BASE_URL + "/v1/ticker/detailed", params={
-            "currency_pair": currency
+            "currency_pair": currency.value
         })
         # raise ValueError if no valid json exists
         res_json = res.json()
@@ -43,7 +43,7 @@ class KorbitApi(MarketApi):
 
     def get_orderbook(self, currency: KorbitCurrency):
         res = requests.get(self.BASE_URL + "/v1/orderbook", params={
-            "currency_pair": currency
+            "currency_pair": currency.value
         })
         res_json = res.json()
 
@@ -79,7 +79,7 @@ class KorbitApi(MarketApi):
     # time_range can be "minute", "hour" or "day"
     def get_filled_orders(self, currency: KorbitCurrency, time_range: str):
         res = requests.get(self.BASE_URL + "/v1/transactions", params={
-            "currency_pair": currency,
+            "currency_pair": currency.value,
             "time": time_range
         })
         res_json = res.json()

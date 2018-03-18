@@ -16,7 +16,7 @@ class Collector:
         # init coinone related
         self.co_api = CoinoneApi()
         self.co_db = self.client["coinone"]
-        self.co_currency = CoinoneCurrency[currency.upper()].value
+        self.co_currency = CoinoneCurrency[currency.upper()]
         self.co_ticker_col = self.co_db[currency + "_ticker"]
         self.co_orderbook_col = self.co_db[currency + "_orderbook"]
         self.co_ma_mb_col = self.co_db[currency + "_ma_mb"]
@@ -25,7 +25,7 @@ class Collector:
         # init korbit related
         self.kb_api = KorbitApi()
         self.kb_db = self.client["korbit"]
-        self.kb_currency = KorbitCurrency[currency.upper()].value
+        self.kb_currency = KorbitCurrency[currency.upper()]
         self.kb_ticker_col = self.kb_db[currency + "_ticker"]
         self.kb_orderbook_col = self.kb_db[currency + "_orderbook"]
         self.kb_ma_mb_col = self.kb_db[currency + "_ma_mb"]
