@@ -35,10 +35,13 @@ class ArbitrageBot():
             print("loading.. until %s is %s" % (self.new_spread_stack.size, timestep))
             if (self.new_spread_stack.size == timestep):
                 print("loading finished\n")
-        print("now new stack %s" % self.new_spread_stack)
-        print("now reverse stack %s" % self.reverse_spread_stack)
+                
+#         print("now new stack %s" % self.new_spread_stack)
+#         print("now reverse stack %s" % self.reverse_spread_stack)
+        
         new_mov_avg = self.new_spread_stack.mean()
         new_sigma = self.new_spread_stack.std()
+        
         reverse_mov_avg = self.reverse_spread_stack.mean()
         reverse_sigma = self.reverse_spread_stack.std()
         
@@ -46,18 +49,21 @@ class ArbitrageBot():
         print("new_mov_avg: %s, new_sigma: %s and current_new: %s" %(new_mov_avg, new_sigma, current_new_spread))
         print("reverse_mov_avg: %s, reverse_sigma: %s and current_reverse: %s" \
               %(reverse_mov_avg, reverse_sigma, current_reverse_spread))
-        if (current_new_spread >= new_mov_avg + new_sigma):
+        
+        if (current_new_spread >= new_mov_avg + new_sigma and current_new_spread > 0):
             print("[new]")
             a_market.buy(volume=0.03, bid_price=hoga_a["maxbid"])
             b_market.sell(volume=0.03, ask_price=hoga_b["minask"])
-        elif (current_reverse_spread >= reverse_mov_avg + reverse_sigma):
+        elif (current_reverse_spread >= reverse_mov_avg + reverse_sigma and current_reverse_spread > 0):
             print("[reverse]")
             b_market.buy(volume=0.03, bid_price=hoga_b["maxbid"])
             a_market.sell(volume=0.03, ask_price=hoga_a["minask"])
         else:
             print("[No]")
-        total_krw = a_market.balance_total(hoga_a["maxbid"]) + b_market.balance_total(hoga_b["maxbid"])
-        print("[Total krw: %s\n" % (total_krw))
+            
+#         total_krw = a_market.balance_total(hoga_a["maxbid"]) + b_market.balance_total(hoga_b["maxbid"])
+        print("[Total krw: %s\n" % (self.total_krw_balance()))
+        
         self.new_spread_stack = np.delete(self.new_spread_stack, 0)
         self.reverse_spread_stack = np.delete(self.reverse_spread_stack, 0)
         self.new_spread_stack = np.append(self.new_spread_stack, current_new_spread)
@@ -92,6 +98,7 @@ class ArbitrageBot():
             depth_bids = depth["bids"]
             hoga = { "minask": np.array(depth_asks)[:,0].astype(int).min(),\
                     "maxbid": np.array(depth_bids)[:,0].astype(int).max() }
+            
         if market_name == "coinone":
             currency = "eth"
             depth = self.get_depth_api("https://api.coinone.co.kr/orderbook?currency=%s" % currency)

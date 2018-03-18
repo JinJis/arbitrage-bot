@@ -21,14 +21,14 @@ class Market(object):
                 pass
 
     def buy(self, volume, bid_price):
-        print("execute buy %f ETH @ %f on %s" % (volume, bid_price, self.name))
+#         print("execute buy %f ETH @ %f on %s" % (volume, bid_price, self.name))
         self.eth_balance += volume - volume * self.fee
         self.krw_balance -= bid_price * volume
         if self.persistent:
             self.save()
         
     def sell(self, volume, ask_price):
-        print("execute sell %f ETH @ %f on %s" % (volume, ask_price, self.name))
+#         print("execute sell %f ETH @ %f on %s" % (volume, ask_price, self.name))
         self.eth_balance -= volume
         self.krw_balance += ask_price * volume - ask_price * volume * self.fee
         if self.persistent:
@@ -38,7 +38,7 @@ class Market(object):
         # db select
         data = json.load(open(self.filename, "r"))
         self.krw_balance = data["krw"]
-        self.eth_balance = data["eth"]
+        self.btc_balance = data["eth"]
 
     def save(self):
         # db insert
