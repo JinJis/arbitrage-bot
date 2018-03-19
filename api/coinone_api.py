@@ -118,7 +118,6 @@ class CoinoneApi(MarketApi):
             "access_token": self._access_token
         })
         res_json = res.json()
-        print(res_json)
 
         # write in config file
         self._access_token = res_json["accessToken"]

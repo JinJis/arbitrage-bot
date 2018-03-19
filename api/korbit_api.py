@@ -123,7 +123,6 @@ class KorbitApi(MarketApi):
             "grant_type": "password"
         })
         res_json = res.json()
-        print(res_json)
 
         self._access_token = res_json["access_token"]
         self._refresh_token = res_json["refresh_token"]
