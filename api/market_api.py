@@ -35,3 +35,15 @@ class MarketApi(ABC):
     @abstractmethod
     def cancel_order(self, *args):
         pass
+
+    @abstractmethod
+    def get_order_info(self, currency: Currency, order_id: str):
+        pass
+
+    @abstractmethod
+    def get_open_orders(self, currency: Currency):
+        pass
+
+    @abstractmethod
+    def get_past_trades(self, currency: Currency):
+        pass

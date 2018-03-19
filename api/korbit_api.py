@@ -5,6 +5,7 @@ from bson import Decimal128
 import configparser
 from datetime import datetime
 import time
+from urllib import parse
 
 
 class KorbitApi(MarketApi):
@@ -210,10 +211,43 @@ class KorbitApi(MarketApi):
         })
         return res.json()
 
-    def cancel_order(self, currency: KorbitCurrency, order_id: str):
-        res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
+    def cancel_order(self, currency: KorbitCurrency, order_ids: list):
+        data = {
             "currency_pair": currency.value,
+            "nonce": self.get_nonce()
+        }
+        encoded_data = parse.urlencode(data)
+
+        # korbit supports cancelling multiple orders
+        # append all order ids to encoded data
+        for order_id in order_ids:
+            encoded_data += "&id=%s" % str(order_id)
+
+        res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data=encoded_data)
+        return res.json()
+
+    def get_order_info(self, currency: KorbitCurrency, order_id: str):
+        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), payload={
+            "currency": currency.value,
             "id": order_id,
+            "nonce": self.get_nonce()
+        })
+        return res.json()
+
+    def get_open_orders(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
+        res = requests.get(self.BASE_URL + "/v1/user/orders/open", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
+            "offset": offset,
+            "limit": limit,
+            "nonce": self.get_nonce()
+        })
+        return res.json()
+
+    def get_past_trades(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
+        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), payload={
+            "currency": currency.value,
+            "offset": offset,
+            "limit": limit,
             "nonce": self.get_nonce()
         })
         return res.json()

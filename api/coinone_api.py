@@ -194,7 +194,7 @@ class CoinoneApi(MarketApi):
             "currency": currency.value
         })
 
-    def get_active_orders(self, currency: CoinoneCurrency):
+    def get_open_orders(self, currency: CoinoneCurrency):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_orders", payload={
             "currency": currency.value
         })
