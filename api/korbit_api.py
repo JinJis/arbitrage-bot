@@ -227,8 +227,8 @@ class KorbitApi(MarketApi):
         return res.json()
 
     def get_order_info(self, currency: KorbitCurrency, order_id: str):
-        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), payload={
-            "currency": currency.value,
+        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
             "id": order_id,
             "nonce": self.get_nonce()
         })
@@ -244,8 +244,8 @@ class KorbitApi(MarketApi):
         return res.json()
 
     def get_past_trades(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
-        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), payload={
-            "currency": currency.value,
+        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
             "offset": offset,
             "limit": limit,
             "nonce": self.get_nonce()
