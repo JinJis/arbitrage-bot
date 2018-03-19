@@ -114,9 +114,7 @@ class CoinoneApi(MarketApi):
 
     def refresh_access_token(self):
         # request for refresh, save in config file
-        res = requests.post(self.BASE_URL + "/oauth/refresh_token", headers={
-            "content-type": "application/x-www-form-urlencoded"
-        }, data={
+        res = requests.post(self.BASE_URL + "/oauth/refresh_token", data={
             "access_token": self._access_token
         })
         res_json = res.json()

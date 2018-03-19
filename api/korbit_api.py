@@ -3,7 +3,7 @@ from .market_api import MarketApi
 from .currency import KorbitCurrency
 from bson import Decimal128
 import configparser
-from datetime import date
+from datetime import datetime
 
 
 class KorbitApi(MarketApi):
@@ -25,6 +25,13 @@ class KorbitApi(MarketApi):
         self._client_secret = self._config["KORBIT"]["ClientSecret"]
         self._username = self._config["KORBIT"]["Username"]
         self._password = self._config["KORBIT"]["Password"]
+
+        # set initial access token
+        self._access_token = None
+        # korbit has an extra token for refresh request
+        self._refresh_token = None
+        self._access_token_last_updated = None
+        self.set_access_token()
 
     def get_ticker(self, currency: KorbitCurrency):
         res = requests.get(self.BASE_URL + "/v1/ticker/detailed", params={
@@ -111,29 +118,30 @@ class KorbitApi(MarketApi):
 
         return result
 
-    def set_access_token(self, grant_type="password"):
-        config = configparser.ConfigParser()
-        config.read("config.ini")
-        # request for refresh if needed
-        # then save in config file
-        if should_refresh:
-            res = requests.post(self.BASE_URL + "/oauth/refresh_token", headers={
-                "content-type": "application/x-www-form-urlencoded"
-            }, data={
-                "access_token": self._access_token
-            })
-            res_json = res.json()
-            self._access_token = res_json["accessToken"]
-            config["COINONE"]["AccessToken"] = self._access_token
-            with open("config.ini", "w") as config_file:
-                config.write(config_file)
-        # read directly from config file
-        else:
-            self._access_token = config["COINONE"]["AccessToken"]
-        # save the current date for record
-        self._access_token_last_updated = date.today()
+    def set_access_token(self):
 
-        token_api_path = "/v1/oauth2/access_token"
+        if grant_type is "password":
+            params = {
+                "client_id": self._client_id,
+                "client_secret": self._client_secret,
+                "username": self._username,
+                "password": self._password,
+                "grant_type": grant_type
+            }
+        elif grant_type is "refresh_token":
+            params = {
+                "client_id": self._client_id,
+                "client_secret": self._client_secret,
+                "refresh_token": self.refresh_token,
+                "grant_type": grant_type
+            }
+        else:
+            raise Exception("Invalid grant_type!")
+
+        # save the current date for record
+        self._access_token_last_updated = datetime.today()
+
+        token_api_path = ""
 
         url_path = self.BASE_API_URL + token_api_path
         if grant_type == "password":
@@ -157,6 +165,11 @@ class KorbitApi(MarketApi):
         self.refresh_token = result["refresh_token"]
         self.expire = result["expires_in"]
         return self.expire, self.access_token, self.refresh_token
+
+    def refresh_access_token(self):
+        res = requests.post(self.BASE_URL + "/v1/oauth2/access_token", data={
+            "access_token": self._access_token
+        })
 
     def get_access_token(self):
         if self._access_token is None:
