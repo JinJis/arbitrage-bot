@@ -10,17 +10,16 @@ import base64
 import hashlib
 import time
 
+# in order to match the korbit orderbook item count
 orderbook_item_limit = 30
+# coinone access token expires in 30 days
+access_token_refresh_interval_in_days = 1
 
 
 class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
-    def __init__(self, access_token_refresh_interval_in_days=5):
-        self._expires_in_days = 30
-        if access_token_refresh_interval_in_days >= self._expires_in_days:
-            raise Exception("Coinone access token expires within 30 days! Shorter refresh interval expected.")
-
+    def __init__(self):
         # in number of days
         self._access_token_refresh_interval_in_days = access_token_refresh_interval_in_days
 
@@ -119,6 +118,7 @@ class CoinoneApi(MarketApi):
             "access_token": self._access_token
         })
         res_json = res.json()
+        print(res_json)
 
         # write in config file
         self._access_token = res_json["accessToken"]

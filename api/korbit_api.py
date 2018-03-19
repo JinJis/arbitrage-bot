@@ -9,14 +9,7 @@ from datetime import datetime
 class KorbitApi(MarketApi):
     BASE_URL = "https://api.korbit.co.kr"
 
-    def __init__(self, access_token_refresh_interval_in_minutes=30):
-        self._expires_in_minutes = 60
-        if access_token_refresh_interval_in_minutes >= self._expires_in_minutes:
-            raise Exception("Korbit access token expires within 1 hour! Shorter refresh interval expected.")
-
-        # in number of minutes
-        self._access_token_refresh_interval_in_minutes = access_token_refresh_interval_in_minutes
-
+    def __init__(self):
         # set instance wide config
         self._config = configparser.ConfigParser()
         self._config.read("config.ini")
@@ -32,6 +25,8 @@ class KorbitApi(MarketApi):
         # korbit has an extra token for refresh request
         self._refresh_token = None
         self._access_token_last_updated = None
+        # korbit provides expiration time of access token
+        self._expires_in_seconds = None
         self.set_access_token()
 
     def get_ticker(self, currency: KorbitCurrency):
@@ -128,16 +123,11 @@ class KorbitApi(MarketApi):
             "grant_type": "password"
         })
         res_json = res.json()
+        print(res_json)
 
         self._access_token = res_json["access_token"]
         self._refresh_token = res_json["refresh_token"]
-
-        # in seconds
-        expires_in = int(res_json["expires_in"])
-        current_expires_in = self._expires_in_minutes * 60
-        if expires_in is not current_expires_in:
-            raise Exception("Seems like the expiration time for Korbit API access token has changed"
-                            "(before: %d sec, after: %d sec)! Please verify." % (current_expires_in, expires_in))
+        self._expires_in_seconds = int(res_json["expires_in"])
 
         # save the current date for record
         self._access_token_last_updated = datetime.today()
@@ -146,21 +136,25 @@ class KorbitApi(MarketApi):
         res = requests.post(self.BASE_URL + "/v1/oauth2/access_token", data={
             "client_id": self._client_id,
             "client_secret": self._client_secret,
+            "refresh_token": self._refresh_token,
             "grant_type": "refresh_token"
         })
         res_json = res.json()
 
         self._access_token = res_json["access_token"]
         self._refresh_token = res_json["refresh_token"]
+        self._expires_in_seconds = int(res_json["expires_in"])
 
         # save the current date for record
         self._access_token_last_updated = datetime.today()
 
     def get_access_token(self):
         # check if access token is within valid time
-        # refresh access token if not
         delta = datetime.today() - self._access_token_last_updated
-        if (delta.seconds / 60) >= self._access_token_refresh_interval_in_minutes:
+        # korbit expires the access token within an hour
+        # the api gives specific number on the expiration time
+        # here we are refreshing the access token 5 minutes before it expires
+        if delta.seconds >= (self._expires_in_seconds - 60 * 5):
             self.refresh_access_token()
 
         return self._access_token
