@@ -39,11 +39,12 @@ class Collector:
 
     def collect_co_ticker(self, request_time: int):
         co_ticker = None
+        # noinspection PyBroadException
         try:
             co_ticker = self.co_api.get_ticker(self.co_currency)
-        except Exception as e:
+        except Exception:
             co_ticker = self.last_co_ticker
-            logging.error("collect_co_ticker: " + e)
+            logging.exception("collect_co_ticker")
         finally:
             co_ticker["requestTime"] = request_time
             # need to copy the mutable dict because in `insert`,
@@ -53,11 +54,12 @@ class Collector:
 
     def collect_co_orderbook(self, request_time: int):
         co_orderbook = None
+        # noinspection PyBroadException
         try:
             co_orderbook = self.co_api.get_orderbook(self.co_currency)
-        except Exception as e:
+        except Exception:
             co_orderbook = self.last_co_orderbook
-            logging.error("collect_co_orderbook: " + e)
+            logging.exception("collect_co_orderbook")
         finally:
             co_orderbook["requestTime"] = request_time
             self.last_co_orderbook = dict(co_orderbook)
@@ -78,9 +80,9 @@ class Collector:
         kb_ticker = None
         try:
             kb_ticker = self.kb_api.get_ticker(self.kb_currency)
-        except Exception as e:
+        except Exception:
             kb_ticker = self.last_kb_ticker
-            logging.error("collect_kb_ticker: " + e)
+            logging.exception("collect_kb_ticker")
         finally:
             kb_ticker["requestTime"] = request_time
             self.last_kb_ticker = dict(kb_ticker)
@@ -88,11 +90,12 @@ class Collector:
 
     def collect_kb_orderbook(self, request_time: int):
         kb_orderbook = None
+        # noinspection PyBroadException
         try:
             kb_orderbook = self.kb_api.get_orderbook(self.kb_currency)
-        except Exception as e:
+        except Exception:
             kb_orderbook = self.last_kb_orderbook
-            logging.error("collect_kb_orderbook: " + e)
+            logging.exception("collect_kb_orderbook")
         finally:
             kb_orderbook["requestTime"] = request_time
             self.last_kb_orderbook = dict(kb_orderbook)
