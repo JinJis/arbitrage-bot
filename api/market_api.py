@@ -25,13 +25,13 @@ class MarketApi(ABC):
         pass
 
     @abstractmethod
-    def order_buy(self, currency: Currency, price: int, amount: float, order_type: str):
+    def order_limit_buy(self, currency: Currency, price: int, amount: float):
         pass
 
     @abstractmethod
-    def order_sell(self, currency: Currency, price: int, amount: float, order_type: str):
+    def order_limit_sell(self, currency: Currency, price: int, amount: float):
         pass
 
     @abstractmethod
-    def cancel_order(self, currency: Currency, price: int, amount: float, order_id: str, is_sell_order: bool):
+    def cancel_order(self, *args):
         pass

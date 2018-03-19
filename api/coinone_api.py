@@ -165,20 +165,14 @@ class CoinoneApi(MarketApi):
     def get_balance(self):
         return self.coinone_post(self.BASE_URL + "/v2/account/balance")
 
-    def order_buy(self, currency: CoinoneCurrency, price: int, amount: float, order_type: str = "limit"):
-        if order_type != "limit":
-            raise Exception("Coinone only supports limit type order!")
-
+    def order_limit_buy(self, currency: CoinoneCurrency, price: int, amount: float):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_buy", payload={
             "price": price,
             "qty": amount,
             "currency": currency.value,
         })
 
-    def order_sell(self, currency: CoinoneCurrency, price: int, amount: float, order_type: str = "limit"):
-        if order_type != "limit":
-            raise Exception("Coinone only supports limit type order!")
-
+    def order_limit_sell(self, currency: CoinoneCurrency, price: int, amount: float):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_sell", payload={
             "price": price,
             "qty": amount,

@@ -4,6 +4,7 @@ from .currency import KorbitCurrency
 from bson import Decimal128
 import configparser
 from datetime import datetime
+import time
 
 
 class KorbitApi(MarketApi):
@@ -158,14 +159,61 @@ class KorbitApi(MarketApi):
 
         return self._access_token
 
+    def get_auth_header(self):
+        return {
+            "Authorization": "Bearer " + self._access_token
+        }
+
+    @staticmethod
+    def get_nonce():
+        return int(time.time())
+
     def get_balance(self):
-        pass
+        res = requests.get(self.BASE_URL + "/v1/user/balances", headers=self.get_auth_header())
+        return res.json()
 
-    def order_buy(self, currency: KorbitCurrency, price: int, amount: float, order_type: str):
-        pass
+    def order_limit_buy(self, currency: KorbitCurrency, price: int, amount: float):
+        res = requests.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
+            "type": "limit",
+            "price": price,
+            "coin_amount": amount,
+            "nonce": self.get_nonce()
+        })
+        return res.json()
 
-    def order_sell(self, currency: KorbitCurrency, price: int, amount: float, order_type: str):
-        pass
+    def order_limit_sell(self, currency: KorbitCurrency, price: int, amount: float):
+        res = requests.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
+            "type": "limit",
+            "price": price,
+            "coin_amount": amount,
+            "nonce": self.get_nonce()
+        })
+        return res.json()
 
-    def cancel_order(self, currency: KorbitCurrency, price: int, amount: float, order_id: str, is_sell_order: bool):
-        pass
+    def order_market_buy(self, currency: KorbitCurrency, amount_of_krw: int):
+        res = requests.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
+            "type": "market",
+            "fiat_amount": amount_of_krw,
+            "nonce": self.get_nonce()
+        })
+        return res.json()
+
+    def order_market_sell(self, currency: KorbitCurrency, amount_of_coin: float):
+        res = requests.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
+            "type": "market",
+            "coin_amount": amount_of_coin,
+            "nonce": self.get_nonce()
+        })
+        return res.json()
+
+    def cancel_order(self, currency: KorbitCurrency, order_id: str):
+        res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
+            "id": order_id,
+            "nonce": self.get_nonce()
+        })
+        return res.json()
