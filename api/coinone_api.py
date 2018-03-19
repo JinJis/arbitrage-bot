@@ -17,8 +17,9 @@ class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
     def __init__(self, access_token_refresh_interval_in_days=5):
-        if access_token_refresh_interval_in_days >= 30:
-            raise Exception("Coinone access token expires within 30 days!")
+        self._expires_in_days = 30
+        if access_token_refresh_interval_in_days >= self._expires_in_days:
+            raise Exception("Coinone access token expires within 30 days! Shorter refresh interval expected.")
 
         # in number of days
         self._access_token_refresh_interval_in_days = access_token_refresh_interval_in_days

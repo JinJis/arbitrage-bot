@@ -10,8 +10,9 @@ class KorbitApi(MarketApi):
     BASE_URL = "https://api.korbit.co.kr"
 
     def __init__(self, access_token_refresh_interval_in_minutes=30):
-        if access_token_refresh_interval_in_minutes >= 60:
-            raise Exception("Korbit access token expires within 1 hour!")
+        self._expires_in_minutes = 60
+        if access_token_refresh_interval_in_minutes >= self._expires_in_minutes:
+            raise Exception("Korbit access token expires within 1 hour! Shorter refresh interval expected.")
 
         # in number of minutes
         self._access_token_refresh_interval_in_minutes = access_token_refresh_interval_in_minutes
@@ -119,63 +120,50 @@ class KorbitApi(MarketApi):
         return result
 
     def set_access_token(self):
+        res = requests.post(self.BASE_URL + "/v1/oauth2/access_token", data={
+            "client_id": self._client_id,
+            "client_secret": self._client_secret,
+            "username": self._username,
+            "password": self._password,
+            "grant_type": "password"
+        })
+        res_json = res.json()
 
-        if grant_type is "password":
-            params = {
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-                "username": self._username,
-                "password": self._password,
-                "grant_type": grant_type
-            }
-        elif grant_type is "refresh_token":
-            params = {
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-                "refresh_token": self.refresh_token,
-                "grant_type": grant_type
-            }
-        else:
-            raise Exception("Invalid grant_type!")
+        self._access_token = res_json["access_token"]
+        self._refresh_token = res_json["refresh_token"]
+
+        # in seconds
+        expires_in = int(res_json["expires_in"])
+        current_expires_in = self._expires_in_minutes * 60
+        if expires_in is not current_expires_in:
+            raise Exception("Seems like the expiration time for Korbit API access token has changed"
+                            "(before: %d sec, after: %d sec)! Please verify." % (current_expires_in, expires_in))
 
         # save the current date for record
         self._access_token_last_updated = datetime.today()
 
-        token_api_path = ""
-
-        url_path = self.BASE_API_URL + token_api_path
-        if grant_type == "password":
-            data = {"client_id": self.CLIENT_ID,
-                    "client_secret": self.CLIENT_SECRET,
-                    "username": self.USER_NAME,
-                    "password": self.PASSWORD,
-                    "grant_type": grant_type}
-        elif grant_type == "refresh_token":
-            data = {"client_id": self.CLIENT_ID,
-                    "client_secret": self.CLIENT_SECRET,
-                    "refresh_token": self.refresh_token,
-                    "grant_type": grant_type}
-        else:
-            raise Exception("Unexpected grant_type")
-
-        res = requests.post(url_path, data=data)
-        result = res.json()
-        self.access_token = result["access_token"]
-        self.token_type = result["token_type"]
-        self.refresh_token = result["refresh_token"]
-        self.expire = result["expires_in"]
-        return self.expire, self.access_token, self.refresh_token
-
     def refresh_access_token(self):
         res = requests.post(self.BASE_URL + "/v1/oauth2/access_token", data={
-            "access_token": self._access_token
+            "client_id": self._client_id,
+            "client_secret": self._client_secret,
+            "grant_type": "refresh_token"
         })
+        res_json = res.json()
+
+        self._access_token = res_json["access_token"]
+        self._refresh_token = res_json["refresh_token"]
+
+        # save the current date for record
+        self._access_token_last_updated = datetime.today()
 
     def get_access_token(self):
-        if self._access_token is None:
-            raise Exception("Need to call set_access_token() first!")
-        else:
-            return self._access_token
+        # check if access token is within valid time
+        # refresh access token if not
+        delta = datetime.today() - self._access_token_last_updated
+        if (delta.seconds / 60) >= self._access_token_refresh_interval_in_minutes:
+            self.refresh_access_token()
+
+        return self._access_token
 
     def get_balance(self):
         pass

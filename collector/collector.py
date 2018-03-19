@@ -1,7 +1,7 @@
 from api.coinone_api import CoinoneApi, CoinoneCurrency
 from api.korbit_api import KorbitApi, KorbitCurrency
 from pymongo import MongoClient
-import time
+import logging
 
 
 class Collector:
@@ -43,8 +43,7 @@ class Collector:
             co_ticker = self.co_api.get_ticker(self.co_currency)
         except Exception as e:
             co_ticker = self.last_co_ticker
-            print("Error at " + time.ctime())
-            print(e)
+            logging.error("collect_co_ticker: " + e)
         finally:
             co_ticker["requestTime"] = request_time
             # need to copy the mutable dict because in `insert`,
@@ -58,8 +57,7 @@ class Collector:
             co_orderbook = self.co_api.get_orderbook(self.co_currency)
         except Exception as e:
             co_orderbook = self.last_co_orderbook
-            print("Error at " + time.ctime())
-            print(e)
+            logging.error("collect_co_orderbook: " + e)
         finally:
             co_orderbook["requestTime"] = request_time
             self.last_co_orderbook = dict(co_orderbook)
@@ -82,8 +80,7 @@ class Collector:
             kb_ticker = self.kb_api.get_ticker(self.kb_currency)
         except Exception as e:
             kb_ticker = self.last_kb_ticker
-            print("Error at " + time.ctime())
-            print(e)
+            logging.error("collect_kb_ticker: " + e)
         finally:
             kb_ticker["requestTime"] = request_time
             self.last_kb_ticker = dict(kb_ticker)
@@ -95,8 +92,7 @@ class Collector:
             kb_orderbook = self.kb_api.get_orderbook(self.kb_currency)
         except Exception as e:
             kb_orderbook = self.last_kb_orderbook
-            print("Error at " + time.ctime())
-            print(e)
+            logging.error("collect_kb_orderbook: " + e)
         finally:
             kb_orderbook["requestTime"] = request_time
             self.last_kb_orderbook = dict(kb_orderbook)
