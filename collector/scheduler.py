@@ -15,7 +15,7 @@ class Scheduler:
         logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s",
                             datefmt="%Y-%m-%d %H:%M:%S",
                             stream=sys.stdout)
-        # set the log level for the schedule & requests
+        # set the log level for the schedule
         # in order not to display any extraneous log
         logging.getLogger("schedule").setLevel(logging.CRITICAL)
 
