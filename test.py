@@ -9,4 +9,13 @@ def coinone_private_api_test():
     # print()
 
 
-coinone_private_api_test()
+# coinone_private_api_test()
+
+from datetime import datetime
+
+a = datetime(2018, 3, 14, 12, 0, 0)
+b = datetime.today()
+
+print(a)
+print(b)
+print((b-a).days)

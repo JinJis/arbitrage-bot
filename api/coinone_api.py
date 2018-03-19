@@ -3,7 +3,7 @@ from .market_api import MarketApi
 from .currency import CoinoneCurrency
 from bson import Decimal128
 import configparser
-from datetime import date
+from datetime import datetime
 import hmac
 import json
 import base64
@@ -16,15 +16,24 @@ orderbook_item_limit = 30
 class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
-    def __init__(self, access_token_refresh_interval=5):
+    def __init__(self, access_token_refresh_interval_in_days=5):
+        if access_token_refresh_interval_in_days >= 30:
+            raise Exception("Coinone access token expires within 30 days!")
+
         # in number of days
-        # make sure initial access token have more grace time than the given duration
-        self._access_token_refresh_interval = access_token_refresh_interval
-        self._access_token = None
+        self._access_token_refresh_interval_in_days = access_token_refresh_interval_in_days
+
+        # set instance wide config
+        self._config = configparser.ConfigParser()
+        self._config.read("config.ini")
+
+        # set initial access_token & secret_key
+        self._access_token = self._config["COINONE"]["AccessToken"]
+        self._secret_key = self._config["COINONE"]["SecretKey"]
+
+        # refresh access token to make sure it has enough grace time than the set interval
         self._access_token_last_updated = None
-        self._secret_key = None
-        self.set_access_token()
-        self.set_secret_key()
+        self.refresh_access_token()
 
     def get_ticker(self, currency: CoinoneCurrency):
         res = requests.get(self.BASE_URL + "/ticker", params={
@@ -103,38 +112,33 @@ class CoinoneApi(MarketApi):
 
         return result
 
-    def set_access_token(self, should_refresh=False):
-        config = configparser.ConfigParser()
-        config.read("config.ini")
-        # request for refresh if needed
-        # then save in config file
-        if should_refresh:
-            res = requests.post(self.BASE_URL + "/oauth/refresh_token", headers={
-                "content-type": "application/x-www-form-urlencoded"
-            }, data={
-                "access_token": self._access_token
-            })
-            res_json = res.json()
-            self._access_token = res_json["accessToken"]
-            config["COINONE"]["AccessToken"] = self._access_token
-            with open("config.ini", "w") as config_file:
-                config.write(config_file)
-        # read directly from config file
-        else:
-            self._access_token = config["COINONE"]["AccessToken"]
+    def refresh_access_token(self):
+        # request for refresh, save in config file
+        res = requests.post(self.BASE_URL + "/oauth/refresh_token", headers={
+            "content-type": "application/x-www-form-urlencoded"
+        }, data={
+            "access_token": self._access_token
+        })
+        res_json = res.json()
+
+        # write in config file
+        self._access_token = res_json["accessToken"]
+        self._config["COINONE"]["AccessToken"] = self._access_token
+
+        with open("config.ini", "w") as config_file:
+            self._config.write(config_file)
+
         # save the current date for record
-        self._access_token_last_updated = date.today()
+        self._access_token_last_updated = datetime.today()
 
     def get_access_token(self):
-        delta = date.today() - self._access_token_last_updated
-        if delta.days >= self._access_token_refresh_interval:
-            self.set_access_token(should_refresh=True)
-        return self._access_token
+        # check if access token is within valid time
+        # refresh access token if not
+        delta = datetime.today() - self._access_token_last_updated
+        if delta.days >= self._access_token_refresh_interval_in_days:
+            self.refresh_access_token()
 
-    def set_secret_key(self):
-        config = configparser.ConfigParser()
-        config.read("config.ini")
-        self._secret_key = config["COINONE"]["SecretKey"]
+        return self._access_token
 
     @staticmethod
     def encode_payload(payload):
