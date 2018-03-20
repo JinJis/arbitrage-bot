@@ -1,27 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="8b21dc5e-f162-45d1-950b-32a5099d5d9f" name="Default" comment="">
-      <change beforePath="" afterPath="$PROJECT_DIR$/analyzer/analyzer.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/api/currency.py" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change beforePath="$PROJECT_DIR$/api/coinone_api.py" afterPath="$PROJECT_DIR$/api/coinone_api.py" />
-      <change beforePath="$PROJECT_DIR$/api/korbit_api.py" afterPath="$PROJECT_DIR$/api/korbit_api.py" />
-      <change beforePath="$PROJECT_DIR$/collector/scheduler.py" afterPath="$PROJECT_DIR$/collector/scheduler.py" />
-      <change beforePath="$PROJECT_DIR$/config.form.ini" afterPath="$PROJECT_DIR$/config/conf_user.ini" />
-      <change beforePath="$PROJECT_DIR$/temp/coinone_machine.py" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/temp/korbit_machine.py" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/.ipynb_checkpoints/dataAnalyze-checkpoint.ipynb" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/ArbitrageBot.py" afterPath="$PROJECT_DIR$/trader/arbitragebot.py" />
-      <change beforePath="$PROJECT_DIR$/trader/spread.csv" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/temp/bt_dt_eth_krw.csv" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/temp/bt_ob_eth_krw.csv" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/temp/co_dt_eth_krw.csv" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/temp/co_ob_eth_krw.csv" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/temp/kb_dt_eth_krw.csv" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/trader/temp/kb_ob_eth_krw.csv" afterPath="" />
-    </list>
+    <list default="true" id="8b21dc5e-f162-45d1-950b-32a5099d5d9f" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
