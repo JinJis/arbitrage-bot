@@ -9,6 +9,7 @@ import json
 import base64
 import hashlib
 import time
+from config.global_constants import Global
 
 # in order to match the korbit orderbook item count
 orderbook_item_limit = 30
@@ -25,7 +26,7 @@ class CoinoneApi(MarketApi):
 
         # set instance wide config
         self._config = configparser.ConfigParser()
-        self._config.read("config/conf_user.ini")
+        self._config.read(Global.USER_CONFIG_LOCATION)
 
         # set initial access_token & secret_key
         self._access_token = self._config["COINONE"]["AccessToken"]
@@ -123,7 +124,7 @@ class CoinoneApi(MarketApi):
         self._access_token = res_json["accessToken"]
         self._config["COINONE"]["AccessToken"] = self._access_token
 
-        with open("config.ini", "w") as config_file:
+        with open(Global.USER_CONFIG_LOCATION, "w") as config_file:
             self._config.write(config_file)
 
         # save the current date for record

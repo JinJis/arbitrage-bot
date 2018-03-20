@@ -6,6 +6,7 @@ import configparser
 from datetime import datetime
 import time
 from urllib import parse
+from config.global_constants import Global
 
 
 class KorbitApi(MarketApi):
@@ -14,7 +15,7 @@ class KorbitApi(MarketApi):
     def __init__(self):
         # set instance wide config
         self._config = configparser.ConfigParser()
-        self._config.read("config/conf_user.ini")
+        self._config.read(Global.USER_CONFIG_LOCATION)
 
         # set initial access_token & secret_key
         self._client_id = self._config["KORBIT"]["ClientId"]

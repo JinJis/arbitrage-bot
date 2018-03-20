@@ -7,6 +7,7 @@ import signal
 import sys
 import configparser
 import logging
+from config.global_constants import Global
 
 
 class Scheduler:
@@ -30,7 +31,7 @@ class Scheduler:
     @staticmethod
     def read_mongodb_uri():
         config = configparser.ConfigParser()
-        config.read("config/conf_user.ini")
+        config.read(Global.USER_CONFIG_LOCATION)
 
         mongo = config["MONGO"]
         host = mongo["Host"]
