@@ -20,21 +20,22 @@ access_token_refresh_interval_in_days = 1
 class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
-    def __init__(self):
-        # in number of days
-        self._access_token_refresh_interval_in_days = access_token_refresh_interval_in_days
+    def __init__(self, is_public_access_only=False):
+        if not is_public_access_only:
+            # in number of days
+            self._access_token_refresh_interval_in_days = access_token_refresh_interval_in_days
 
-        # set instance wide config
-        self._config = configparser.ConfigParser()
-        self._config.read(Global.USER_CONFIG_LOCATION)
+            # set instance wide config
+            self._config = configparser.ConfigParser()
+            self._config.read(Global.USER_CONFIG_LOCATION)
 
-        # set initial access_token & secret_key
-        self._access_token = self._config["COINONE"]["access_token"]
-        self._secret_key = self._config["COINONE"]["secret_key"]
+            # set initial access_token & secret_key
+            self._access_token = self._config["COINONE"]["access_token"]
+            self._secret_key = self._config["COINONE"]["secret_key"]
 
-        # refresh access token to make sure it has enough grace time than the set interval
-        self._access_token_last_updated = None
-        self.refresh_access_token()
+            # refresh access token to make sure it has enough grace time than the set interval
+            self._access_token_last_updated = None
+            self.refresh_access_token()
 
     def get_ticker(self, currency: CoinoneCurrency):
         res = requests.get(self.BASE_URL + "/ticker", params={

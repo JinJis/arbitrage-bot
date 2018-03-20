@@ -12,25 +12,26 @@ from config.global_constants import Global
 class KorbitApi(MarketApi):
     BASE_URL = "https://api.korbit.co.kr"
 
-    def __init__(self):
-        # set instance wide config
-        self._config = configparser.ConfigParser()
-        self._config.read(Global.USER_CONFIG_LOCATION)
+    def __init__(self, is_public_access_only=False):
+        if not is_public_access_only:
+            # set instance wide config
+            self._config = configparser.ConfigParser()
+            self._config.read(Global.USER_CONFIG_LOCATION)
 
-        # set initial access_token & secret_key
-        self._client_id = self._config["KORBIT"]["client_id"]
-        self._client_secret = self._config["KORBIT"]["client_secret"]
-        self._username = self._config["KORBIT"]["username"]
-        self._password = self._config["KORBIT"]["password"]
+            # set initial access_token & secret_key
+            self._client_id = self._config["KORBIT"]["client_id"]
+            self._client_secret = self._config["KORBIT"]["client_secret"]
+            self._username = self._config["KORBIT"]["username"]
+            self._password = self._config["KORBIT"]["password"]
 
-        # set initial access token
-        self._access_token = None
-        # korbit has an extra token for refresh request
-        self._refresh_token = None
-        self._access_token_last_updated = None
-        # korbit provides expiration time of access token
-        self._expires_in_seconds = None
-        self.set_access_token()
+            # set initial access token
+            self._access_token = None
+            # korbit has an extra token for refresh request
+            self._refresh_token = None
+            self._access_token_last_updated = None
+            # korbit provides expiration time of access token
+            self._expires_in_seconds = None
+            self.set_access_token()
 
     def get_ticker(self, currency: KorbitCurrency):
         res = requests.get(self.BASE_URL + "/v1/ticker/detailed", params={

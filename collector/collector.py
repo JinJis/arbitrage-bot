@@ -14,7 +14,7 @@ class Collector:
         self.client = MongoClient(mongodb_uri)
 
         # init coinone related
-        self.co_api = CoinoneApi()
+        self.co_api = CoinoneApi(is_public_access_only=True)
         self.co_db = self.client["coinone"]
         self.co_currency = CoinoneCurrency[currency.upper()]
         self.co_ticker_col = self.co_db[currency + "_ticker"]
@@ -23,7 +23,7 @@ class Collector:
         self.co_filled_orders_col = self.co_db[currency + "_filled_orders"]
 
         # init korbit related
-        self.kb_api = KorbitApi()
+        self.kb_api = KorbitApi(is_public_access_only=True)
         self.kb_db = self.client["korbit"]
         self.kb_currency = KorbitCurrency[currency.upper()]
         self.kb_ticker_col = self.kb_db[currency + "_ticker"]
