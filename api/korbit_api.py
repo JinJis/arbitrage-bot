@@ -18,10 +18,10 @@ class KorbitApi(MarketApi):
         self._config.read(Global.USER_CONFIG_LOCATION)
 
         # set initial access_token & secret_key
-        self._client_id = self._config["KORBIT"]["ClientId"]
-        self._client_secret = self._config["KORBIT"]["ClientSecret"]
-        self._username = self._config["KORBIT"]["Username"]
-        self._password = self._config["KORBIT"]["Password"]
+        self._client_id = self._config["KORBIT"]["client_id"]
+        self._client_secret = self._config["KORBIT"]["client_secret"]
+        self._username = self._config["KORBIT"]["username"]
+        self._password = self._config["KORBIT"]["password"]
 
         # set initial access token
         self._access_token = None

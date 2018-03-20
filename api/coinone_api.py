@@ -29,8 +29,8 @@ class CoinoneApi(MarketApi):
         self._config.read(Global.USER_CONFIG_LOCATION)
 
         # set initial access_token & secret_key
-        self._access_token = self._config["COINONE"]["AccessToken"]
-        self._secret_key = self._config["COINONE"]["SecretKey"]
+        self._access_token = self._config["COINONE"]["access_token"]
+        self._secret_key = self._config["COINONE"]["secret_key"]
 
         # refresh access token to make sure it has enough grace time than the set interval
         self._access_token_last_updated = None
@@ -122,7 +122,7 @@ class CoinoneApi(MarketApi):
 
         # write in config file
         self._access_token = res_json["accessToken"]
-        self._config["COINONE"]["AccessToken"] = self._access_token
+        self._config["COINONE"]["access_token"] = self._access_token
 
         with open(Global.USER_CONFIG_LOCATION, "w") as config_file:
             self._config.write(config_file)

@@ -31,16 +31,16 @@ class Scheduler:
     @staticmethod
     def read_mongodb_uri():
         config = configparser.ConfigParser()
-        config.read(Global.USER_CONFIG_LOCATION)
+        config.read(Global.DB_CONFIG_LOCATION)
 
         mongo = config["MONGO"]
-        host = mongo["Host"]
-        port = mongo.getint("Port")
-        use_auth = mongo.getboolean("UseAuth")
+        host = mongo["host"]
+        port = mongo.getint("port")
+        use_auth = mongo.getboolean("use_auth")
 
         if use_auth:
-            username = urllib.parse.quote_plus(mongo["Username"])
-            password = urllib.parse.quote_plus(mongo["Password"])
+            username = urllib.parse.quote_plus(mongo["username"])
+            password = urllib.parse.quote_plus(mongo["password"])
             return "mongodb://%s:%s@%s:%d" % (username, password, host, port)
         else:
             return "mongodb://%s:%d" % (host, port)
