@@ -40,7 +40,7 @@ from bson import Decimal128
 
 a = Decimal128("1000").to_decimal()
 b = Decimal128("1200").to_decimal()
-c = b - a
+c = abs(a - b)
 # - int(Decimal128(900))
 # print(type(a))
 print(c)
