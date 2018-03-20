@@ -25,7 +25,7 @@ class CoinoneApi(MarketApi):
 
         # set instance wide config
         self._config = configparser.ConfigParser()
-        self._config.read("config.ini")
+        self._config.read("config/conf_user.ini")
 
         # set initial access_token & secret_key
         self._access_token = self._config["COINONE"]["AccessToken"]

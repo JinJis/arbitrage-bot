@@ -30,7 +30,7 @@ class Scheduler:
     @staticmethod
     def read_mongodb_uri():
         config = configparser.ConfigParser()
-        config.read("config.ini")
+        config.read("config/conf_user.ini")
 
         mongo = config["MONGO"]
         host = mongo["Host"]

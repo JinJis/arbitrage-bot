@@ -14,7 +14,7 @@ class KorbitApi(MarketApi):
     def __init__(self):
         # set instance wide config
         self._config = configparser.ConfigParser()
-        self._config.read("config.ini")
+        self._config.read("config/conf_user.ini")
 
         # set initial access_token & secret_key
         self._client_id = self._config["KORBIT"]["ClientId"]
