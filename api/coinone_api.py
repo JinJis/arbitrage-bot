@@ -96,7 +96,7 @@ class CoinoneApi(MarketApi):
         return result
 
     # time_range can be "hour" or "day"
-    def get_filled_orders(self, currency: CoinoneCurrency, time_range: str):
+    def get_filled_orders(self, currency: CoinoneCurrency, time_range: str = "hour"):
         res = requests.get(self.BASE_URL + "/trades", params={
             "currency": currency.value,
             "period": time_range
