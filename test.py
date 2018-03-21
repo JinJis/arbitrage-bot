@@ -3,14 +3,15 @@ from api.currency import KorbitCurrency, CoinoneCurrency
 from api.coinone_api import CoinoneApi
 import time
 from bson import Decimal128
+from decimal import Decimal
 
-# korbit_api = KorbitApi()
-# print(korbit_api.get_balance())
+korbit_api = KorbitApi()
+print(korbit_api.get_balance())
 # print(korbit_api.get_open_orders(KorbitCurrency.ETH))
 # print(korbit_api.get_past_trades(KorbitCurrency.ETH))
 #
-# coinone_api = CoinoneApi()
-# print(coinone_api.get_balance())
+coinone_api = CoinoneApi()
+print(coinone_api.get_balance())
 # print(coinone_api.get_open_orders(CoinoneCurrency.ETH))
 # print(coinone_api.get_past_trades(CoinoneCurrency.ETH))
 
@@ -38,9 +39,14 @@ from bson import Decimal128
 # print(list3)
 # print(end-start)
 
-a = Decimal128("1000").to_decimal()
-b = Decimal128("1200").to_decimal()
-c = abs(a - b)
+# a = Decimal128("1000").to_decimal()
+# b = Decimal128("1200").to_decimal()
+# c = abs(a - b)
 # - int(Decimal128(900))
 # print(type(a))
-print(c)
+# print(c)
+
+# d = Decimal("123123")
+# f = Decimal128("123123")
+# if isinstance(f, Decimal):
+#     print("yeye")
