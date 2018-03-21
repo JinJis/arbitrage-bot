@@ -73,7 +73,7 @@ class Collector:
             self.co_ma_mb_col.insert_one(co_ma_mb)
 
     def collect_co_filled_orders(self):
-        co_filled_orders = self.co_api.get_filled_orders(self.co_currency, "hour")
+        co_filled_orders = self.co_api.get_filled_orders(self.co_currency)
         self.co_filled_orders_col.insert_many(co_filled_orders)
 
     def collect_kb_ticker(self, request_time: int):
@@ -109,5 +109,5 @@ class Collector:
             self.kb_ma_mb_col.insert_one(kb_ma_mb)
 
     def collect_kb_filled_orders(self):
-        kb_filled_orders = self.kb_api.get_filled_orders(self.kb_currency, "hour")
+        kb_filled_orders = self.kb_api.get_filled_orders(self.kb_currency)
         self.kb_filled_orders_col.insert_many(kb_filled_orders)

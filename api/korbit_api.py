@@ -100,7 +100,7 @@ class KorbitApi(MarketApi):
         return result
 
     # time_range can be "minute", "hour" or "day"
-    def get_filled_orders(self, currency: KorbitCurrency, time_range: str):
+    def get_filled_orders(self, currency: KorbitCurrency, time_range: str = "hour"):
         res = requests.get(self.BASE_URL + "/v1/transactions", params={
             "currency_pair": currency.value,
             "time": time_range
