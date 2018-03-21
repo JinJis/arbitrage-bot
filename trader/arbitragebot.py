@@ -52,16 +52,27 @@ class ArbitrageBot():
         print("reverse_mov_avg: %s, reverse_sigma: %s and current_reverse: %s" \
               % (reverse_mov_avg, reverse_sigma, current_reverse_spread))
 
-        if (current_new_spread >= new_mov_avg + new_sigma and current_new_spread > 0):
+        if (current_new_spread > 0):
             print("[new]")
-            a_market.buy(volume=0.03, bid_price=hoga_a["maxbid"])
-            b_market.sell(volume=0.03, ask_price=hoga_b["minask"])
-        elif (current_reverse_spread >= reverse_mov_avg + reverse_sigma and current_reverse_spread > 0):
+            b_market.buy(volume=0.03, bid_price=hoga_b["minask"])
+            a_market.sell(volume=0.03, ask_price=hoga_a["maxbid"])
+        elif (current_reverse_spread > 0):
             print("[reverse]")
-            b_market.buy(volume=0.03, bid_price=hoga_b["maxbid"])
-            a_market.sell(volume=0.03, ask_price=hoga_a["minask"])
+            a_market.buy(volume=0.03, bid_price=hoga_a(["minask"])
+            b_market.sell(volume=0.03, ask_price=hoga_b["maxbid"])
         else:
             print("[No]")
+
+        # if (current_new_spread >= new_mov_avg + new_sigma and current_new_spread > 0):
+        #     print("[new]")
+        #     a_market.buy(volume=0.03, bid_price=hoga_a["maxbid"])
+        #     b_market.sell(volume=0.03, ask_price=hoga_b["minask"])
+        # elif (current_reverse_spread >= reverse_mov_avg + reverse_sigma and current_reverse_spread > 0):
+        #     print("[reverse]")
+        #     b_market.buy(volume=0.03, bid_price=hoga_b["maxbid"])
+        #     a_market.sell(volume=0.03, ask_price=hoga_a["minask"])
+        # else:
+        #     print("[No]")
 
         #         total_krw = a_market.balance_total(hoga_a["maxbid"]) + b_market.balance_total(hoga_b["maxbid"])
         print("[Total krw: %s\n" % (self.total_krw_balance()))
@@ -89,8 +100,11 @@ class ArbitrageBot():
         reverse_spread = self.get_spread(b_hoga["maxbid"], b_market.fee, a_hoga["minask"], a_market.fee)
         return new_spread, reverse_spread, a_hoga, b_hoga
 
+    # def get_spread(self, maxbid, maxbid_fee, minask, minask_fee):
+    #     return -maxbid * (1 + maxbid_fee) + minask * (1 - minask_fee)
+
     def get_spread(self, maxbid, maxbid_fee, minask, minask_fee):
-        return -maxbid * (1 + maxbid_fee) + minask * (1 - minask_fee)
+        return -minask * (1 + minask_fee) + maxbid * (1 - maxbid_fee)
 
     def get_market_hoga(self, market_name, currency="eth_krw"):
         hoga = None
