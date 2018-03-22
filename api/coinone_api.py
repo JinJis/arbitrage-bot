@@ -9,7 +9,8 @@ import json
 import base64
 import hashlib
 import time
-from config.global_constants import Global
+from config.global_conf import Global
+from decimal import Decimal
 
 # in order to match the korbit orderbook item count
 orderbook_item_limit = 30
@@ -96,7 +97,7 @@ class CoinoneApi(MarketApi):
         return result
 
     # time_range can be "hour" or "day"
-    def get_filled_orders(self, currency: CoinoneCurrency, time_range: str):
+    def get_filled_orders(self, currency: CoinoneCurrency, time_range: str = "hour"):
         res = requests.get(self.BASE_URL + "/trades", params={
             "currency": currency.value,
             "period": time_range
@@ -165,7 +166,19 @@ class CoinoneApi(MarketApi):
         return res.json()
 
     def get_balance(self):
-        return self.coinone_post(self.BASE_URL + "/v2/account/balance")
+        res_json = self.coinone_post(self.BASE_URL + "/v2/account/balance")
+
+        result = dict()
+        for coin_name in Global.TARGET_COIN_FOR_BALANCE:
+            coin_balance = res_json[coin_name]
+            available = Decimal(coin_balance["avail"])
+            balance = Decimal(coin_balance["balance"])
+            result[coin_name] = {
+                "available": available,
+                "trade_in_use": (balance - available),
+                "balance": balance
+            }
+        return result
 
     def order_limit_buy(self, currency: CoinoneCurrency, price: int, amount: float):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_buy", payload={

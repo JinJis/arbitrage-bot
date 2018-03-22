@@ -6,7 +6,8 @@ import configparser
 from datetime import datetime
 import time
 from urllib import parse
-from config.global_constants import Global
+from config.global_conf import Global
+from decimal import Decimal
 
 
 class KorbitApi(MarketApi):
@@ -100,7 +101,7 @@ class KorbitApi(MarketApi):
         return result
 
     # time_range can be "minute", "hour" or "day"
-    def get_filled_orders(self, currency: KorbitCurrency, time_range: str):
+    def get_filled_orders(self, currency: KorbitCurrency, time_range: str = "hour"):
         res = requests.get(self.BASE_URL + "/v1/transactions", params={
             "currency_pair": currency.value,
             "time": time_range
@@ -173,7 +174,19 @@ class KorbitApi(MarketApi):
 
     def get_balance(self):
         res = requests.get(self.BASE_URL + "/v1/user/balances", headers=self.get_auth_header())
-        return res.json()
+        res_json = res.json()
+
+        result = dict()
+        for coin_name in Global.TARGET_COIN_FOR_BALANCE:
+            coin_balance = res_json[coin_name]
+            available = Decimal(coin_balance["available"])
+            trade_in_use = Decimal(coin_balance["trade_in_use"])
+            result[coin_name] = {
+                "available": available,
+                "trade_in_use": trade_in_use,
+                "balance": available + trade_in_use
+            }
+        return result
 
     def order_limit_buy(self, currency: KorbitCurrency, price: int, amount: float):
         res = requests.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
