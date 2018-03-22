@@ -10,7 +10,7 @@ class CoinoneMarketManager(MarketManager):
     MARKET_FEE = 0.001
 
     def __init__(self, should_db_logging=False):
-        super().__init__(should_db_logging, self.MARKET_FEE)
+        super().__init__(should_db_logging, self.MARKET_TAG, self.MARKET_FEE)
         self.coinone_api = CoinoneApi()
         self.balance = Balance(self.MARKET_TAG)
         self.update_balance()
@@ -29,7 +29,7 @@ class CoinoneMarketManager(MarketManager):
         self.record_order(new_order)
 
     def update_balance(self):
-        self.balance = self.coinone_api.get_balance()
+        self.balance.update(self.coinone_api.get_balance())
 
     def get_balance(self):
         return self.balance
@@ -42,3 +42,6 @@ class CoinoneMarketManager(MarketManager):
         # record balance
         self.update_balance()
         self.log_balance(self.balance)
+
+    def get_orderbook(self, currency: CoinoneCurrency):
+        return self.coinone_api.get_orderbook(currency)

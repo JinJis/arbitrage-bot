@@ -10,7 +10,7 @@ class KorbitMarketManager(MarketManager):
     MARKET_FEE = 0.0008
 
     def __init__(self, should_db_logging=False):
-        super().__init__(should_db_logging, self.MARKET_FEE)
+        super().__init__(should_db_logging, self.MARKET_TAG, self.MARKET_FEE)
         self.korbit_api = KorbitApi()
         self.balance = Balance(self.MARKET_TAG)
         self.update_balance()
@@ -42,3 +42,6 @@ class KorbitMarketManager(MarketManager):
         # record balance
         self.update_balance()
         self.log_balance(self.balance)
+
+    def get_orderbook(self, currency: KorbitCurrency):
+        return self.korbit_api.get_orderbook(currency)

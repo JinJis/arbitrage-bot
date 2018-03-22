@@ -5,11 +5,13 @@ from config.global_conf import Global
 from trader.market.order import Order
 from trader.market.balance import Balance
 import logging
+from trader.market.market import Market
 
 
 class MarketManager(ABC):
-    def __init__(self, should_db_logging, market_fee):
+    def __init__(self, should_db_logging: bool, market_tag: Market, market_fee: float):
         self.should_db_logging = should_db_logging
+        self.market_tag = market_tag
         self.market_fee = market_fee
         self.order_list = list()
 
@@ -49,3 +51,10 @@ class MarketManager(ABC):
 
     def calc_actual_coin_need_to_buy(self, amount):
         return amount / (1 - self.market_fee)
+
+    @abstractmethod
+    def get_orderbook(self, currency: Currency):
+        pass
+
+    def get_market_tag(self):
+        return self.market_tag.value

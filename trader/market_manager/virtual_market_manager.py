@@ -6,8 +6,8 @@ from trader.market.order import Market
 class VirtualMarketManager(MarketManager):
     MARKET_TAG = Market.VIRTUAL
 
-    def __init__(self, name, market_fee=0.001, krw_balance=100000, eth_balance=0.1, should_db_logging=False):
-        super().__init__(should_db_logging, market_fee)
+    def __init__(self, name: str, market_fee=0.001, krw_balance=100000, eth_balance=0.1, should_db_logging=False):
+        super().__init__(should_db_logging, self.MARKET_TAG, market_fee)
         self.name = name
         self.krw_balance = krw_balance
         self.eth_balance = eth_balance

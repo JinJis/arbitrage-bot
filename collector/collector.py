@@ -78,6 +78,7 @@ class Collector:
 
     def collect_kb_ticker(self, request_time: int):
         kb_ticker = None
+        # noinspection PyBroadException
         try:
             kb_ticker = self.kb_api.get_ticker(self.kb_currency)
         except Exception:
