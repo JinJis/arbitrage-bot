@@ -1,4 +1,4 @@
-from market import Market
+from .market import Market
 import numpy as np
 import json
 import urllib.request
@@ -46,20 +46,19 @@ class ArbitrageBot():
         reverse_mov_avg = self.reverse_spread_stack.mean()
         reverse_sigma = self.reverse_spread_stack.std()
 
-        current_new_spread, current_reverse_spread, hoga_a, hoga_b = self.get_current_spread(a_market_name,
-                                                                                             b_market_name)
+        current_new_spread, current_reverse_spread, depth_a, depth_b, hoga_a, hoga_b = self.get_current_spread(a_market_name, b_market_name)
         print("new_mov_avg: %s, new_sigma: %s and current_new: %s" % (new_mov_avg, new_sigma, current_new_spread))
         print("reverse_mov_avg: %s, reverse_sigma: %s and current_reverse: %s" \
               % (reverse_mov_avg, reverse_sigma, current_reverse_spread))
 
-        if (current_new_spread >= new_mov_avg + new_sigma and current_new_spread > 0):
+        if current_new_spread > 0:
             print("[new]")
-            a_market.buy(volume=0.03, bid_price=hoga_a["maxbid"])
-            b_market.sell(volume=0.03, ask_price=hoga_b["minask"])
-        elif (current_reverse_spread >= reverse_mov_avg + reverse_sigma and current_reverse_spread > 0):
+            b_market.buy(volume=0.03, bid_price=hoga_b["minask"])
+            a_market.sell(volume=0.03, ask_price=hoga_a["maxbid"])
+        elif current_reverse_spread > 0:
             print("[reverse]")
-            b_market.buy(volume=0.03, bid_price=hoga_b["maxbid"])
-            a_market.sell(volume=0.03, ask_price=hoga_a["minask"])
+            a_market.buy(volume=0.03, bid_price=hoga_a["minask"])
+            b_market.sell(volume=0.03, ask_price=hoga_b["maxbid"])
         else:
             print("[No]")
 
@@ -81,18 +80,19 @@ class ArbitrageBot():
         time.sleep(3)
         a_market = self.markets[a_market_name]
         b_market = self.markets[b_market_name]
-        a_hoga = self.get_market_hoga(a_market_name)
-        b_hoga = self.get_market_hoga(b_market_name)
+        a_depth, a_hoga = self.get_depth_hoga(a_market_name)
+        a_depth, b_hoga = self.get_depth_hoga(b_market_name)
         print("[%s] maxbid: %s, minask: %s" % (a_market_name, a_hoga["maxbid"], a_hoga["minask"]))
         print("[%s] maxbid: %s, minask: %s" % (b_market_name, b_hoga["maxbid"], b_hoga["minask"]))
         new_spread = self.get_spread(a_hoga["maxbid"], a_market.fee, b_hoga["minask"], b_market.fee)
         reverse_spread = self.get_spread(b_hoga["maxbid"], b_market.fee, a_hoga["minask"], a_market.fee)
-        return new_spread, reverse_spread, a_hoga, b_hoga
+        return new_spread, reverse_spread, a_depth, b_depth, a_hoga, b_hoga
 
     def get_spread(self, maxbid, maxbid_fee, minask, minask_fee):
-        return -maxbid * (1 + maxbid_fee) + minask * (1 - minask_fee)
+        return -minask * (1 + minask_fee) + maxbid * (1 - maxbid_fee)
 
-    def get_market_hoga(self, market_name, currency="eth_krw"):
+    def get_depth_hoga(self, market_name, currency="eth_krw"):
+        depth = None
         hoga = None
         if market_name == "korbit":
             depth = self.get_depth_api("https://api.korbit.co.kr/v1/orderbook?currency_pair=%s" % currency)
@@ -106,8 +106,71 @@ class ArbitrageBot():
             depth = self.get_depth_api("https://api.coinone.co.kr/orderbook?currency=%s" % currency)
             hoga = {"minask": np.array([ask["price"] for ask in depth["ask"]]).astype(int).min(), \
                     "maxbid": np.array([bid["price"] for bid in depth["bid"]]).astype(int).max()}
-        return hoga
+        return depth, hoga
 
+    def get_profit_amount(self, buy_idx, sell_idx, buy_depth, sell_depth, buy_fee, sell_fee):
+        if self.get_spread(sell_depth["bids"][sell_idx]["price"], sell_fee, buy_depth["asks"][buy_idx]["price"], buy_fee) <= 0:
+            return 0, 0
+
+        max_amount_buy = 0
+        for i in range(buy_idx + 1):
+            max_amount_buy += buy_depth["asks"][i]["amount"]
+        max_amount_sell = 0
+        for j in range(sell_idx + 1):
+            max_amount_sell += sell_depth["bids"][j]["amount"]
+        max_amount = min(max_amount_buy, max_amount_sell)
+
+        buy_total = 0
+        avg_buyprice = 0
+        for i in range(buy_idx + 1):
+            price = buy_depth["asks"][i]["price"]
+            amount = min(max_amount, buy_total + buy_depth["asks"][i]["amount"]) - buy_total
+            if amount <= 0:
+                break
+            buy_total += amount
+            if avg_buyprice == 0 or buy_total == 0:
+                avg_buyprice = price
+            else:
+                avg_buyprice = (avg_buyprice * (buy_total - amount) + price * amount) / buy_total
+
+        sell_total = 0
+        avg_sellprice = 0
+        for j in range(sell_idx + 1):
+            price = sell_depth["bids"][j]["price"]
+            amount = min(max_amount, sell_total + sell_depth["bids"][j]["amount"]) - sell_total
+            if amount <= 0:
+                break
+            sell_total += amount
+            if avg_sellprice == 0 or sell_total == 0:
+                avg_sellprice = price
+            else:
+                avg_sellprice = (avg_sellprice * (sell_total - amount) + price * amount) / sell_total
+        
+        profit = sell_total * avg_sellprice * (1 - sell_fee) - buy_total * avg_buyprice * (1 + buy_fee)
+        return profit, max_amount
+
+    def get_max_depth_idx(self, buy_depth, sell_depth, buy_fee, sell_fee):
+        buy_idx, sell_idx = 0, 0
+        while self.get_spread(sell_depth["bids"][0]["price"], sell_fee, buy_depth["asks"][buy_idx]["price"], buy_fee) > 0:
+            buy_idx += 1
+        while self.get_spread(sell_depth["bids"][sell_idx]["price"], sell_fee, buy_depth["asks"][0]["price"], buy_fee) > 0:
+            sell_idx += 1
+        return buy_idx, sell_idx
+
+    def get_idx_amount(self, buy_depth, sell_depth, buy_fee, sell_fee):
+        max_buy_idx, max_sell_idx = self.get_max_depth_idx(buy_depth, sell_depth, buy_fee, sell_fee)
+        max_amount = 0
+        best_profit = 0
+        best_buy_idx, best_sell_idx = 0, 0
+        for buy_idx in range(max_buy_idx + 1):
+            for sell_idx in range(max_sell_idx + 1):
+                profit, amount = self.get_profit_amount(buy_idx, sell_idx, buy_depth, sell_depth, buy_fee, sell_fee)
+                if profit >= 0 and profit >= best_profit:
+                    best_profit = profit
+                    max_amount = amount
+                    best_buy_idx, best_sell_idx = buy_idx, sell_idx
+        return best_buy_idx, best_sell_idx, max_amount
+    
     def get_depth_api(self, url):
         req = urllib.request.Request(url, None, headers={
             "Content-Type": "application/x-www-form-urlencoded",
@@ -118,7 +181,6 @@ class ArbitrageBot():
             return None
         depth = json.loads(res.read().decode('utf8'))
         return depth
-
 
 t = ArbitrageBot()
 t.test()
