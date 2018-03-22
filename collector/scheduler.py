@@ -11,9 +11,7 @@ from config.global_conf import Global
 class Scheduler:
     def __init__(self):
         # init root logger
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s",
-                            datefmt="%Y-%m-%d %H:%M:%S",
-                            stream=sys.stdout)
+        Global.configure_default_root_logging()
         # set the log level for the schedule
         # in order not to display any extraneous log
         logging.getLogger("schedule").setLevel(logging.CRITICAL)

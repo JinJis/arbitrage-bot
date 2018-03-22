@@ -1,5 +1,7 @@
 import configparser
 import urllib.parse
+import logging
+import sys
 
 
 class Global:
@@ -23,3 +25,9 @@ class Global:
             return "mongodb://%s:%s@%s:%d" % (username, password, host, port)
         else:
             return "mongodb://%s:%d" % (host, port)
+
+    @staticmethod
+    def configure_default_root_logging():
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s",
+                            datefmt="%Y-%m-%d %H:%M:%S",
+                            stream=sys.stdout)

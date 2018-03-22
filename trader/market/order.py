@@ -1,5 +1,6 @@
 from enum import Enum
 from bson import Decimal128
+from .market import Market
 
 
 class OrderType(Enum):
@@ -7,12 +8,6 @@ class OrderType(Enum):
     LIMIT_SELL = "limit_sell"
     MARKET_BUY = "market_buy"
     MARKET_SELL = "market_sell"
-
-
-class Market(Enum):
-    VIRTUAL = "virtual"
-    COINONE = "coinone"
-    KORBIT = "korbit"
 
 
 class Order:
@@ -26,6 +21,15 @@ class Order:
         # TODO: request for filled orders until the order is completely filled
         self.is_filled = False
         self.filled_orders = list()
+
+    def __repr__(self):
+        return "<Order %s>: %s in %s (price %d, amount %f)" % (
+            self.order_id,
+            self.order_type.value,
+            self.market.value,
+            self.price,
+            self.amount
+        )
 
     def update(self):
         if self.market == Market.VIRTUAL:
@@ -51,6 +55,6 @@ class Order:
             "market": self.market.value,
             "order": self.order_type.value,
             "order_id": self.order_id,
-            "price": Decimal128(self.price),
-            "amount": Decimal128(self.amount)
+            "price": Decimal128(str(self.price)),
+            "amount": Decimal128(str(self.amount))
         }

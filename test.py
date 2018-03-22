@@ -4,14 +4,15 @@ from api.coinone_api import CoinoneApi
 import time
 from bson import Decimal128
 from decimal import Decimal
+from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
-korbit_api = KorbitApi()
-print(korbit_api.get_balance())
+# korbit_api = KorbitApi()
+# print(korbit_api.get_balance())
 # print(korbit_api.get_open_orders(KorbitCurrency.ETH))
 # print(korbit_api.get_past_trades(KorbitCurrency.ETH))
 #
-coinone_api = CoinoneApi()
-print(coinone_api.get_balance())
+# coinone_api = CoinoneApi()
+# print(coinone_api.get_balance())
 # print(coinone_api.get_open_orders(CoinoneCurrency.ETH))
 # print(coinone_api.get_past_trades(CoinoneCurrency.ETH))
 
@@ -50,3 +51,22 @@ print(coinone_api.get_balance())
 # f = Decimal128("123123")
 # if isinstance(f, Decimal):
 #     print("yeye")
+
+# Global.configure_default_root_logging()
+# logging.info(Balance(Market.KORBIT, {
+#     "krw": {
+#         "available": Decimal(128),
+#         "trade_in_use": Decimal(300),
+#         "balance": Decimal(2.8898745)
+#     },
+#     "eth": {
+#         "available": Decimal(128),
+#         "trade_in_use": Decimal(300),
+#         "balance": Decimal(2.889874)
+#     }
+# }))
+
+a = VirtualMarketManager("a", 0.03)
+print(a.market_fee)
+b = VirtualMarketManager("b", 0.08)
+print(b.market_fee)
