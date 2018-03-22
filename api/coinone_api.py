@@ -9,7 +9,7 @@ import json
 import base64
 import hashlib
 import time
-from config.global_constants import Global
+from config.global_conf import Global
 from decimal import Decimal
 
 # in order to match the korbit orderbook item count

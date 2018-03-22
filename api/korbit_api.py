@@ -6,7 +6,7 @@ import configparser
 from datetime import datetime
 import time
 from urllib import parse
-from config.global_constants import Global
+from config.global_conf import Global
 from decimal import Decimal
 
 

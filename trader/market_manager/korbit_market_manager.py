@@ -1,12 +1,15 @@
 from .market_manager import MarketManager
 from api.currency import KorbitCurrency
 from api.korbit_api import KorbitApi
+from .order import Order, OrderType, Market
 
 
 class KorbitMarketManager(MarketManager):
+    MARKET_TAG = Market.KORBIT
     MARKET_FEE = 0.0008
 
     def __init__(self):
+        super().__init__()
         self.korbit_api = KorbitApi()
         self.balance = None
         self.update_balance()

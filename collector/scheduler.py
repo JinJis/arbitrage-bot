@@ -2,12 +2,10 @@ from .collector import Collector
 import threading
 import schedule
 import time
-import urllib.parse
 import signal
 import sys
-import configparser
 import logging
-from config.global_constants import Global
+from config.global_conf import Global
 
 
 class Scheduler:
@@ -21,29 +19,12 @@ class Scheduler:
         logging.getLogger("schedule").setLevel(logging.CRITICAL)
 
         # init collector
-        mongodb_uri = self.read_mongodb_uri()
+        mongodb_uri = Global.read_mongodb_uri()
         # currency param should be a lower-cased currency symbol listed in api.currency
         self.collector = Collector(mongodb_uri, "eth")
 
         # add SIGTERM handler
         signal.signal(signal.SIGTERM, self.handle_sigterm)
-
-    @staticmethod
-    def read_mongodb_uri():
-        config = configparser.ConfigParser()
-        config.read(Global.DB_CONFIG_LOCATION)
-
-        mongo = config["MONGO"]
-        host = mongo["host"]
-        port = mongo.getint("port")
-        use_auth = mongo.getboolean("use_auth")
-
-        if use_auth:
-            username = urllib.parse.quote_plus(mongo["username"])
-            password = urllib.parse.quote_plus(mongo["password"])
-            return "mongodb://%s:%s@%s:%d" % (username, password, host, port)
-        else:
-            return "mongodb://%s:%d" % (host, port)
 
     @staticmethod
     def run_threaded(job_func, args=()):
