@@ -1,31 +1,33 @@
 from .market import Market
+from config.global_conf import Global
 
 
 class Balance:
     def __init__(self, market: Market, balance_dict: dict = None):
         self.market = market
-        self._balance_dict = balance_dict
+        self._balance_dict = self.filter_target_coins(balance_dict)
 
     def update(self, balance_dict: dict):
-        self._balance_dict = balance_dict
+        self._balance_dict = self.filter_target_coins(balance_dict)
 
     def __repr__(self):
-        krw_balance = self._balance_dict["krw"]
-        eth_balance = self._balance_dict["eth"]
+        repr_str = "<%s Balance>:" % self.market.value
 
-        return "<%s Balance>:\n" \
-               "krw { %f available, %f trade_in_use, %f in total }\n" \
-               "eth { %f available, %f trade_in_use, %f in total }" % (
-                   self.market.value,
-                   krw_balance["available"],
-                   krw_balance["trade_in_use"],
-                   krw_balance["balance"],
-                   eth_balance["available"],
-                   eth_balance["trade_in_use"],
-                   eth_balance["balance"],
-               )
+        for coin in self._balance_dict.keys():
+            val = self._balance_dict[coin]
+            repr_str += "\n %s { %f available, %f trade_in_use, %f in total }" % \
+                        (coin, val["available"], val["trade_in_use"], val["balance"])
+
+        return repr_str
 
     def to_dict(self):
         clone = dict(self._balance_dict)
         clone["market"] = self.market.value
         return clone
+
+    @staticmethod
+    def filter_target_coins(balance_dict: dict):
+        result = dict()
+        for coin in Global.COIN_FILTER_FOR_BALANCE:
+            result[coin] = balance_dict[coin]
+        return result

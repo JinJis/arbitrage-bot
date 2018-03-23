@@ -177,7 +177,7 @@ class KorbitApi(MarketApi):
         res_json = res.json()
 
         result = dict()
-        for coin_name in Global.TARGET_COIN_FOR_BALANCE:
+        for coin_name in res_json.keys:
             coin_balance = res_json[coin_name]
             available = Decimal(coin_balance["available"])
             trade_in_use = Decimal(coin_balance["trade_in_use"])

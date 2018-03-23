@@ -169,7 +169,7 @@ class CoinoneApi(MarketApi):
         res_json = self.coinone_post(self.BASE_URL + "/v2/account/balance")
 
         result = dict()
-        for coin_name in Global.TARGET_COIN_FOR_BALANCE:
+        for coin_name in res_json.keys():
             coin_balance = res_json[coin_name]
             available = Decimal(coin_balance["avail"])
             balance = Decimal(coin_balance["balance"])

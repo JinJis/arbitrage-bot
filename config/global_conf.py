@@ -7,7 +7,7 @@ import sys
 class Global:
     USER_CONFIG_LOCATION = "config/conf_user.ini"
     DB_CONFIG_LOCATION = "config/conf_db.ini"
-    TARGET_COIN_FOR_BALANCE = ("btc", "eth", "krw")
+    COIN_FILTER_FOR_BALANCE = ("eth", "krw")
 
     @staticmethod
     def read_mongodb_uri():

@@ -45,3 +45,7 @@ class KorbitMarketManager(MarketManager):
 
     def get_orderbook(self, currency: KorbitCurrency):
         return self.korbit_api.get_orderbook(currency)
+
+    @staticmethod
+    def get_market_currency(target_currency: str):
+        return KorbitCurrency[target_currency.upper()]

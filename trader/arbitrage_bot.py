@@ -9,8 +9,12 @@ from api.currency import Currency, KorbitCurrency, CoinoneCurrency
 from config.global_conf import Global
 
 """
+!!!!!IMPORTANT NOTE!!!!!
+
 [NEW Spread] => buy in mm1, sell in mm2
 [REVERSE Spread] => buy in mm2, sell in mm1
+
+MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 """
 
 
@@ -37,8 +41,8 @@ class ArbitrageBot:
 
     def execute_no_risk(self, mm1: MarketManager, mm2: MarketManager):
         # get currency for each market
-        mm1_currency = ArbitrageBot.get_market_currency(mm1, self.TARGET_CURRENCY)
-        mm2_currency = ArbitrageBot.get_market_currency(mm2, self.TARGET_CURRENCY)
+        mm1_currency = mm1.get_market_currency(self.TARGET_CURRENCY)
+        mm2_currency = mm2.get_market_currency(self.TARGET_CURRENCY)
 
         while True:
             # get current spread
@@ -168,17 +172,6 @@ class ArbitrageBot:
     @staticmethod
     def calc_spread(buy_price, buy_fee, sell_price, sell_fee):
         return (-1) * buy_price / (1 - buy_fee) + (+1) * sell_price * (1 - sell_fee)
-
-    @staticmethod
-    def get_market_currency(mm: MarketManager, target_currency: str):
-        market_tag = mm.get_market_tag()
-        if market_tag is Market.COINONE:
-            currency = CoinoneCurrency[target_currency.upper()]
-        elif market_tag is Market.KORBIT:
-            currency = KorbitCurrency[target_currency.upper()]
-        else:
-            raise Exception("Invalid market tag!")
-        return currency
 
     @staticmethod
     def get_price_of_minask_maxbid(orderbook: dict):

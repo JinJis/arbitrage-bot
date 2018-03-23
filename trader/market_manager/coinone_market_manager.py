@@ -45,3 +45,7 @@ class CoinoneMarketManager(MarketManager):
 
     def get_orderbook(self, currency: CoinoneCurrency):
         return self.coinone_api.get_orderbook(currency)
+
+    @staticmethod
+    def get_market_currency(target_currency: str):
+        return CoinoneCurrency[target_currency.upper()]

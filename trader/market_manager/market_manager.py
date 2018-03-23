@@ -58,3 +58,8 @@ class MarketManager(ABC):
 
     def get_market_tag(self):
         return self.market_tag.value
+
+    @staticmethod
+    @abstractmethod
+    def get_market_currency(target_currency: str):
+        pass

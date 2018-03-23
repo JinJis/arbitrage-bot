@@ -4,8 +4,7 @@ from api.coinone_api import CoinoneApi
 import time
 from bson import Decimal128
 from decimal import Decimal
-from trader.market_manager.virtual_market_manager import VirtualMarketManager
-
+# from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 # korbit_api = KorbitApi()
 # print(korbit_api.get_balance())
@@ -72,9 +71,4 @@ from trader.market_manager.virtual_market_manager import VirtualMarketManager
 # b = VirtualMarketManager("b", 0.08)
 # print(b.market_fee)
 
-def yoyo(currency: Currency):
-    print(currency["ETH"])
-
-
-test = CoinoneCurrency()
-yoyo(test)
+print(CoinoneCurrency.ETH.value)
