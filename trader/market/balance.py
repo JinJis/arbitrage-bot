@@ -5,7 +5,8 @@ from config.global_conf import Global
 class Balance:
     def __init__(self, market: Market, balance_dict: dict = None):
         self.market = market
-        self._balance_dict = self.filter_target_coins(balance_dict)
+        if balance_dict is not None:
+            self._balance_dict = self.filter_target_coins(balance_dict)
 
     def update(self, balance_dict: dict):
         self._balance_dict = self.filter_target_coins(balance_dict)

@@ -70,5 +70,54 @@ from decimal import Decimal
 # print(a.market_fee)
 # b = VirtualMarketManager("b", 0.08)
 # print(b.market_fee)
+# print(CoinoneCurrency.ETH.value)
 
-print(CoinoneCurrency.ETH.value)
+from trader.market_manager.korbit_market_manager import KorbitMarketManager
+from trader.market_manager.coinone_market_manager import CoinoneMarketManager
+import logging
+from config.global_conf import Global
+
+# def get_price_of_minask_maxbid(orderbook: dict):
+#     return orderbook["asks"][0]["price"].to_decimal(), orderbook["bids"][0]["price"].to_decimal()
+#
+#
+# Global.configure_default_root_logging()
+
+# logging.info(korbit_api.get_order_info(KorbitCurrency.ETH, "15739205"))
+
+
+# korbit_mm = KorbitMarketManager()
+# korbit_orderbook = korbit_mm.get_orderbook(KorbitCurrency.ETH)
+# korbit_minask, korbit_maxbid = get_price_of_minask_maxbid(korbit_orderbook)
+# logging.info("korbit minask: %s, maxbid: %s" % (korbit_minask, korbit_maxbid))
+#
+# korbit_avg = (korbit_maxbid + korbit_minask) / 2
+# korbit_mm.order_sell(KorbitCurrency.ETH, int(korbit_avg // 100 * 100), 0.01)
+#
+# coinone_mm = CoinoneMarketManager()
+# coinone_orderbook = coinone_mm.get_orderbook(CoinoneCurrency.ETH)
+# coinone_minask, coinone_maxbid = get_price_of_minask_maxbid(coinone_orderbook)
+# logging.info("coinone minask: %s, maxbid: %s" % (coinone_minask, coinone_maxbid))
+#
+# coinone_avg = (coinone_maxbid + coinone_minask) / 2
+# coinone_mm.order_sell(CoinoneCurrency.ETH, int(coinone_avg // 100 * 100), 0.01)
+
+
+# korbit_api = KorbitApi()
+# coinone_api = CoinoneApi()
+
+# logging.info(korbit_api.cancel_order(KorbitCurrency.ETH, "15742897"))
+# logging.info(
+#     coinone_api.cancel_order(CoinoneCurrency.ETH, 583700, 0.020000, "c01a9891-84ca-4e61-bb61-cfe3b7adb288", False))
+
+# while True:
+# logging.info(korbit_api.get_past_trades(KorbitCurrency.ETH))
+# logging.info(coinone_api.get_open_orders(CoinoneCurrency.ETH))
+# logging.info(korbit_mm.get_balance())
+# logging.info(coinone_mm.get_balance())
+# time.sleep(1)
+
+from trader.arbitrage_bot import ArbitrageBot
+
+ab = ArbitrageBot()
+ab.run()

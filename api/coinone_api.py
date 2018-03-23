@@ -171,13 +171,19 @@ class CoinoneApi(MarketApi):
         result = dict()
         for coin_name in res_json.keys():
             coin_balance = res_json[coin_name]
-            available = Decimal(coin_balance["avail"])
-            balance = Decimal(coin_balance["balance"])
-            result[coin_name] = {
-                "available": available,
-                "trade_in_use": (balance - available),
-                "balance": balance
-            }
+            if not isinstance(coin_balance, dict):
+                continue
+            _a = coin_balance.get("avail")
+            _b = coin_balance.get("balance")
+
+            if _a is not None and _b is not None:
+                available = Decimal(_a)
+                balance = Decimal(_b)
+                result[coin_name] = {
+                    "available": available,
+                    "trade_in_use": (balance - available),
+                    "balance": balance
+                }
         return result
 
     def order_limit_buy(self, currency: CoinoneCurrency, price: int, amount: float):

@@ -4,8 +4,8 @@ import numpy as np
 from .market_manager.market_manager import MarketManager
 from .market_manager.coinone_market_manager import CoinoneMarketManager
 from .market_manager.korbit_market_manager import KorbitMarketManager
-from .market.market import Market
-from api.currency import Currency, KorbitCurrency, CoinoneCurrency
+from .market_manager.virtual_market_manager import VirtualMarketManager, VirtualMarketApiType
+from api.currency import Currency
 from config.global_conf import Global
 
 """
@@ -22,13 +22,15 @@ class ArbitrageBot:
     TARGET_CURRENCY = "eth"
     BOLLINGER_TIME_STEP = 20
     Z_SIGMA = 1
-    COIN_TRADING_UNIT = 0.01
+    COIN_TRADING_UNIT = 0.02
     TRADE_INTERVAL_IN_SEC = 3
 
     def __init__(self):
         # init market managers
-        self.coinone_mm = CoinoneMarketManager()
-        self.korbit_mm = KorbitMarketManager()
+        # self.coinone_mm = CoinoneMarketManager()
+        # self.korbit_mm = KorbitMarketManager()
+        self.v_coinone_mm = VirtualMarketManager("abc", VirtualMarketApiType.COINONE)
+        self.v_korbit_mm = VirtualMarketManager("def", VirtualMarketApiType.KORBIT)
 
         # init stack
         self.new_spread_stack = np.array([], dtype=np.float32)
@@ -37,9 +39,14 @@ class ArbitrageBot:
 
     def run(self):
         Global.configure_default_root_logging()
-        self.execute_no_risk(self.coinone_mm, self.korbit_mm)
+        self.execute_no_risk(self.v_coinone_mm, self.v_korbit_mm)
 
     def execute_no_risk(self, mm1: MarketManager, mm2: MarketManager):
+        # log initial balance
+        logging.warning("[INITIAL BALANCE]")
+        logging.warning(mm1.get_balance())
+        logging.warning(mm2.get_balance())
+
         # get currency for each market
         mm1_currency = mm1.get_market_currency(self.TARGET_CURRENCY)
         mm2_currency = mm2.get_market_currency(self.TARGET_CURRENCY)
@@ -71,18 +78,27 @@ class ArbitrageBot:
             mm2.update_balance()
 
             # log balance
-            logging.warning(
-                "[BALANCE] %d KRW in %s, %d KRW in %s" %
-                (mm1.get_market_tag().value, mm1.get_balance(), mm2.get_market_tag().value, mm2.get_balance())
-            )
+            logging.warning("[BALANCE]")
+            mm1_balance = mm1.get_balance()
+            mm2_balance = mm2.get_balance()
+            logging.warning(mm1_balance)
+            logging.warning(mm2_balance)
+
+            mm1_krw_balance = mm1.get_balance().to_dict()["krw"]
+            mm2_krw_balance = mm2.get_balance().to_dict()["krw"]
+
+            logging.warning("[TOTAL KRW]: available - %d KRW, trade_in_use - %d KRW, balance - %d KRW" %
+                            (mm1_krw_balance["available"] + mm2_krw_balance["available"],
+                             mm1_krw_balance["trade_in_use"] + mm2_krw_balance["trade_in_use"],
+                             mm1_krw_balance["balance"] + mm2_krw_balance["balance"]))
 
             # sleep for interval
             time.sleep(self.TRADE_INTERVAL_IN_SEC)
 
     def execute_bollinger(self, mm1: MarketManager, mm2: MarketManager, stat_size):
         # get currency for each market
-        mm1_currency = ArbitrageBot.get_market_currency(mm1, self.TARGET_CURRENCY)
-        mm2_currency = ArbitrageBot.get_market_currency(mm2, self.TARGET_CURRENCY)
+        mm1_currency = mm1.get_market_currency(self.TARGET_CURRENCY)
+        mm2_currency = mm2.get_market_currency(self.TARGET_CURRENCY)
 
         # collect spread stack until the stack fills the stat_size
         while self.new_spread_stack.size < stat_size:
@@ -129,10 +145,9 @@ class ArbitrageBot:
             mm2.update_balance()
 
             # log balance
-            logging.warning(
-                "[BALANCE] %d KRW in %s, %d KRW in %s" %
-                (mm1.get_market_tag().value, mm1.get_balance(), mm2.get_market_tag().value, mm2.get_balance())
-            )
+            logging.warning("[BALANCE]")
+            logging.warning(mm1.get_balance())
+            logging.warning(mm2.get_balance())
 
             # remove the earliest spread in the stack
             self.new_spread_stack = np.delete(self.new_spread_stack, 0)
@@ -158,19 +173,21 @@ class ArbitrageBot:
         mm1_orderbook = mm1.get_orderbook(mm1_currency)
         mm1_minask_price, mm1_maxbid_price = ArbitrageBot.get_price_of_minask_maxbid(mm1_orderbook)
 
-        mm2_orderbook = mm1.get_orderbook(mm2_currency)
+        mm2_orderbook = mm2.get_orderbook(mm2_currency)
         mm2_minask_price, mm2_maxbid_price = ArbitrageBot.get_price_of_minask_maxbid(mm2_orderbook)
 
-        logging.info("[%s] minask: %s, maxbid: %s" % (mm1.get_market_tag().value, mm1_minask_price, mm1_maxbid_price))
-        logging.info("[%s] minask: %s, maxbid: %s" % (mm2.get_market_tag().value, mm2_minask_price, mm2_maxbid_price))
+        logging.info("[%s] minask: %s, maxbid: %s" % (mm1.get_market_tag(), mm1_minask_price, mm1_maxbid_price))
+        logging.info("[%s] minask: %s, maxbid: %s" % (mm2.get_market_tag(), mm2_minask_price, mm2_maxbid_price))
 
-        new_spread = ArbitrageBot.calc_spread(mm1_minask_price, mm1.market_fee, mm2_maxbid_price, mm2.market_fee)
-        reverse_spread = ArbitrageBot.calc_spread(mm2_minask_price, mm2.market_fee, mm1_maxbid_price, mm1.market_fee)
+        new_spread = ArbitrageBot.calc_spread(int(mm1_minask_price), mm1.market_fee,
+                                              int(mm2_maxbid_price), mm2.market_fee)
+        reverse_spread = ArbitrageBot.calc_spread(int(mm2_minask_price), mm2.market_fee,
+                                                  int(mm1_maxbid_price), mm1.market_fee)
 
         return new_spread, reverse_spread, mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price
 
     @staticmethod
-    def calc_spread(buy_price, buy_fee, sell_price, sell_fee):
+    def calc_spread(buy_price: int, buy_fee: float, sell_price: int, sell_fee: float):
         return (-1) * buy_price / (1 - buy_fee) + (+1) * sell_price * (1 - sell_fee)
 
     @staticmethod

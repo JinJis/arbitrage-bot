@@ -3,6 +3,7 @@ from api.currency import KorbitCurrency
 from api.korbit_api import KorbitApi
 from trader.market.order import Order, OrderType, Market
 from trader.market.balance import Balance
+import logging
 
 
 class KorbitMarketManager(MarketManager):
@@ -16,14 +17,16 @@ class KorbitMarketManager(MarketManager):
         self.update_balance()
 
     def order_buy(self, currency: KorbitCurrency, price: int, amount: float):
-        actual_amount = self.calc_actual_coin_need_to_buy(amount)
+        actual_amount = round(self.calc_actual_coin_need_to_buy(amount), 4)
         res_json = self.korbit_api.order_limit_buy(currency, price, actual_amount)
+        logging.info(res_json)
         order_id = res_json["orderId"]
         new_order = Order(self.MARKET_TAG, OrderType.LIMIT_BUY, order_id, price, actual_amount)
         self.record_order(new_order)
 
     def order_sell(self, currency: KorbitCurrency, price: int, amount: float):
         res_json = self.korbit_api.order_limit_sell(currency, price, amount)
+        logging.info(res_json)
         order_id = res_json["orderId"]
         new_order = Order(self.MARKET_TAG, OrderType.LIMIT_SELL, order_id, price, amount)
         self.record_order(new_order)

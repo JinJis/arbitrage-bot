@@ -63,7 +63,7 @@ class VirtualMarketManager(MarketManager):
 
     def get_orderbook(self, currency: VirtualCurrency):
         target_api_currency = self._convert_to_target_api_currency(currency)
-        self.api.get_orderbook(target_api_currency)
+        return self.api.get_orderbook(target_api_currency)
 
     @staticmethod
     def get_market_currency(target_currency: str):

@@ -177,7 +177,7 @@ class KorbitApi(MarketApi):
         res_json = res.json()
 
         result = dict()
-        for coin_name in res_json.keys:
+        for coin_name in res_json.keys():
             coin_balance = res_json[coin_name]
             available = Decimal(coin_balance["available"])
             trade_in_use = Decimal(coin_balance["trade_in_use"])
@@ -226,19 +226,12 @@ class KorbitApi(MarketApi):
         })
         return res.json()
 
-    def cancel_order(self, currency: KorbitCurrency, order_ids: list):
-        data = {
+    def cancel_order(self, currency: KorbitCurrency, order_id: str):
+        res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
             "currency_pair": currency.value,
-            "nonce": self.get_nonce()
-        }
-        encoded_data = parse.urlencode(data)
-
-        # korbit supports cancelling multiple orders
-        # append all order ids to encoded data
-        for order_id in order_ids:
-            encoded_data += "&id=%s" % str(order_id)
-
-        res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data=encoded_data)
+            "nonce": self.get_nonce(),
+            "id": order_id
+        })
         return res.json()
 
     def get_order_info(self, currency: KorbitCurrency, order_id: str):
