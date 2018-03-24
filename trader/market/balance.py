@@ -32,3 +32,9 @@ class Balance:
         for coin in Global.COIN_FILTER_FOR_BALANCE:
             result[coin] = balance_dict[coin]
         return result
+
+    def get_available_krw(self):
+        return self._balance_dict["krw"]["available"]
+
+    def get_available_eth(self):
+        return self._balance_dict["eth"]["available"]
