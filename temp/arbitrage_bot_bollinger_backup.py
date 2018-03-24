@@ -20,10 +20,12 @@ MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 
 class ArbitrageBot:
     TARGET_CURRENCY = "eth"
-    BOLLINGER_TIME_STEP = 20
-    Z_SIGMA = 1
     COIN_TRADING_UNIT = 0.02
     TRADE_INTERVAL_IN_SEC = 3
+
+    # bollinger related constant
+    BOLLINGER_TIME_STEP = 20
+    Z_SIGMA = 1
 
     def __init__(self):
         # init market managers
@@ -39,7 +41,7 @@ class ArbitrageBot:
 
     def run(self):
         Global.configure_default_root_logging()
-        self.execute_bollinger(self.v_coinone_mm, self.v_korbit_mm, 20)
+        self.execute_bollinger(self.v_coinone_mm, self.v_korbit_mm, self.BOLLINGER_TIME_STEP)
 
     def execute_bollinger(self, mm1: MarketManager, mm2: MarketManager, stat_size):
         # get currency for each market

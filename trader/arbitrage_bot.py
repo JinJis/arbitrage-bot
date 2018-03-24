@@ -20,8 +20,6 @@ MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 
 class ArbitrageBot:
     TARGET_CURRENCY = "eth"
-    BOLLINGER_TIME_STEP = 20
-    Z_SIGMA = 1
     COIN_TRADING_UNIT = 0.02
     TRADE_INTERVAL_IN_SEC = 3
 
@@ -96,3 +94,5 @@ class ArbitrageBot:
 
             # sleep for interval
             time.sleep(self.TRADE_INTERVAL_IN_SEC)
+
+ArbitrageBot().run()
