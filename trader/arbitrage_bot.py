@@ -20,8 +20,9 @@ MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 
 class ArbitrageBot:
     TARGET_CURRENCY = "eth"
-    COIN_TRADING_UNIT = 0.02
+    COIN_TRADING_UNIT = 0.009
     TRADE_INTERVAL_IN_SEC = 3
+    TARGET_STRATEGY = Analyzer.buy_sell_strategy_2
 
     def __init__(self):
         # init market managers
@@ -41,23 +42,14 @@ class ArbitrageBot:
 
     def run(self):
         Global.configure_default_root_logging()
-        self.execute_no_risk(self.v_coinone_mm, self.v_korbit_mm)
+        self.execute_no_risk(self.v_coinone_mm, self.v_korbit_mm, ArbitrageBot.TARGET_STRATEGY)
 
-    def execute_no_risk(self, mm1: MarketManager, mm2: MarketManager):
-        # update balance
-        mm1.update_balance()
-        mm2.update_balance()
-        self.mm1_balance = mm1.get_balance()
-        self.mm2_balance = mm2.get_balance()
-
-        # log initial balance
-        logging.info("[INITIAL BALANCE]")
-        logging.info(self.mm1_balance)
-        logging.info(self.mm2_balance)
-
+    def execute_no_risk(self, mm1: MarketManager, mm2: MarketManager, strategy_fun):
         # get currency for each market
         mm1_currency = mm1.get_market_currency(self.TARGET_CURRENCY)
         mm2_currency = mm2.get_market_currency(self.TARGET_CURRENCY)
+
+        self.update_and_log_balance(mm1, mm2)
 
         while True:
             # print a blank line
@@ -65,27 +57,25 @@ class ArbitrageBot:
 
             # get current spread
             new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price = \
-                Analyzer.buy_sell_strategy_1(mm1, mm1_currency, mm2, mm2_currency)
+                strategy_fun(mm1, mm1_currency, mm2, mm2_currency)
 
             # log stat
-            logging.info(
-                "[STAT][%s] buy_price: %d, sell_price: %d" % (mm1.name, mm1_buy_price, mm1_sell_price))
-            logging.info(
-                "[STAT][%s] buy_price: %d, sell_price: %d" % (mm2.name, mm2_buy_price, mm2_sell_price))
+            logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (mm1.name, mm1_buy_price, mm1_sell_price))
+            logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (mm2.name, mm2_buy_price, mm2_sell_price))
             logging.info("[STAT] new_spread: %d, rev_spread: %d" % (new_spread, rev_spread))
 
             mm1_buy_cost = mm1_buy_price * mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
             mm2_buy_cost = mm2_buy_price * mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
 
             # make decision
-            if (new_spread > 0 and self.mm1_balance.get_available_krw() > mm1_buy_cost
+            if (new_spread > 500 and self.mm1_balance.get_available_krw() > mm1_buy_cost
                     and self.mm2_balance.get_available_eth() > self.COIN_TRADING_UNIT):
 
                 logging.warning("[EXECUTE] New")
                 mm1.order_buy(mm1_currency, mm1_buy_price, self.COIN_TRADING_UNIT)
                 mm2.order_sell(mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
 
-            elif (rev_spread > 0 and self.mm2_balance.get_available_krw() > mm2_buy_cost
+            elif (rev_spread > 500 and self.mm2_balance.get_available_krw() > mm2_buy_cost
                   and self.mm1_balance.get_available_eth() > self.COIN_TRADING_UNIT):
 
                 logging.warning("[EXECUTE] Reverse")
@@ -95,27 +85,30 @@ class ArbitrageBot:
             else:
                 logging.warning("[EXECUTE] No")
 
-            # update balance
-            mm1.update_balance()
-            mm2.update_balance()
-            self.mm1_balance = mm1.get_balance()
-            self.mm2_balance = mm2.get_balance()
-
-            # log balance
-            logging.info(self.mm1_balance)
-            logging.info(self.mm2_balance)
-
-            for coin in ("eth", "krw"):
-                mm1_coin_balance = self.mm1_balance.to_dict()[coin]
-                mm2_coin_balance = self.mm2_balance.to_dict()[coin]
-
-                logging.warning("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
-                                (coin.upper(), mm1_coin_balance["available"] + mm2_coin_balance["available"],
-                                 mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
-                                 mm1_coin_balance["balance"] + mm2_coin_balance["balance"]))
+            self.update_and_log_balance(mm1, mm2)
 
             # sleep for interval
             time.sleep(self.TRADE_INTERVAL_IN_SEC)
+
+    def update_and_log_balance(self, mm1: MarketManager, mm2: MarketManager):
+        # update balance
+        mm1.update_balance()
+        mm2.update_balance()
+        self.mm1_balance = mm1.get_balance()
+        self.mm2_balance = mm2.get_balance()
+
+        # log initial balance
+        logging.info(self.mm1_balance)
+        logging.info(self.mm2_balance)
+
+        for coin in ("eth", "krw"):
+            mm1_coin_balance = self.mm1_balance.to_dict()[coin]
+            mm2_coin_balance = self.mm2_balance.to_dict()[coin]
+
+            logging.warning("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
+                            (coin.upper(), mm1_coin_balance["available"] + mm2_coin_balance["available"],
+                             mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
+                             mm1_coin_balance["balance"] + mm2_coin_balance["balance"]))
 
 
 ArbitrageBot().run()

@@ -1,5 +1,6 @@
 from api.currency import Currency
 from trader.market_manager.market_manager import MarketManager
+import logging
 
 
 class Analyzer:
@@ -37,7 +38,7 @@ class Analyzer:
         return new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price
 
     ######################################################################
-    # co:   buy at ma_mb_avg        sell at ma_mb_avg
+    # co:   buy at ma_mb_avg ±      sell at ma_mb_avg ±
     # kb:   buy at (minask-100)     sell at (maxbid+100)
     ######################################################################
 
@@ -49,10 +50,14 @@ class Analyzer:
         kb_orderbook = kb_mm.get_orderbook(kb_currency)
         kb_minask_price, kb_maxbid_price = Analyzer.get_price_of_minask_maxbid(kb_orderbook)
 
+        logging.info("[STAT][%s] min_ask: %d, max_bid: %d" % (co_mm.name, co_minask_price, co_maxbid_price))
+        logging.info("[STAT][%s] min_ask: %d, max_bid: %d" % (kb_mm.name, kb_minask_price, kb_maxbid_price))
+
         # set co buy & sell price
-        co_ma_mb_avg = (co_minask_price + co_maxbid_price) / 2
-        co_buy_price = int(co_ma_mb_avg)
-        co_sell_price = int(co_ma_mb_avg)
+        co_ma_mb_diff = co_minask_price - co_maxbid_price
+        step_count_from_mid = -3  # fill difficulty: -5 hard ~ 5 easy
+        co_buy_price = co_maxbid_price + int(co_ma_mb_diff * (5 + step_count_from_mid) / 10)
+        co_sell_price = co_maxbid_price + int(co_ma_mb_diff * (5 - step_count_from_mid) / 10)
 
         # set kb buy & sell price
         kb_buy_price = kb_minask_price - 100
