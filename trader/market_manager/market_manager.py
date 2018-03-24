@@ -57,7 +57,7 @@ class MarketManager(ABC):
         pass
 
     def get_market_tag(self):
-        return self.market_tag.value
+        return self.market_tag
 
     @staticmethod
     @abstractmethod

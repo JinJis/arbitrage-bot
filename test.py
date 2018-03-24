@@ -81,7 +81,7 @@ from config.global_conf import Global
 #     return orderbook["asks"][0]["price"].to_decimal(), orderbook["bids"][0]["price"].to_decimal()
 #
 #
-# Global.configure_default_root_logging()
+
 
 # logging.info(korbit_api.get_order_info(KorbitCurrency.ETH, "15739205"))
 
@@ -102,22 +102,22 @@ from config.global_conf import Global
 # coinone_avg = (coinone_maxbid + coinone_minask) / 2
 # coinone_mm.order_sell(CoinoneCurrency.ETH, int(coinone_avg // 100 * 100), 0.01)
 
-
-# korbit_api = KorbitApi()
-# coinone_api = CoinoneApi()
+Global.configure_default_root_logging()
+korbit_api = KorbitApi()
+coinone_api = CoinoneApi()
 
 # logging.info(korbit_api.cancel_order(KorbitCurrency.ETH, "15742897"))
 # logging.info(
 #     coinone_api.cancel_order(CoinoneCurrency.ETH, 583700, 0.020000, "c01a9891-84ca-4e61-bb61-cfe3b7adb288", False))
 
 # while True:
-# logging.info(korbit_api.get_past_trades(KorbitCurrency.ETH))
-# logging.info(coinone_api.get_open_orders(CoinoneCurrency.ETH))
+logging.info(korbit_api.get_past_trades(KorbitCurrency.ETH))
+logging.info(coinone_api.get_past_trades(CoinoneCurrency.ETH))
 # logging.info(korbit_mm.get_balance())
 # logging.info(coinone_mm.get_balance())
 # time.sleep(1)
 
-from trader.arbitrage_bot import ArbitrageBot
-
-ab = ArbitrageBot()
-ab.run()
+# from trader.arbitrage_bot import ArbitrageBot
+#
+# ab = ArbitrageBot()
+# ab.run()
