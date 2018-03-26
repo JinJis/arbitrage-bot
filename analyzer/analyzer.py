@@ -39,7 +39,7 @@ class Analyzer:
 
     ######################################################################
     # co:   buy at ma_mb_avg ±      sell at ma_mb_avg ±
-    # kb:   buy at (minask-100)     sell at (maxbid+100)
+    # kb:   buy at (minask-50)     sell at (maxbid+50)
     ######################################################################
 
     @staticmethod
@@ -55,13 +55,13 @@ class Analyzer:
 
         # set co buy & sell price
         co_ma_mb_diff = co_minask_price - co_maxbid_price
-        step_count_from_mid = -3  # fill difficulty: -5 hard ~ 5 easy
+        step_count_from_mid = 5  # fill difficulty: -5 hard ~ 5 easy
         co_buy_price = co_maxbid_price + int(co_ma_mb_diff * (5 + step_count_from_mid) / 10)
         co_sell_price = co_maxbid_price + int(co_ma_mb_diff * (5 - step_count_from_mid) / 10)
 
         # set kb buy & sell price
-        kb_buy_price = kb_minask_price - 100
-        kb_sell_price = kb_maxbid_price + 100
+        kb_buy_price = kb_minask_price - 50
+        kb_sell_price = kb_maxbid_price + 50
 
         new_spread = Analyzer.calc_spread(co_buy_price, co_mm.market_fee,
                                           kb_sell_price, kb_mm.market_fee)

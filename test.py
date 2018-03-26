@@ -2,9 +2,11 @@ from api.korbit_api import KorbitApi
 from api.currency import KorbitCurrency, CoinoneCurrency, Currency
 from api.coinone_api import CoinoneApi
 import time
+from datetime import datetime
 from bson import Decimal128
 from decimal import Decimal
 # from trader.market_manager.virtual_market_manager import VirtualMarketManager
+from collector.db_to_csv import DbToCsv
 
 # korbit_api = KorbitApi()
 # print(korbit_api.get_balance())
@@ -102,17 +104,17 @@ from config.global_conf import Global
 # coinone_avg = (coinone_maxbid + coinone_minask) / 2
 # coinone_mm.order_sell(CoinoneCurrency.ETH, int(coinone_avg // 100 * 100), 0.01)
 
-Global.configure_default_root_logging()
-korbit_api = KorbitApi()
-coinone_api = CoinoneApi()
+# Global.configure_default_root_logging()
+# korbit_api = KorbitApi()
+# coinone_api = CoinoneApi()
 
 # logging.info(korbit_api.cancel_order(KorbitCurrency.ETH, "15742897"))
 # logging.info(
 #     coinone_api.cancel_order(CoinoneCurrency.ETH, 583700, 0.020000, "c01a9891-84ca-4e61-bb61-cfe3b7adb288", False))
 
 # while True:
-logging.info(korbit_api.get_past_trades(KorbitCurrency.ETH))
-logging.info(coinone_api.get_past_trades(CoinoneCurrency.ETH))
+# logging.info(korbit_api.get_past_trades(KorbitCurrency.ETH))
+# logging.info(coinone_api.get_past_trades(CoinoneCurrency.ETH))
 # logging.info(korbit_mm.get_balance())
 # logging.info(coinone_mm.get_balance())
 # time.sleep(1)
@@ -121,3 +123,13 @@ logging.info(coinone_api.get_past_trades(CoinoneCurrency.ETH))
 #
 # ab = ArbitrageBot()
 # ab.run()
+
+# fetcher = DbFetcher()
+# cursor = fetcher.test()
+# for item in cursor:
+#     print(item["last"])
+
+start_time = Global.convert_local_datetime_to_epoch("2018.03.25 10:00:00")
+end_time = Global.convert_local_datetime_to_epoch("2018.03.25 10:05:00")
+db_to_csv = DbToCsv()
+db_to_csv.save_ticker_as_csv("korbit", "eth", start_time, end_time)
