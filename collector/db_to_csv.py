@@ -18,7 +18,7 @@ class DbToCsv:
             "$lte": end_time
         }})
 
-        csv_writer = CsvWriter("ticker", "%s_ticker_%d_%d" % (target_currency, start_time, end_time),
+        csv_writer = CsvWriter("ticker", "%s_%s_ticker_%d_%d" % (target_db, target_currency, start_time, end_time),
                                self.ticker_columns)
 
         for item in cursor:
