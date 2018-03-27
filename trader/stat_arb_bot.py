@@ -17,7 +17,7 @@ class StatArbBot:
     TRADE_INTERVAL_IN_SEC = 5
     TARGET_SPREAD_STACK_HOUR = 3  # 3-hour data
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
-    Z_SCORE_SIGMA = 2  # Global.get_z_score_for_probability(0.8)
+    Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.8)  # 2
 
     def __init__(self, is_from_local: bool = False):
         # init market managers

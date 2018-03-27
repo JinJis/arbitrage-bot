@@ -30,7 +30,7 @@ class CoinoneMarketManager(MarketManager):
         self.common_post_order_process(new_order)
 
     def order_sell(self, currency: CoinoneCurrency, price: int, amount: float):
-        if not self.has_enough_coin(currency.name.upper(), amount):
+        if not self.has_enough_coin(currency.name.lower(), amount):
             logging.error("[%s] Could not order_sell" % self.market_tag)
             return
 

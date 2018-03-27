@@ -69,10 +69,10 @@ class MarketManager(ABC):
         pass
 
     def has_enough_coin(self, coin_type: str, needed_amount: float):
-        available_amount = self.balance.get_available_coin(coin_type)
+        available_amount = self.balance.get_available_coin(coin_type.lower())
         if available_amount < needed_amount:
             # log warning if balance is not enough
-            logging.warning("[%s][Not enough %s balance] available: %d, needed: %d" %
+            logging.warning("[%s][Not enough %s balance] available: %.4f, needed: %.4f" %
                             (self.market_tag, coin_type.upper(), available_amount, needed_amount))
             return False
         else:
