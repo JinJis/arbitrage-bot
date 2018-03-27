@@ -129,8 +129,14 @@ from config.global_conf import Global
 # for item in cursor:
 #     print(item["last"])
 
-start_time = Global.convert_local_datetime_to_epoch("2018.03.26 09:00:00")
-end_time = Global.convert_local_datetime_to_epoch("2018.03.26 21:00:00")
-db_to_csv = DbToCsv()
-db_to_csv.save_ticker_as_csv("korbit", "eth", start_time, end_time)
-db_to_csv.save_ticker_as_csv("coinone", "eth", start_time, end_time)
+# start_time = Global.convert_local_datetime_to_epoch("2018.03.26 09:00:00")
+# end_time = Global.convert_local_datetime_to_epoch("2018.03.26 21:00:00")
+# db_to_csv = DbToCsv()
+# db_to_csv.save_ticker_as_csv("korbit", "eth", start_time, end_time)
+# db_to_csv.save_ticker_as_csv("coinone", "eth", start_time, end_time)
+
+import math
+
+# print(type(math.log(Decimal(2))))
+
+import scipy.stats as st

@@ -8,21 +8,13 @@ from trader.market_manager.virtual_market_manager import VirtualMarketManager, V
 from config.global_conf import Global
 from analyzer.analyzer import Analyzer
 
-"""
-!!! IMPORTANT NOTE !!!
 
-[NEW Spread] => buy in mm1, sell in mm2
-[REV Spread] => buy in mm2, sell in mm1
-
-MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
-"""
-
-
-class ArbitrageBot:
+class StatArbBot:
     TARGET_CURRENCY = "eth"
-    COIN_TRADING_UNIT = 0.009
+    COIN_TRADING_UNIT = 0.01
     TRADE_INTERVAL_IN_SEC = 3
-    TARGET_STRATEGY = Analyzer.buy_sell_strategy_2
+    TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * 3  # 3-hour data
+    Z_SCORE_SIGMA = 2
 
     def __init__(self):
         # init market managers
@@ -32,9 +24,7 @@ class ArbitrageBot:
         self.v_korbit_mm = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.0008, 60000, 0.1)
 
         # init stack
-        self.new_spread_stack = np.array([], dtype=np.float32)
-        self.reverse_spread_stack = np.array([], dtype=np.float32)
-        self.bolinger_spread_stack = np.array([], dtype=np.float32)
+        self.spread_stack = np.array([], dtype=np.float32)
 
         # init balance
         self.mm1_balance = None
@@ -42,35 +32,53 @@ class ArbitrageBot:
 
     def run(self):
         Global.configure_default_root_logging()
-        self.execute_no_risk(self.v_coinone_mm, self.v_korbit_mm, ArbitrageBot.TARGET_STRATEGY)
+        self.execute(self.v_coinone_mm, self.v_korbit_mm)
 
-    def execute_no_risk(self, mm1: MarketManager, mm2: MarketManager, strategy_fun):
+    def execute(self, mm1: MarketManager, mm2: MarketManager):
         # get currency for each market
         mm1_currency = mm1.get_market_currency(self.TARGET_CURRENCY)
         mm2_currency = mm2.get_market_currency(self.TARGET_CURRENCY)
 
         self.update_and_log_balance(mm1, mm2)
 
+        # TODO: get initial stack
+
         while True:
             # print a blank line
             logging.info("")
 
+            # get previous mean, standard deviation
+            mean = self.spread_stack.mean()
+            stdev = self.spread_stack.std()
+
+            # get upper & lower bound
+            upper = mean + stdev * StatArbBot.Z_SCORE_SIGMA
+            lower = mean - stdev * StatArbBot.Z_SCORE_SIGMA
+
             # get current spread
-            new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price = \
-                strategy_fun(mm1, mm1_currency, mm2, mm2_currency)
+            cur_spread, mm1_last, mm2_last = Analyzer.get_ticker_log_spread(mm1, mm1_currency, mm2, mm2_currency)
+            self.spread_stack = np.append(self.spread_stack, cur_spread)
 
             # log stat
-            logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (mm1.name, mm1_buy_price, mm1_sell_price))
-            logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (mm2.name, mm2_buy_price, mm2_sell_price))
-            logging.info("[STAT] new_spread: %d, rev_spread: %d" % (new_spread, rev_spread))
+            logging.info("[STAT] current spread (mm1 - mm2): %d" % cur_spread)
+
+            # get buy cost
+            mm1_buy_cost = mm1_last * mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
+            mm2_buy_cost = mm2_last * mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
+
+
+            # decide whether long, short
+            if cur_spread < lower:
+                # long in mm1, short in mm2
+                mm1.order_buy(mm1_currency, mm1_buy_price, self.COIN_TRADING_UNIT)
+                mm2.order_sell(mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
 
             # make decision
             if (new_spread > 500 and self.mm1_balance.get_available_krw() > mm1_buy_cost
                     and self.mm2_balance.get_available_eth() > self.COIN_TRADING_UNIT):
 
                 logging.warning("[EXECUTE] New")
-                mm1.order_buy(mm1_currency, mm1_buy_price, self.COIN_TRADING_UNIT)
-                mm2.order_sell(mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
+
 
             elif (rev_spread > 500 and self.mm2_balance.get_available_krw() > mm2_buy_cost
                   and self.mm1_balance.get_available_eth() > self.COIN_TRADING_UNIT):
@@ -106,6 +114,3 @@ class ArbitrageBot:
                             (coin.upper(), mm1_coin_balance["available"] + mm2_coin_balance["available"],
                              mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
                              mm1_coin_balance["balance"] + mm2_coin_balance["balance"]))
-
-
-ArbitrageBot().run()

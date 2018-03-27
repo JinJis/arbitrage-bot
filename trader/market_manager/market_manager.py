@@ -9,10 +9,11 @@ from trader.market.market import Market
 
 
 class MarketManager(ABC):
-    def __init__(self, should_db_logging: bool, market_tag: Market, market_fee: float):
+    def __init__(self, should_db_logging: bool, market_tag: Market, market_fee: float, balance: Balance):
         self.should_db_logging = should_db_logging
         self.market_tag = market_tag
         self.market_fee = market_fee
+        self.balance = balance
         self.order_list = list()
 
         if self.should_db_logging:
@@ -35,25 +36,28 @@ class MarketManager(ABC):
     def update_balance(self):
         pass
 
-    @abstractmethod
     def get_balance(self):
-        pass
+        return self.balance
 
     def log_order(self, order: Order):
         logging.info(order)
         if self.should_db_logging:
             self.order_col.insert_one(order.to_dict())
 
-    def log_balance(self, balance: Balance):
-        logging.info(balance)
+    def log_balance(self):
+        logging.info(self.balance)
         if self.should_db_logging:
-            self.balance_col.insert_one(balance.to_dict())
+            self.balance_col.insert_one(self.balance.to_dict())
 
     def calc_actual_coin_need_to_buy(self, amount):
         return amount / (1 - self.market_fee)
 
     @abstractmethod
     def get_orderbook(self, currency: Currency):
+        pass
+
+    @abstractmethod
+    def get_ticker(self, currency: Currency):
         pass
 
     def get_market_tag(self):
@@ -63,3 +67,22 @@ class MarketManager(ABC):
     @abstractmethod
     def get_market_currency(target_currency: str):
         pass
+
+    def has_enough_coin(self, coin_type: str, needed_amount: float):
+        available_amount = self.balance.get_available_coin(coin_type)
+        if available_amount < needed_amount:
+            # log warning if balance is not enough
+            logging.warning("[%s][Not enough %s balance] available: %d, needed: %d" %
+                            (self.market_tag, coin_type.upper(), available_amount, needed_amount))
+            return False
+        else:
+            return True
+
+    def record_order(self, order: Order):
+        # record order
+        self.order_list.append(order)
+        self.log_order(order)
+
+        # record balance
+        self.update_balance()
+        self.log_balance()

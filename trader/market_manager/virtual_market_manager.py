@@ -6,6 +6,7 @@ from decimal import Decimal
 from enum import Enum
 from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
+import logging
 
 
 class VirtualMarketApiType(Enum):
@@ -18,10 +19,9 @@ class VirtualMarketManager(MarketManager):
 
     def __init__(self, name: str, api_type: VirtualMarketApiType, market_fee=0.001,
                  krw_balance=100000, eth_balance=0.1, should_db_logging=False):
-        super().__init__(should_db_logging, self.MARKET_TAG, market_fee)
+        super().__init__(should_db_logging, self.MARKET_TAG, market_fee, Balance(self.MARKET_TAG))
         self.name = name
         self.api_type = api_type
-        self.balance = Balance(self.MARKET_TAG)
         self.krw_balance = krw_balance
         self.eth_balance = eth_balance
         self.update_balance()
@@ -34,10 +34,17 @@ class VirtualMarketManager(MarketManager):
             raise Exception("Invalid target API type has set!")
 
     def order_buy(self, currency: VirtualCurrency, price: int, amount: float):
+        actual_amount = self.calc_actual_coin_need_to_buy(amount)
+        if not self.has_enough_coin("krw", actual_amount * price):
+            logging.error("[%s] Could not order_buy" % self.market_tag)
+            return
         self.eth_balance += amount
-        self.krw_balance -= price * (amount / (1 - self.market_fee))
+        self.krw_balance -= price * actual_amount
 
     def order_sell(self, currency: VirtualCurrency, price: int, amount: float):
+        if not self.has_enough_coin(currency.name.upper(), amount):
+            logging.error("[%s] Could not order_sell" % self.market_tag)
+            return
         self.eth_balance -= amount
         self.krw_balance += price * amount * (1 - self.market_fee)
 
@@ -58,12 +65,13 @@ class VirtualMarketManager(MarketManager):
             }
         })
 
-    def get_balance(self):
-        return self.balance
-
     def get_orderbook(self, currency: VirtualCurrency):
         target_api_currency = self._convert_to_target_api_currency(currency)
         return self.api.get_orderbook(target_api_currency)
+
+    def get_ticker(self, currency: VirtualCurrency):
+        target_api_currency = self._convert_to_target_api_currency(currency)
+        return self.api.get_ticker(target_api_currency)
 
     @staticmethod
     def get_market_currency(target_currency: str):

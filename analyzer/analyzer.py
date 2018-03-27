@@ -1,6 +1,7 @@
 from api.currency import Currency
 from trader.market_manager.market_manager import MarketManager
 import logging
+import math
 
 
 class Analyzer:
@@ -69,3 +70,15 @@ class Analyzer:
                                           co_sell_price, co_mm.market_fee)
 
         return new_spread, rev_spread, co_buy_price, co_sell_price, kb_buy_price, kb_sell_price
+
+    @staticmethod
+    def get_ticker_log_spread(mm1: MarketManager, mm1_currency: Currency, mm2: MarketManager, mm2_currency: Currency):
+        mm1_ticker = mm1.get_ticker(mm1_currency)
+        mm2_ticker = mm2.get_ticker(mm2_currency)
+
+        mm1_last = int(mm1_ticker["last"].to_decimal())
+        mm2_last = int(mm2_ticker["last"].to_decimal())
+
+        log_spread = math.log(mm1_last) - math.log(mm2_last)
+
+        return log_spread, mm1_last, mm2_last
