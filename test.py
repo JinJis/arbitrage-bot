@@ -135,4 +135,10 @@ from config.global_conf import Global
 # db_to_csv.save_ticker_as_csv("korbit", "eth", start_time, end_time)
 # db_to_csv.save_ticker_as_csv("coinone", "eth", start_time, end_time)
 
-print(Global.get_z_score_for_probability(0.954499736104))
+# print(Global.get_z_score_for_probability(0.954499736104))
+
+
+from trader.stat_arb_bot import StatArbBot
+
+aa = StatArbBot(is_from_local=True)
+aa.run()

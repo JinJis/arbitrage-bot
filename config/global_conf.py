@@ -44,13 +44,14 @@ class Global:
     @staticmethod
     def convert_local_datetime_to_epoch(datetime_str, timezone=None):
         # `datetime_str` should be in the format of "%Y.%m.%d %H:%M:%S", ex) "2018.03.25 10:00:00"
-        if timezone is None:
+
+        if timezone == "cn":
+            gmt = "+0800"
+        elif timezone == "kr":
+            gmt = "+0900"
+        else:
             # default behavior is to use system timezone
             gmt = strftime("%z", gmtime())
-        elif timezone is "cn":
-            gmt = "+0800"
-        elif timezone is "kr":
-            gmt = "+0900"
 
         return int(datetime.strptime("%s GMT%s" % (datetime_str, gmt), "%Y.%m.%d %H:%M:%S GMT%z").timestamp())
 

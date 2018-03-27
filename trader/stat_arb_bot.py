@@ -19,7 +19,7 @@ class StatArbBot:
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
     Z_SCORE_SIGMA = 2  # Global.get_z_score_for_probability(0.8)
 
-    def __init__(self):
+    def __init__(self, is_from_local: bool = False):
         # init market managers
         # self.coinone_mm = CoinoneMarketManager()
         # self.korbit_mm = KorbitMarketManager()
@@ -30,7 +30,7 @@ class StatArbBot:
         self.spread_stack = np.array([], dtype=np.float32)
 
         # init mongo client
-        self.mongo_client = MongoClient(Global.read_mongodb_uri())
+        self.mongo_client = MongoClient(Global.read_mongodb_uri(is_from_local))
         self.co_ticker_col = self.mongo_client["coinone"][self.TARGET_CURRENCY + "_ticker"]
         self.kb_ticker_col = self.mongo_client["korbit"][self.TARGET_CURRENCY + "_ticker"]
 
@@ -43,12 +43,13 @@ class StatArbBot:
         mm1_currency = mm1.get_market_currency(self.TARGET_CURRENCY)
         mm2_currency = mm2.get_market_currency(self.TARGET_CURRENCY)
 
+        # collect initial stack before going into trade loop
+        logging.info("Collecting initial spread stack, please wait...")
+        self.collect_initial_stack()
+
         # log initial balance
         logging.info(mm1.get_balance())
         logging.info(mm2.get_balance())
-
-        # collect initial stack before going into trade loop
-        self.collect_initial_stack()
 
         # init loop count
         loop_count = 1
@@ -113,8 +114,10 @@ class StatArbBot:
             "$lte": current_timestamp
         }}).sort([("requestTime", 1)])
 
-        if co_cursor.count() is not kb_cursor.count():
-            raise Exception("[Initialization Error] Cursor count does not match!")
+        co_count = co_cursor.count()
+        kb_count = kb_cursor.count()
+        if co_count != kb_count:
+            raise Exception("[Initialization Error] Cursor count does not match! : co %d, kb %d" % (co_count, kb_count))
 
         for co_item, kb_item in zip(co_cursor, kb_cursor):
             co_last = int(co_item["last"])
