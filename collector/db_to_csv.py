@@ -16,7 +16,7 @@ class DbToCsv:
         cursor = target_col.find({"requestTime": {
             "$gte": start_time,
             "$lte": end_time
-        }})
+        }}).sort([("requestTime", 1)])
 
         csv_writer = CsvWriter("ticker", "%s_%s_ticker_%d_%d" % (target_db, target_currency, start_time, end_time),
                                self.ticker_columns)
