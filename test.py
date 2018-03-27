@@ -135,8 +135,4 @@ from config.global_conf import Global
 # db_to_csv.save_ticker_as_csv("korbit", "eth", start_time, end_time)
 # db_to_csv.save_ticker_as_csv("coinone", "eth", start_time, end_time)
 
-import math
-
-# print(type(math.log(Decimal(2))))
-
-import scipy.stats as st
+print(Global.get_z_score_for_probability(0.954499736104))

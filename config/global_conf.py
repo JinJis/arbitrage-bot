@@ -4,6 +4,7 @@ import logging
 import sys
 from datetime import datetime
 from time import gmtime, strftime
+import scipy.stats as st
 
 
 class Global:
@@ -52,3 +53,9 @@ class Global:
             gmt = "+0900"
 
         return int(datetime.strptime("%s GMT%s" % (datetime_str, gmt), "%Y.%m.%d %H:%M:%S GMT%z").timestamp())
+
+    @staticmethod
+    def get_z_score_for_probability(probability: float):
+        # python calculates left/lower-tail probabilities by default
+        # so we need to halve the excluded probability(`1 - prob`) before processing
+        return st.norm.ppf(1 - (1 - probability) / 2)
