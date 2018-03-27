@@ -46,8 +46,10 @@ class StatArbBot:
         # collect initial stack before going into trade loop
         logging.info("Collecting initial spread stack, please wait...")
         self.collect_initial_stack()
+        logging.info("Done collecting! Current stack size: %d", self.spread_stack.size)
 
         # log initial balance
+        logging.info("========== [  INITIAL BALANCE  ] ========================================================")
         logging.info(mm1.get_balance())
         logging.info(mm2.get_balance())
 
@@ -56,7 +58,8 @@ class StatArbBot:
 
         while True:
             # print trade loop seq
-            logging.info("# %12d Trade Loop ==============================" % loop_count)
+            logging.info("========== [# %12d Trade Loop] =================================================="
+                         % loop_count)
             loop_count += 1
 
             # get previous mean, standard deviation
@@ -71,7 +74,7 @@ class StatArbBot:
             cur_spread, mm1_last, mm2_last = Analyzer.get_ticker_log_spread(mm1, mm1_currency, mm2, mm2_currency)
 
             # log stat
-            logging.info("[STAT] current spread (mm1 - mm2): %d" % cur_spread)
+            logging.info("[STAT] cur_spread: %.8f, mean: %.8f, stdev: %.8f" % (cur_spread, mean, stdev))
 
             # make decision
             if cur_spread < lower:
@@ -120,7 +123,7 @@ class StatArbBot:
             raise Exception("[Initialization Error] Cursor count does not match! : co %d, kb %d" % (co_count, kb_count))
 
         for co_item, kb_item in zip(co_cursor, kb_cursor):
-            co_last = int(co_item["last"])
-            kb_last = int(kb_item["last"])
+            co_last = co_item["last"].to_decimal()
+            kb_last = kb_item["last"].to_decimal()
             log_spread = math.log(co_last) - math.log(kb_last)
             self.spread_stack = np.append(self.spread_stack, log_spread)
