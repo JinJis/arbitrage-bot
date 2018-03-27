@@ -2,6 +2,7 @@ from api.currency import Currency
 from trader.market_manager.market_manager import MarketManager
 import logging
 import math
+from trader.market.balance import Balance
 
 
 class Analyzer:
@@ -82,3 +83,17 @@ class Analyzer:
         log_spread = math.log(mm1_last) - math.log(mm2_last)
 
         return log_spread, mm1_last, mm2_last
+
+    @staticmethod
+    def log_combined_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):
+        mm1_balance_dict = mm1_balance.to_dict()
+        mm2_balance_dict = mm2_balance.to_dict()
+
+        for coin in target_coins:
+            mm1_coin_balance = mm1_balance_dict[coin]
+            mm2_coin_balance = mm2_balance_dict[coin]
+
+            logging.warning("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
+                            (coin.upper(), mm1_coin_balance["available"] + mm2_coin_balance["available"],
+                             mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
+                             mm1_coin_balance["balance"] + mm2_coin_balance["balance"]))

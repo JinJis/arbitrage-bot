@@ -78,11 +78,11 @@ class MarketManager(ABC):
         else:
             return True
 
-    def record_order(self, order: Order):
-        # record order
+    def manage_order(self, order: Order):
         self.order_list.append(order)
-        self.log_order(order)
 
-        # record balance
+    def common_post_order_process(self, order: Order):
+        self.manage_order(order)
+        self.log_order(order)
         self.update_balance()
         self.log_balance()

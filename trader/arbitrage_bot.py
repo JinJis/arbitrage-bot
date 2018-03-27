@@ -1,6 +1,5 @@
 import time
 import logging
-import numpy as np
 from trader.market_manager.market_manager import MarketManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
@@ -20,7 +19,7 @@ MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 
 class ArbitrageBot:
     TARGET_CURRENCY = "eth"
-    COIN_TRADING_UNIT = 0.009
+    COIN_TRADING_UNIT = 0.01
     TRADE_INTERVAL_IN_SEC = 3
     TARGET_STRATEGY = Analyzer.buy_sell_strategy_2
 
@@ -31,15 +30,6 @@ class ArbitrageBot:
         self.v_coinone_mm = VirtualMarketManager("co", VirtualMarketApiType.COINONE, 0.001, 60000, 0.1)
         self.v_korbit_mm = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.0008, 60000, 0.1)
 
-        # init stack
-        self.new_spread_stack = np.array([], dtype=np.float32)
-        self.reverse_spread_stack = np.array([], dtype=np.float32)
-        self.bolinger_spread_stack = np.array([], dtype=np.float32)
-
-        # init balance
-        self.mm1_balance = None
-        self.mm2_balance = None
-
     def run(self):
         Global.configure_default_root_logging()
         self.execute_no_risk(self.v_coinone_mm, self.v_korbit_mm, ArbitrageBot.TARGET_STRATEGY)
@@ -49,11 +39,17 @@ class ArbitrageBot:
         mm1_currency = mm1.get_market_currency(self.TARGET_CURRENCY)
         mm2_currency = mm2.get_market_currency(self.TARGET_CURRENCY)
 
-        self.update_and_log_balance(mm1, mm2)
+        # log initial balance
+        logging.info(mm1.get_balance())
+        logging.info(mm2.get_balance())
+
+        # init loop count
+        loop_count = 1
 
         while True:
-            # print a blank line
-            logging.info("")
+            # print trade loop seq
+            logging.info("# %12d Trade Loop ==============================" % loop_count)
+            loop_count += 1
 
             # get current spread
             new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price = \
@@ -65,47 +61,22 @@ class ArbitrageBot:
             logging.info("[STAT] new_spread: %d, rev_spread: %d" % (new_spread, rev_spread))
 
             # make decision
-            if (new_spread > 500 and self.mm1_balance.get_available_krw() > mm1_buy_cost
-                    and self.mm2_balance.get_available_eth() > self.COIN_TRADING_UNIT):
-
+            if new_spread > 500:
                 logging.warning("[EXECUTE] New")
                 mm1.order_buy(mm1_currency, mm1_buy_price, self.COIN_TRADING_UNIT)
                 mm2.order_sell(mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
-
-            elif (rev_spread > 500 and self.mm2_balance.get_available_krw() > mm2_buy_cost
-                  and self.mm1_balance.get_available_eth() > self.COIN_TRADING_UNIT):
-
+            elif rev_spread > 500:
                 logging.warning("[EXECUTE] Reverse")
                 mm2.order_buy(mm2_currency, mm2_buy_price, self.COIN_TRADING_UNIT)
                 mm1.order_sell(mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
-
             else:
                 logging.warning("[EXECUTE] No")
 
-            self.update_and_log_balance(mm1, mm2)
+            # log combined balance
+            Analyzer.log_combined_balance(mm1.get_balance(), mm2.get_balance())
 
             # sleep for interval
             time.sleep(self.TRADE_INTERVAL_IN_SEC)
-
-    def update_and_log_balance(self, mm1: MarketManager, mm2: MarketManager):
-        # update balance
-        mm1.update_balance()
-        mm2.update_balance()
-        self.mm1_balance = mm1.get_balance()
-        self.mm2_balance = mm2.get_balance()
-
-        # log initial balance
-        logging.info(self.mm1_balance)
-        logging.info(self.mm2_balance)
-
-        for coin in ("eth", "krw"):
-            mm1_coin_balance = self.mm1_balance.to_dict()[coin]
-            mm2_coin_balance = self.mm2_balance.to_dict()[coin]
-
-            logging.warning("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
-                            (coin.upper(), mm1_coin_balance["available"] + mm2_coin_balance["available"],
-                             mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
-                             mm1_coin_balance["balance"] + mm2_coin_balance["balance"]))
 
 
 ArbitrageBot().run()
