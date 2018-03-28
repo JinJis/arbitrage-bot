@@ -1,49 +1,63 @@
+import logging
 from abc import ABC, abstractmethod
 from api.currency import Currency
 from trader.market.balance import Balance
-import logging
 from trader.market.market import Market
+from api.market_api import MarketApi
+from trader.market.order import Order, OrderType
 
 
 class MarketManager(ABC):
-    def __init__(self, market_tag: Market, market_fee: float, balance: Balance):
+    def __init__(self, market_tag: Market, market_fee: float, market_api: MarketApi):
         self.market_tag = market_tag
         self.market_fee = market_fee
-        self.balance = balance
+        self.market_api = market_api
 
-    @abstractmethod
+        # Note that updating balance is already included in initialization phase
+        self.balance = Balance(self.get_market_name())
+        self.update_balance()
+
+    def get_market_tag(self):
+        return self.market_tag
+
+    def get_market_name(self):
+        return str(self.market_tag.value)
+
     def order_buy(self, currency: Currency, price: int, amount: float):
-        pass
+        actual_amount = round(self.calc_actual_coin_need_to_buy(amount), 4)
+        if not self.has_enough_coin("krw", actual_amount * price):
+            raise Exception("[%s] Could not order_buy" % self.get_market_name())
 
-    @abstractmethod
+        res_json = self.market_api.order_limit_buy(currency, price, actual_amount)
+        logging.info(res_json)
+        order_id = res_json["orderId"]
+        new_order = Order(self.market_tag, OrderType.LIMIT_BUY, order_id, price, actual_amount)
+        return new_order
+
     def order_sell(self, currency: Currency, price: int, amount: float):
-        pass
+        if not self.has_enough_coin(currency.name.lower(), amount):
+            raise Exception("[%s] Could not order_sell" % self.get_market_name())
 
-    @abstractmethod
+        res_json = self.market_api.order_limit_sell(currency, price, amount)
+        logging.info(res_json)
+        order_id = res_json["orderId"]
+        new_order = Order(self.market_tag, OrderType.LIMIT_SELL, order_id, price, amount)
+        return new_order
+
+    def get_orderbook(self, currency: Currency):
+        return self.market_api.get_orderbook(currency)
+
+    def get_ticker(self, currency: Currency):
+        return self.market_api.get_ticker(currency)
+
     def update_balance(self):
-        pass
+        self.balance.update(self.market_api.get_balance())
 
     def get_balance(self):
         return self.balance
 
     def calc_actual_coin_need_to_buy(self, amount):
         return amount / (1 - self.market_fee)
-
-    @abstractmethod
-    def get_orderbook(self, currency: Currency):
-        pass
-
-    @abstractmethod
-    def get_ticker(self, currency: Currency):
-        pass
-
-    def get_market_name(self):
-        return self.market_tag.value
-
-    @staticmethod
-    @abstractmethod
-    def get_market_currency(target_currency: str):
-        pass
 
     def has_enough_coin(self, coin_type: str, needed_amount: float):
         available_amount = self.balance.get_available_coin(coin_type.lower())
@@ -54,3 +68,8 @@ class MarketManager(ABC):
             return False
         else:
             return True
+
+    @staticmethod
+    @abstractmethod
+    def get_market_currency(target_currency: str):
+        pass

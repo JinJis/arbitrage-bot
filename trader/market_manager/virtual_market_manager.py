@@ -1,12 +1,10 @@
 from .market_manager import MarketManager
-from api.currency import VirtualCurrency, KorbitCurrency, CoinoneCurrency
+from api.currency import Currency, CoinoneCurrency, KorbitCurrency
 from trader.market.order import Market
-from trader.market.balance import Balance
 from decimal import Decimal
 from enum import Enum
 from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
-import logging
 from trader.market.order import Order, OrderType
 
 
@@ -19,74 +17,58 @@ class VirtualMarketManager(MarketManager):
     MARKET_TAG = Market.VIRTUAL
 
     def __init__(self, name: str, api_type: VirtualMarketApiType, market_fee, krw_balance=100000, eth_balance=0.1):
-        super().__init__(self.MARKET_TAG, market_fee, Balance(self.MARKET_TAG))
-        self.name = name
-        self.api_type = api_type
-        self.krw_balance = krw_balance
-        self.eth_balance = eth_balance
-        self.update_balance()
-        self.order_id_count = 0
-
-        if self.api_type is VirtualMarketApiType.COINONE:
-            self.api = CoinoneApi(is_public_access_only=True)
-        elif self.api_type is VirtualMarketApiType.KORBIT:
-            self.api = KorbitApi(is_public_access_only=True)
+        # create api instance according to given api_type
+        if api_type is VirtualMarketApiType.COINONE:
+            target_api = CoinoneApi(is_public_access_only=True)
+        elif api_type is VirtualMarketApiType.KORBIT:
+            target_api = KorbitApi(is_public_access_only=True)
         else:
             raise Exception("Invalid target API type has set!")
 
-    def order_buy(self, currency: VirtualCurrency, price: int, amount: float):
+        super().__init__(self.MARKET_TAG, market_fee, target_api)
+        self.name = name
+        self.api_type = api_type
+        self.vt_balance = {
+            "krw": krw_balance,
+            "eth": eth_balance
+        }
+        self.order_id_count = 0
+
+    def order_buy(self, currency: Currency, price: int, amount: float):
         actual_amount = self.calc_actual_coin_need_to_buy(amount)
         if not self.has_enough_coin("krw", actual_amount * price):
             raise Exception("[%s] Could not order_buy" % self.market_tag)
 
-        self.eth_balance += amount
-        self.krw_balance -= price * actual_amount
-        new_order = Order(self.MARKET_TAG, OrderType.LIMIT_BUY, self.generate_order_id(), price, actual_amount)
-        return new_order
+        self.vt_balance[currency.name.lower()] += amount
+        self.vt_balance["krw"] -= price * actual_amount
+        return Order(self.MARKET_TAG, OrderType.LIMIT_BUY, self.generate_order_id(), price, actual_amount)
 
-    def order_sell(self, currency: VirtualCurrency, price: int, amount: float):
+    def order_sell(self, currency: Currency, price: int, amount: float):
         if not self.has_enough_coin(currency.name.lower(), amount):
             raise Exception("[%s] Could not order_sell" % self.market_tag)
 
-        self.eth_balance -= amount
-        self.krw_balance += price * amount * (1 - self.market_fee)
-        new_order = Order(self.MARKET_TAG, OrderType.LIMIT_SELL, self.generate_order_id(), price, amount)
-        return new_order
+        self.vt_balance[currency.name.lower()] -= amount
+        self.vt_balance["krw"] += price * amount * (1 - self.market_fee)
+        return Order(self.MARKET_TAG, OrderType.LIMIT_SELL, self.generate_order_id(), price, amount)
 
     def update_balance(self):
-        eth_bal = Decimal(self.eth_balance)
-        krw_bal = Decimal(self.krw_balance)
         zero = Decimal(0)
-        self.balance.update({
-            "eth": {
-                "available": eth_bal,
+        balance_dict = dict()
+        for key in self.vt_balance.keys():
+            coin_bal = Decimal(self.vt_balance[key])
+            balance_dict[key] = {
+                "available": coin_bal,
                 "trade_in_use": zero,
-                "balance": eth_bal
-            },
-            "krw": {
-                "available": krw_bal,
-                "trade_in_use": zero,
-                "balance": krw_bal
+                "balance": coin_bal
             }
-        })
+        self.balance.update(balance_dict)
 
-    def get_orderbook(self, currency: VirtualCurrency):
-        target_api_currency = self._convert_to_target_api_currency(currency)
-        return self.api.get_orderbook(target_api_currency)
-
-    def get_ticker(self, currency: VirtualCurrency):
-        target_api_currency = self._convert_to_target_api_currency(currency)
-        return self.api.get_ticker(target_api_currency)
-
-    @staticmethod
-    def get_market_currency(target_currency: str):
-        return VirtualCurrency[target_currency.upper()]
-
-    def _convert_to_target_api_currency(self, currency: VirtualCurrency):
+    # override static method
+    def get_market_currency(self, target_currency: str):
         if self.api_type is VirtualMarketApiType.COINONE:
-            return CoinoneCurrency[currency.name]
+            return CoinoneCurrency[target_currency.upper()]
         elif self.api_type is VirtualMarketApiType.KORBIT:
-            return KorbitCurrency[currency.name]
+            return KorbitCurrency[target_currency.upper()]
         else:
             raise Exception("Invalid target API type has set!")
 

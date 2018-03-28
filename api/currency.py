@@ -23,15 +23,3 @@ class KorbitCurrency(Currency):
     ETH = "eth_krw"
     ETC = "etc_krw"
     XRP = "xrp_krw"
-
-
-class VirtualCurrency(Currency):
-    BTC = "btc"
-    BCH = "bch"
-    ETH = "eth"
-    ETC = "etc"
-    XRP = "xrp"
-    QTUM = "qtum"
-    IOTA = "iota"
-    LTC = "ltc"
-    BTG = "btg"
