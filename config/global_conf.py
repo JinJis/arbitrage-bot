@@ -5,6 +5,7 @@ import sys
 from datetime import datetime
 from time import gmtime, strftime
 import scipy.stats as st
+import os
 
 
 class Global:
@@ -60,3 +61,8 @@ class Global:
         # python calculates left/lower-tail probabilities by default
         # so we need to halve the excluded probability(`1 - prob`) before processing
         return st.norm.ppf(1 - (1 - probability) / 2)
+
+    @staticmethod
+    def get_unique_process_tag():
+        # should only be called in initialization phase
+        return "%s_%d" % (datetime.today().strftime("%Y%m%d"), os.getpid())

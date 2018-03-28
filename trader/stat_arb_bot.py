@@ -61,6 +61,7 @@ class StatArbBot:
             logging.info("========== [# %12d Trade Loop] =================================================="
                          % loop_count)
             loop_count += 1
+            loop_start_time = time.time()
 
             # get previous mean, standard deviation
             mean = self.spread_stack.mean()
@@ -75,22 +76,38 @@ class StatArbBot:
 
             # log stat
             logging.info("[STAT] cur_spread: %.8f, mean: %.8f, stdev: %.8f" % (cur_spread, mean, stdev))
+            logging.info("[STAT] mm1_last: ")
 
+            # TODO: 트레이딩 기록하기
+            # TODO: 스프레드 얼마일 때 페어 거래 New/Reverse 어떻게 했는지, mm은 기록만 하고, Order의 관리는 바깥에서 하는 게 맞는듯
             # make decision
             if cur_spread < lower:
-                logging.warning("[EXECUTE] New")
-                # long in mm1, short in mm2
-                mm1.order_buy(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
-                mm2.order_sell(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
+                # check balance
+                if (mm1.has_enough_coin("krw", mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT) * mm1_last)
+                        and mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)):
+                    logging.warning("[EXECUTE] New")
+                    # long in mm1, short in mm2
+                    mm1.order_buy(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
+                    mm2.order_sell(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
+                else:
+                    logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
             elif cur_spread > upper:
-                logging.warning("[EXECUTE] Reverse")
-                # long in mm2, short in mm1
-                mm2.order_buy(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
-                mm1.order_sell(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
+                # check balance
+                if (mm2.has_enough_coin("krw", mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT) * mm2_last)
+                        and mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)):
+                    logging.warning("[EXECUTE] Reverse")
+                    # long in mm2, short in mm1
+                    mm2.order_buy(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
+                    mm1.order_sell(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
+                else:
+                    logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
             else:
                 logging.warning("[EXECUTE] No")
+
+            # set a is_trade flag
+            # should update and log balance
 
             # log combined balance
             Analyzer.log_combined_balance(mm1.get_balance(), mm2.get_balance())
@@ -101,8 +118,10 @@ class StatArbBot:
             # append the current spread
             self.spread_stack = np.append(self.spread_stack, cur_spread)
 
-            # sleep for interval
-            time.sleep(self.TRADE_INTERVAL_IN_SEC)
+            # sleep for diff between the set interval and execution time
+            loop_end_time = time.time()
+            loop_spent_time = loop_end_time - loop_start_time
+            time.sleep(self.TRADE_INTERVAL_IN_SEC - loop_spent_time)
 
     def collect_initial_stack(self):
         current_timestamp = int(time.time())

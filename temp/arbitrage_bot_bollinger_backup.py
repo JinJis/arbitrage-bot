@@ -124,8 +124,8 @@ class ArbitrageBot:
         mm2_orderbook = mm2.get_orderbook(mm2_currency)
         mm2_minask_price, mm2_maxbid_price = ArbitrageBot.get_price_of_minask_maxbid(mm2_orderbook)
 
-        logging.info("[%s] minask: %d, maxbid: %d" % (mm1.get_market_tag(), mm1_minask_price, mm1_maxbid_price))
-        logging.info("[%s] minask: %d, maxbid: %d" % (mm2.get_market_tag(), mm2_minask_price, mm2_maxbid_price))
+        logging.info("[%s] minask: %d, maxbid: %d" % (mm1.get_market_name(), mm1_minask_price, mm1_maxbid_price))
+        logging.info("[%s] minask: %d, maxbid: %d" % (mm2.get_market_name(), mm2_minask_price, mm2_maxbid_price))
 
         new_spread = ArbitrageBot.calc_spread(mm1_minask_price, mm1.market_fee,
                                               mm2_maxbid_price, mm2.market_fee)
