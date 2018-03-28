@@ -115,16 +115,23 @@ class StatArbBot:
                 logging.warning("[EXECUTE] No")
 
             # TODO: log trade, keep track of trades in trade manager
-            # should update and log balance
             if trade is not None:
                 self.trade_manager.add_trade(trade)
+                mm1.update_balance()
+                mm2.update_balance()
+                logging.info(mm1.get_balance())
+                logging.info(mm2.get_balance())
 
             # log trade stat
             trade_total = self.trade_manager.get_trade_count()
             trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
             trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
-            logging.info("[STAT] total trades: %d, new trades: %d(%.2f), rev trades: %d(%.2f)" %
-                         (trade_total, trade_new, (trade_new / trade_total), trade_rev, (trade_rev / trade_total)))
+            try:
+                logging.info("[STAT] total trades: %d, new trades: %d(%.2f), rev trades: %d(%.2f)" %
+                             (trade_total, trade_new, trade_new / trade_total * 100,
+                              trade_rev, trade_rev / trade_total * 100))
+            except ZeroDivisionError:
+                logging.info("[STAT] total trades: 0, new trades: 0, rev trades: 0")
 
             # log combined balance
             Analyzer.log_combined_balance(mm1.get_balance(), mm2.get_balance())

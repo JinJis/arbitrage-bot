@@ -25,7 +25,6 @@ class VirtualMarketManager(MarketManager):
         else:
             raise Exception("Invalid target API type has set!")
 
-        super().__init__(self.MARKET_TAG, market_fee, target_api)
         self.name = name
         self.api_type = api_type
         self.vt_balance = {
@@ -33,6 +32,7 @@ class VirtualMarketManager(MarketManager):
             "eth": eth_balance
         }
         self.order_id_count = 0
+        super().__init__(self.MARKET_TAG, market_fee, target_api)
 
     def order_buy(self, currency: Currency, price: int, amount: float):
         actual_amount = self.calc_actual_coin_need_to_buy(amount)
