@@ -1,14 +1,16 @@
+import math
 import time
 import logging
 import numpy as np
+from pymongo import MongoClient
+from analyzer.analyzer import Analyzer
+from config.global_conf import Global
+from trader.market.trade import ArbTrade, TradeTag, StatArbTradeMeta
+from .trade_manager import TradeManager
 from trader.market_manager.market_manager import MarketManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
 from trader.market_manager.virtual_market_manager import VirtualMarketManager, VirtualMarketApiType
-from config.global_conf import Global
-from analyzer.analyzer import Analyzer
-from pymongo import MongoClient
-import math
 
 
 class StatArbBot:
@@ -33,6 +35,9 @@ class StatArbBot:
         self.mongo_client = MongoClient(Global.read_mongodb_uri(is_from_local))
         self.co_ticker_col = self.mongo_client["coinone"][self.TARGET_CURRENCY + "_ticker"]
         self.kb_ticker_col = self.mongo_client["korbit"][self.TARGET_CURRENCY + "_ticker"]
+
+        # init trade manager
+        self.trade_manager = TradeManager()
 
     def run(self):
         Global.configure_default_root_logging()
@@ -62,6 +67,7 @@ class StatArbBot:
                          % loop_count)
             loop_count += 1
             loop_start_time = time.time()
+            trade = None
 
             # get previous mean, standard deviation
             mean = self.spread_stack.mean()
@@ -73,13 +79,13 @@ class StatArbBot:
 
             # get current spread
             cur_spread, mm1_last, mm2_last = Analyzer.get_ticker_log_spread(mm1, mm1_currency, mm2, mm2_currency)
+            plain_spread = mm1_last - mm2_last
 
             # log stat
             logging.info("[STAT] cur_spread: %.8f, mean: %.8f, stdev: %.8f" % (cur_spread, mean, stdev))
-            logging.info("[STAT] mm1_last: ")
+            logging.info("[STAT] mm1_last: %d, mm2_last: %d, plain_spread: %d" % (mm1_last, mm2_last, plain_spread))
+            trade_meta = StatArbTradeMeta(plain_spread, cur_spread, mean, stdev, upper, lower)
 
-            # TODO: 트레이딩 기록하기
-            # TODO: 스프레드 얼마일 때 페어 거래 New/Reverse 어떻게 했는지, mm은 기록만 하고, Order의 관리는 바깥에서 하는 게 맞는듯
             # make decision
             if cur_spread < lower:
                 # check balance
@@ -87,8 +93,9 @@ class StatArbBot:
                         and mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)):
                     logging.warning("[EXECUTE] New")
                     # long in mm1, short in mm2
-                    mm1.order_buy(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
-                    mm2.order_sell(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
+                    buy_order = mm1.order_buy(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
+                    sell_order = mm2.order_sell(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
+                    trade = ArbTrade(TradeTag.NEW, [buy_order, sell_order], trade_meta)
                 else:
                     logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
@@ -98,24 +105,33 @@ class StatArbBot:
                         and mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)):
                     logging.warning("[EXECUTE] Reverse")
                     # long in mm2, short in mm1
-                    mm2.order_buy(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
-                    mm1.order_sell(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
+                    buy_order = mm2.order_buy(mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
+                    sell_order = mm1.order_sell(mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
+                    trade = ArbTrade(TradeTag.REV, [buy_order, sell_order], trade_meta)
                 else:
                     logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
             else:
                 logging.warning("[EXECUTE] No")
 
-            # set a is_trade flag
+            # TODO: log trade, keep track of trades in trade manager
             # should update and log balance
+            if trade is not None:
+                self.trade_manager.add_trade(trade)
+
+            # log trade stat
+            trade_total = self.trade_manager.get_trade_count()
+            trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
+            trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
+            logging.info("[STAT] total trades: %d, new trades: %d(%.2f), rev trades: %d(%.2f)" %
+                         (trade_total, trade_new, (trade_new / trade_total), trade_rev, (trade_rev / trade_total)))
 
             # log combined balance
             Analyzer.log_combined_balance(mm1.get_balance(), mm2.get_balance())
 
             # remove the earliest spread in the stack
-            self.spread_stack = np.delete(self.spread_stack, 0)
-
             # append the current spread
+            self.spread_stack = np.delete(self.spread_stack, 0)
             self.spread_stack = np.append(self.spread_stack, cur_spread)
 
             # sleep for diff between the set interval and execution time
