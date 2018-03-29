@@ -59,7 +59,8 @@ class StatArbBot:
         wait_n_sec = self.TRADE_INTERVAL_IN_SEC - (current_ts - last_request_time)
         logging.info("Last requestTime: %.2f, current: %.2f, will wait %.2f sec..." %
                      (last_request_time, current_ts, wait_n_sec))
-        time.sleep(wait_n_sec if wait_n_sec > 0 else 0)
+        if wait_n_sec > 0:
+            time.sleep(wait_n_sec)
 
         # log initial balance
         logging.info("========== [  INITIAL BALANCE  ] ========================================================")
@@ -163,7 +164,9 @@ class StatArbBot:
             # sleep for diff between the set interval and execution time
             loop_end_time = time.time()
             loop_spent_time = loop_end_time - loop_start_time
-            time.sleep(self.TRADE_INTERVAL_IN_SEC - loop_spent_time)
+            sleep_time = self.TRADE_INTERVAL_IN_SEC - loop_spent_time
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
     def collect_initial_stack(self):
         current_timestamp = int(time.time())
