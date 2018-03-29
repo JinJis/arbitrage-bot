@@ -6,7 +6,8 @@ from pymongo import MongoClient
 from analyzer.analyzer import Analyzer
 from config.global_conf import Global
 from trader.market.trade import ArbTrade, TradeTag, StatArbTradeMeta
-from .trade_manager import TradeManager
+from trader.trade_manager import TradeManager
+from trader.market.switch_over import SwitchOver
 from trader.market_manager.market_manager import MarketManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
@@ -115,8 +116,12 @@ class StatArbBot:
                 logging.warning("[EXECUTE] No")
 
             # TODO: log trade, keep track of trades in trade manager
+            # if any trade was executed
             if trade is not None:
-                self.trade_manager.add_trade(trade)
+                # add into trade list
+                self.trade_manager.add_trade(trade, loop_start_time)
+
+                # update and log balance
                 mm1.update_balance()
                 mm2.update_balance()
                 logging.info(mm1.get_balance())
@@ -132,6 +137,13 @@ class StatArbBot:
                               trade_rev, trade_rev / trade_total * 100))
             except ZeroDivisionError:
                 logging.info("[STAT] total trades: 0, new trades: 0, rev trades: 0")
+
+            # log switch over stat
+            last_switch_over = self.trade_manager.get_last_switch_over()
+            logging.info("[STAT] switch over - count: %d, average: %d sec, last: %d sec" %
+                         (self.trade_manager.get_switch_over_count(),
+                          self.trade_manager.get_average_switch_over_spent_time(),
+                          last_switch_over.get_spent_time() if last_switch_over is not None else 0))
 
             # log combined balance
             Analyzer.log_combined_balance(mm1.get_balance(), mm2.get_balance())
