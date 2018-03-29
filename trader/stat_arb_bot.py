@@ -1,5 +1,6 @@
 import time
 import logging
+from itertools import zip_longest
 import numpy as np
 from pymongo import MongoClient
 from analyzer.analyzer import Analyzer
@@ -232,10 +233,13 @@ class StatArbBot:
         mm1_count = mm1_cursor.count()
         mm2_count = mm2_cursor.count()
         if mm1_count != mm2_count:
-            if not self.is_back_testing:
-                raise Exception("[Initialization Error] Cursor count does not match! : mm1 %d, mm2 %d" %
-                                (mm1_count, mm2_count))
-            else:
-                logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
+            logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
+            logging.info("Now validating ticker data...")
+            for mm1_item, mm2_item in zip_longest(mm1_cursor, mm2_cursor):
+                mm1_rt = mm1_item["requestTime"]
+                mm2_rt = mm2_item["requestTime"]
+                if mm1_rt != mm2_rt:
+                    raise Exception("Please manually check and fix the data on DB: "
+                                    "mm1 requestTime - %d, mm2 requestTime - %d" % (mm1_rt, mm2_rt))
 
         return mm1_cursor, mm2_cursor
