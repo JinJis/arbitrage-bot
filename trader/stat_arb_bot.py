@@ -143,7 +143,7 @@ class StatArbBot:
             logging.info("[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
                          (self.trade_manager.get_switch_over_count(),
                           self.trade_manager.get_average_switch_over_spent_time(),
-                          last_switch_over.get_spent_time() if last_switch_over is not None else 0))
+                          last_switch_over.get("spent_time") if last_switch_over is not None else 0))
 
             # log combined balance
             Analyzer.log_combined_balance(mm1.get_balance(), mm2.get_balance())

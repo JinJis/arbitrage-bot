@@ -20,7 +20,7 @@ class TradeManager:
         if cur_trade_tag is not last_trade_tag:
             # use loop_start_time if the trade was the first switch over
             last_switch_over = self.get_last_switch_over()
-            last_switch_over_ts = last_switch_over.timestamp if last_switch_over is not None else None
+            last_switch_over_ts = last_switch_over.get("timestamp") if last_switch_over is not None else None
             last_switch_over_ts = loop_start_time if last_switch_over_ts is None else last_switch_over_ts
 
             # create switch over instance & add into list
@@ -47,7 +47,7 @@ class TradeManager:
         return self._switch_over_list[-1] if len(self._switch_over_list) > 0 else None
 
     def get_average_switch_over_spent_time(self):
-        spent_time_list = [switch_over.get_spent_time() for switch_over in self._switch_over_list]
+        spent_time_list = [switch_over.get("spent_time") for switch_over in self._switch_over_list]
         return numpy.mean(spent_time_list) if len(spent_time_list) > 0 else 0
 
     def get_switch_over_count(self):

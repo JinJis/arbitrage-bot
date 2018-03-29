@@ -14,5 +14,5 @@ class SwitchOver:
     def to_dict(self):
         return dict(self._data)
 
-    def get_spent_time(self):
-        return self._data["spent_time"]
+    def get(self, key: str):
+        return self._data[key]
