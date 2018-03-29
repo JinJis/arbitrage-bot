@@ -2,13 +2,13 @@ import time
 
 
 class SwitchOver:
-    def __init__(self, _from: str, _to: str, last_switch_over_timestamp: int):
-        cur_timestamp = int(time.time())
+    def __init__(self, _from: str, _to: str, last_trade_ts: int):
+        current_ts = int(time.time())
         self._data = {
-            "timestamp": cur_timestamp,
+            "timestamp": current_ts,
             "from": _from,
             "to": _to,
-            "spent_time": (cur_timestamp - last_switch_over_timestamp)
+            "spent_time": (current_ts - last_trade_ts)
         }
 
     def to_dict(self):
