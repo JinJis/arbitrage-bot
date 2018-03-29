@@ -37,10 +37,13 @@ class Global:
             return "mongodb://%s:%d" % (host, port)
 
     @staticmethod
-    def configure_default_root_logging():
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s",
-                            datefmt="%Y-%m-%d %H:%M:%S",
-                            stream=sys.stdout)
+    def configure_default_root_logging(log_level: int = logging.INFO, should_log_to_file: bool = False):
+        if not should_log_to_file:
+            logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s: %(message)s",
+                                datefmt="%Y-%m-%d %H:%M:%S", stream=sys.stdout)
+        else:
+            logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s: %(message)s",
+                                datefmt="%Y-%m-%d %H:%M:%S", filename=("log/%s.log" % datetime.now()))
 
     @staticmethod
     def convert_local_datetime_to_epoch(datetime_str, timezone=None):

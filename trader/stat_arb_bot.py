@@ -13,7 +13,7 @@ class StatArbBot:
     TARGET_CURRENCY = "eth"
     COIN_TRADING_UNIT = 0.01
     TRADE_INTERVAL_IN_SEC = 5
-    TARGET_SPREAD_STACK_HOUR = 3  # 3-hour data
+    TARGET_SPREAD_STACK_HOUR = 6  # 3-hour data
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
     Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.8)  # 2
 
@@ -159,6 +159,11 @@ class StatArbBot:
         # TODO: log trade, keep track of trades in trade manager
         # if any trade was executed
         if trade is not None:
+            # change timestamp of trade when backtesting
+            if self.is_back_testing:
+                current_ts = mm1_ticker["requestTime"]
+                trade.set_timestamp(current_ts)
+
             # add into trade list
             self.trade_manager.add_trade(trade)
 
@@ -207,7 +212,7 @@ class StatArbBot:
 
         last_request_time = None
         for mm1_ticker, mm2_ticker in zip(mm1_cursor, mm2_cursor):
-            log_spread = Analyzer.get_ticker_log_spread(mm1_ticker, mm2_ticker)
+            log_spread, _, _ = Analyzer.get_ticker_log_spread(mm1_ticker, mm2_ticker)
             self.spread_stack = np.append(self.spread_stack, log_spread)
             last_request_time = mm1_ticker["requestTime"]
 
@@ -227,7 +232,10 @@ class StatArbBot:
         mm1_count = mm1_cursor.count()
         mm2_count = mm2_cursor.count()
         if mm1_count != mm2_count:
-            raise Exception("[Initialization Error] Cursor count does not match! : mm1 %d, mm2 %d" %
-                            (mm1_count, mm2_count))
+            if not self.is_back_testing:
+                raise Exception("[Initialization Error] Cursor count does not match! : mm1 %d, mm2 %d" %
+                                (mm1_count, mm2_count))
+            else:
+                logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
 
         return mm1_cursor, mm2_cursor

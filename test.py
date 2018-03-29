@@ -140,4 +140,7 @@ from config.global_conf import Global
 
 from trader.stat_arb_bot import StatArbBot
 
-StatArbBot(is_from_local=True).run()
+Global.configure_default_root_logging(should_log_to_file=True)
+start_time = Global.convert_local_datetime_to_epoch("2018.03.24 00:00:00")
+end_time = Global.convert_local_datetime_to_epoch("2018.03.27 00:00:00")
+StatArbBot(is_from_local=True, is_back_testing=True, start_time=start_time, end_time=end_time).run()

@@ -12,6 +12,9 @@ class Trade:
         self.timestamp = int(time.time())
         self.trade_tag = trade_tag
 
+    def set_timestamp(self, new_timestamp: int):
+        self.timestamp = new_timestamp
+
 
 class StatArbTradeMeta:
     def __init__(self, plain_spread, log_spread, log_mean, log_stdev, log_upper, log_lower):
