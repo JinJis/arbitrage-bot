@@ -14,7 +14,8 @@ class TradeManager:
         # see if this is not the first trade, and the trade tag has changed from the tag of last trade
         last_trade = self.get_last_trade()
         if last_trade is not None and cur_trade.trade_tag is not last_trade.trade_tag:
-            switch_over = SwitchOver(last_trade.trade_tag.name, cur_trade.trade_tag.name, last_trade.timestamp)
+            switch_over = SwitchOver(last_trade.trade_tag.name, cur_trade.trade_tag.name,
+                                     last_trade.timestamp, cur_trade.timestamp)
             self.add_switch_over(switch_over)
 
         # add into trade list
