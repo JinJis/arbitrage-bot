@@ -52,8 +52,10 @@ class Analyzer:
         kb_orderbook = kb_mm.get_orderbook(kb_currency)
         kb_minask_price, kb_maxbid_price = Analyzer.get_price_of_minask_maxbid(kb_orderbook)
 
-        logging.info("[STAT][%s] min_ask: %d, max_bid: %d" % (co_mm.name, co_minask_price, co_maxbid_price))
-        logging.info("[STAT][%s] min_ask: %d, max_bid: %d" % (kb_mm.name, kb_minask_price, kb_maxbid_price))
+        logging.info(
+            "[STAT][%s] min_ask: %d, max_bid: %d" % (co_mm.get_market_name(), co_minask_price, co_maxbid_price))
+        logging.info(
+            "[STAT][%s] min_ask: %d, max_bid: %d" % (kb_mm.get_market_name(), kb_minask_price, kb_maxbid_price))
 
         # set co buy & sell price
         co_ma_mb_diff = co_minask_price - co_maxbid_price
@@ -73,15 +75,10 @@ class Analyzer:
         return new_spread, rev_spread, co_buy_price, co_sell_price, kb_buy_price, kb_sell_price
 
     @staticmethod
-    def get_ticker_log_spread(mm1: MarketManager, mm1_currency: Currency, mm2: MarketManager, mm2_currency: Currency):
-        mm1_ticker = mm1.get_ticker(mm1_currency)
-        mm2_ticker = mm2.get_ticker(mm2_currency)
-
+    def get_ticker_log_spread(mm1_ticker: dict, mm2_ticker: dict):
         mm1_last = int(mm1_ticker["last"].to_decimal())
         mm2_last = int(mm2_ticker["last"].to_decimal())
-
         log_spread = math.log(mm1_last) - math.log(mm2_last)
-
         return log_spread, mm1_last, mm2_last
 
     @staticmethod
@@ -97,3 +94,11 @@ class Analyzer:
                          (coin.upper(), mm1_coin_balance["available"] + mm2_coin_balance["available"],
                           mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
                           mm1_coin_balance["balance"] + mm2_coin_balance["balance"]))
+
+    @staticmethod
+    def have_enough_balance_for_arb(buy_mm: MarketManager, sell_mm: MarketManager,
+                                    buy_price: int, coin_trade_amount: float, coin_currency: str):
+        buy_mm_needed_krw = buy_mm.calc_actual_coin_need_to_buy(coin_trade_amount) * buy_price
+        sell_mm_needed_coin = coin_trade_amount
+        return (buy_mm.has_enough_coin("krw", buy_mm_needed_krw) and
+                sell_mm.has_enough_coin(coin_currency, sell_mm_needed_coin))

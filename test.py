@@ -140,5 +140,4 @@ from config.global_conf import Global
 
 from trader.stat_arb_bot import StatArbBot
 
-aa = StatArbBot(is_from_local=True)
-aa.run()
+StatArbBot(is_from_local=True).run()
