@@ -10,22 +10,19 @@ class TradeManager:
         self._trade_list = list()
         self._switch_over_list = list()
 
-    def add_trade(self, trade: Trade, loop_start_time: int):
+    def add_trade(self, trade: Trade):
         # check last & current trade tag
         last_trade = self.get_last_trade()
         last_trade_tag = last_trade.trade_tag if last_trade is not None else None
         cur_trade_tag = trade.trade_tag
+        last_switch_over = self.get_last_switch_over()
 
-        # if the trade tag has changed
-        if cur_trade_tag is not last_trade_tag:
-            # use loop_start_time if the trade was the first switch over
-            last_switch_over = self.get_last_switch_over()
-            last_switch_over_ts = last_switch_over.get("timestamp") if last_switch_over is not None else None
-            last_switch_over_ts = loop_start_time if last_switch_over_ts is None else last_switch_over_ts
-
+        # if the trade tag has changed and this is not the first trade
+        if cur_trade_tag is not last_trade_tag and last_switch_over is not None:
             # create switch over instance & add into list
             last_trade_tag_name = getattr(last_trade_tag, "name", "None")
             cur_trade_tag_name = getattr(cur_trade_tag, "name", "None")
+            last_switch_over_ts = last_switch_over.get("timestamp")
             switch_over = SwitchOver(last_trade_tag_name, cur_trade_tag_name, last_switch_over_ts)
             self.add_switch_over(switch_over)
 

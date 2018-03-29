@@ -7,7 +7,6 @@ from analyzer.analyzer import Analyzer
 from config.global_conf import Global
 from trader.market.trade import ArbTrade, TradeTag, StatArbTradeMeta
 from trader.trade_manager import TradeManager
-from trader.market.switch_over import SwitchOver
 from trader.market_manager.market_manager import MarketManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
@@ -51,8 +50,16 @@ class StatArbBot:
 
         # collect initial stack before going into trade loop
         logging.info("Collecting initial spread stack, please wait...")
-        self.collect_initial_stack()
-        logging.info("Done collecting! Current stack size: %d", self.spread_stack.size)
+        last_request_time = self.collect_initial_stack()
+        logging.warning("Done collecting! Stack size - expected: %d, current: %d" %
+                        (self.TARGET_SPREAD_STACK_SIZE, self.spread_stack.size))
+
+        # calculate and wait for request time gap to match the trade interval
+        current_ts = time.time()
+        wait_n_sec = self.TRADE_INTERVAL_IN_SEC - (current_ts - last_request_time)
+        logging.info("Last requestTime: %.2f, current: %.2f, will wait %.2f sec..." %
+                     (last_request_time, current_ts, wait_n_sec))
+        time.sleep(wait_n_sec if wait_n_sec > 0 else 0)
 
         # log initial balance
         logging.info("========== [  INITIAL BALANCE  ] ========================================================")
@@ -119,7 +126,7 @@ class StatArbBot:
             # if any trade was executed
             if trade is not None:
                 # add into trade list
-                self.trade_manager.add_trade(trade, loop_start_time)
+                self.trade_manager.add_trade(trade)
 
                 # update and log balance
                 mm1.update_balance()
@@ -176,8 +183,13 @@ class StatArbBot:
         if co_count != kb_count:
             raise Exception("[Initialization Error] Cursor count does not match! : co %d, kb %d" % (co_count, kb_count))
 
+        last_request_time = None
         for co_item, kb_item in zip(co_cursor, kb_cursor):
             co_last = co_item["last"].to_decimal()
             kb_last = kb_item["last"].to_decimal()
             log_spread = math.log(co_last) - math.log(kb_last)
             self.spread_stack = np.append(self.spread_stack, log_spread)
+            last_request_time = co_item["requestTime"]
+
+        # return the last request time
+        return last_request_time
