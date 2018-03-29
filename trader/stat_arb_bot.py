@@ -132,7 +132,7 @@ class StatArbBot:
             trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
             trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
             try:
-                logging.info("[STAT] total trades: %d, new trades: %d(%.2f), rev trades: %d(%.2f)" %
+                logging.info("[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
                              (trade_total, trade_new, trade_new / trade_total * 100,
                               trade_rev, trade_rev / trade_total * 100))
             except ZeroDivisionError:
@@ -140,7 +140,7 @@ class StatArbBot:
 
             # log switch over stat
             last_switch_over = self.trade_manager.get_last_switch_over()
-            logging.info("[STAT] switch over - count: %d, average: %d sec, last: %d sec" %
+            logging.info("[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
                          (self.trade_manager.get_switch_over_count(),
                           self.trade_manager.get_average_switch_over_spent_time(),
                           last_switch_over.get_spent_time() if last_switch_over is not None else 0))

@@ -1,7 +1,6 @@
 from trader.market.trade import Trade, TradeTag
 from trader.market.switch_over import SwitchOver
 import numpy
-import logging
 
 
 # TODO: should process db logging, manage(& track) order, balance & tradings(new / reverse)
