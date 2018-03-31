@@ -15,6 +15,10 @@ class Analyzer:
     def get_price_of_minask_maxbid(orderbook: dict):
         return int(orderbook["asks"][0]["price"].to_decimal()), int(orderbook["bids"][0]["price"].to_decimal())
 
+    @staticmethod
+    def get_amount_of_minask_maxbid(orderbook: dict, ask_index: int, bid_index: int):
+        return float(orderbook["asks"][ask_index]["amount"].to_decimal()), float(orderbook["bids"][bid_index]["amount"].to_decimal())
+    
     ######################################################################
     # buy at minask, sell at maxbid
     ######################################################################
@@ -23,9 +27,11 @@ class Analyzer:
     def buy_sell_strategy_1(mm1: MarketManager, mm1_currency: Currency, mm2: MarketManager, mm2_currency: Currency):
         mm1_orderbook = mm1.get_orderbook(mm1_currency)
         mm1_minask_price, mm1_maxbid_price = Analyzer.get_price_of_minask_maxbid(mm1_orderbook)
+        mm1_minask_amount, mm1_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm1_orderbook, 0, 0)
 
         mm2_orderbook = mm2.get_orderbook(mm2_currency)
         mm2_minask_price, mm2_maxbid_price = Analyzer.get_price_of_minask_maxbid(mm2_orderbook)
+        mm2_minask_amount, mm2_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm1_orderbook, 0, 0)
 
         new_spread = Analyzer.calc_spread(mm1_minask_price, mm1.market_fee,
                                           mm2_maxbid_price, mm2.market_fee)
@@ -37,7 +43,9 @@ class Analyzer:
         mm2_buy_price = mm2_minask_price
         mm2_sell_price = mm2_maxbid_price
 
-        return new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price
+
+        return new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price,\
+                mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount
 
     ######################################################################
     # co:   buy at ma_mb_avg ±      sell at ma_mb_avg ±
