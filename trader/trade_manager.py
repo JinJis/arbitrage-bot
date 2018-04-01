@@ -1,4 +1,6 @@
+import time
 import numpy
+import logging
 from pymongo import MongoClient
 from trader.market.trade import Trade, TradeTag
 from trader.market.switch_over import SwitchOver
@@ -8,10 +10,10 @@ from config.global_conf import Global
 from collections import deque
 
 
-# remember only last 100 hundreds of trades and switch over if it's not in a backtesting mode
-# TODO: should process db logging, manage(& track) order, balance & tradings(new / reverse)
-# use Global.get_unique_process_tag
+# TODO: keep track of trades in trade manager
+# TODO: manage(& track) order
 class TradeManager:
+    # remember only last <*_LIMIT> number of trade / switch_over if it's not in a backtesting mode
     TRADE_INSTANCE_LIMIT = 50
     SWITCH_OVER_INSTANCE_LIMIT = 100
 
@@ -29,6 +31,7 @@ class TradeManager:
             # init db related
             self.mongo_client = MongoClient(Global.read_mongodb_uri(is_from_local))
             target_db = self.mongo_client[Global.get_unique_process_tag()]
+            self.trade_col = target_db["trade"]
             self.order_col = target_db["order"]
             self.filled_order_col = target_db["filled_order"]
             self.balance_col = target_db["balance"]
@@ -46,6 +49,12 @@ class TradeManager:
             self._trade_list.popleft()
         # add into trade list
         self._trade_list.append(cur_trade)
+
+        # log current trade
+        self.log_trade(cur_trade)
+        # log orders in current trade
+        for order in cur_trade.orders:
+            self.log_order(order)
 
     def add_switch_over(self, switch_over: SwitchOver):
         # pop the left-most element if the size has reached the set limit
@@ -72,8 +81,19 @@ class TradeManager:
     def get_switch_over_count(self):
         return len(self._switch_over_list)
 
+    def log_trade(self, trade: Trade):
+        logging.info(trade)
+        if self.should_db_logging:
+            self.trade_col.insert_one(trade.to_dict())
+
     def log_order(self, order: Order):
-        self.order_col.insert_one(order.to_dict())
+        logging.info(order)
+        if self.should_db_logging:
+            self.order_col.insert_one(order.to_dict())
 
     def log_balance(self, balance: Balance):
-        self.balance_col.insert_one(balance.to_dict())
+        logging.info(balance)
+        if self.should_db_logging:
+            balance_dic = balance.to_dict()
+            balance_dic["timestamp"] = int(time.time())
+            self.balance_col.insert_one(balance_dic)

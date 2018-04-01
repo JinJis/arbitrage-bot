@@ -5,7 +5,7 @@ import numpy as np
 from pymongo import MongoClient
 from analyzer.analyzer import Analyzer
 from config.global_conf import Global
-from trader.market.trade import ArbTrade, TradeTag, StatArbTradeMeta
+from trader.market.trade import Trade, TradeTag, StatArbTradeMeta
 from trader.trade_manager import TradeManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
@@ -143,7 +143,7 @@ class StatArbBot:
                 logging.warning("[EXECUTE] New")
                 buy_order = self.mm1.order_buy(self.mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
                 sell_order = self.mm2.order_sell(self.mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
-                trade = ArbTrade(TradeTag.NEW, [buy_order, sell_order], trade_meta)
+                trade = Trade(TradeTag.NEW, [buy_order, sell_order], trade_meta)
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
@@ -155,14 +155,13 @@ class StatArbBot:
                 logging.warning("[EXECUTE] Reverse")
                 buy_order = self.mm2.order_buy(self.mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
                 sell_order = self.mm1.order_sell(self.mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
-                trade = ArbTrade(TradeTag.REV, [buy_order, sell_order], trade_meta)
+                trade = Trade(TradeTag.REV, [buy_order, sell_order], trade_meta)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
         else:
             logging.warning("[EXECUTE] No")
 
-        # TODO: log trade, keep track of trades in trade manager
         # if any trade was executed
         if trade is not None:
             # change timestamp of trade when backtesting
@@ -176,8 +175,8 @@ class StatArbBot:
             # update and log balance
             self.mm1.update_balance()
             self.mm2.update_balance()
-            logging.info(self.mm1.get_balance())
-            logging.info(self.mm2.get_balance())
+            self.trade_manager.log_balance(self.mm1.get_balance())
+            self.trade_manager.log_balance(self.mm2.get_balance())
 
         # log trade stat
         trade_total = self.trade_manager.get_trade_count()
