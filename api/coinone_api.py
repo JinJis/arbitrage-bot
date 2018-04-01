@@ -1,16 +1,17 @@
-import requests
-from .market_api import MarketApi
-from .currency import CoinoneCurrency
-from bson import Decimal128
-import configparser
-from datetime import datetime
 import hmac
 import json
+import time
 import base64
 import hashlib
-import time
-from config.global_conf import Global
+import requests
+import configparser
 from decimal import Decimal
+from bson import Decimal128
+from datetime import datetime
+from .market_api import MarketApi
+from .currency import CoinoneCurrency
+from config.global_conf import Global
+from .coinone_error import CoinoneError
 
 # in order to match the korbit orderbook item count
 orderbook_item_limit = 30
@@ -42,7 +43,7 @@ class CoinoneApi(MarketApi):
         res = requests.get(self.BASE_URL + "/ticker", params={
             "currency": currency.value
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         # reformat result
         result = {
@@ -65,7 +66,7 @@ class CoinoneApi(MarketApi):
         res = requests.get(self.BASE_URL + "/orderbook", params={
             "currency": currency.value
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         # normalize asks
         _asks = res_json["ask"]
@@ -102,7 +103,7 @@ class CoinoneApi(MarketApi):
             "currency": currency.value,
             "period": time_range
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         result = list()
         for _item in res_json["completeOrders"]:
@@ -120,7 +121,7 @@ class CoinoneApi(MarketApi):
         res = requests.post(self.BASE_URL + "/oauth/refresh_token", data={
             "access_token": self._access_token
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         # write in config file
         self._access_token = res_json["accessToken"]
@@ -162,8 +163,9 @@ class CoinoneApi(MarketApi):
             "X-COINONE-PAYLOAD": encoded_payload,
             "X-COINONE-SIGNATURE": signature
         }, json=payload)
+        res_json = self.filter_successful_response(res)
 
-        return res.json()
+        return res_json
 
     def get_balance(self):
         res_json = self.coinone_post(self.BASE_URL + "/v2/account/balance")
@@ -225,8 +227,15 @@ class CoinoneApi(MarketApi):
             "currency": currency.value
         })
 
-    # def filter_error(self, res: requests.Response):
-    #     if res.status_code != 200:
-    #         raise Exception("Network request has failed!")
-    #     elif res.json()["result"] != "error":
-    #         raise
+    @staticmethod
+    def filter_successful_response(res: requests.Response):
+        if res.status_code != 200:
+            raise Exception("Network request has failed!")
+        else:
+            res_json = res.json()
+            if res_json["result"] == "error":
+                raise CoinoneError(int(res_json["errorCode"]))
+            elif res_json["result"] != "success":
+                raise Exception("Unknown response: %s" % res_json)
+            else:
+                return res_json
