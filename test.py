@@ -150,4 +150,5 @@ from api.coinone_error import CoinoneErrorCode, CoinoneError
 
 from trader.market.order import OrderType
 
-print(OrderType.LIMIT_BUY)
+KorbitApi.instance()
+CoinoneApi.instance()

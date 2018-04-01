@@ -9,7 +9,7 @@ class KorbitMarketManager(MarketManager):
     MARKET_FEE = 0.0008
 
     def __init__(self):
-        super().__init__(self.MARKET_TAG, self.MARKET_FEE, KorbitApi())
+        super().__init__(self.MARKET_TAG, self.MARKET_FEE, KorbitApi.instance())
 
     @staticmethod
     def get_market_currency(target_currency: str):

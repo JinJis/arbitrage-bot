@@ -24,6 +24,7 @@ class CoinoneApi(MarketApi):
     BASE_URL = "https://api.coinone.co.kr"
 
     def __init__(self, is_public_access_only=False):
+        super().__init__(is_public_access_only)
         if not is_public_access_only:
             # in number of days
             self._access_token_refresh_interval_in_days = access_token_refresh_interval_in_days

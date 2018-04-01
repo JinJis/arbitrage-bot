@@ -9,7 +9,7 @@ class CoinoneMarketManager(MarketManager):
     MARKET_FEE = 0.001
 
     def __init__(self):
-        super().__init__(self.MARKET_TAG, self.MARKET_FEE, CoinoneApi())
+        super().__init__(self.MARKET_TAG, self.MARKET_FEE, CoinoneApi.instance())
 
     @staticmethod
     def get_market_currency(target_currency: str):

@@ -36,6 +36,9 @@ class TradeManager:
             self.filled_order_col = target_db["filled_order"]
             self.balance_col = target_db["balance"]
 
+        # if not self.is_backtesting:
+
+
     def add_trade(self, cur_trade: Trade):
         # see if this is not the first trade, and the trade tag has changed from the tag of last trade
         last_trade = self.get_last_trade()

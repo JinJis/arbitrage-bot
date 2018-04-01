@@ -15,6 +15,7 @@ class KorbitApi(MarketApi):
     BASE_URL = "https://api.korbit.co.kr"
 
     def __init__(self, is_public_access_only=False):
+        super().__init__(is_public_access_only)
         if not is_public_access_only:
             # set instance wide config
             self._config = configparser.ConfigParser()
