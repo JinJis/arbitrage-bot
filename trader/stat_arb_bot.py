@@ -7,6 +7,8 @@ from analyzer.analyzer import Analyzer
 from config.global_conf import Global
 from trader.market.trade import ArbTrade, TradeTag, StatArbTradeMeta
 from trader.trade_manager import TradeManager
+from trader.market_manager.coinone_market_manager import CoinoneMarketManager
+from trader.market_manager.korbit_market_manager import KorbitMarketManager
 from trader.market_manager.virtual_market_manager import VirtualMarketManager, VirtualMarketApiType
 
 
@@ -14,17 +16,26 @@ class StatArbBot:
     TARGET_CURRENCY = "eth"
     COIN_TRADING_UNIT = 0.01
     TRADE_INTERVAL_IN_SEC = 5
-    TARGET_SPREAD_STACK_HOUR = 6  # 3-hour data
+    TARGET_SPREAD_STACK_HOUR = 3  # 3-hour data
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
-    Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.8)  # 2
+    Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.5)
 
     def __init__(self, is_from_local: bool = False,
-                 is_back_testing: bool = False, start_time: int = None, end_time: int = None):
+                 is_backtesting: bool = False, start_time: int = None, end_time: int = None):
+        # for backtesting
+        self.is_backtesting = is_backtesting
+        self.start_time = start_time
+        self.end_time = end_time
+        self.mm1_ticker_cursor = None
+        self.mm2_ticker_cursor = None
+
         # init market managers
-        # self.mm1 = CoinoneMarketManager()
-        # self.mm2 = KorbitMarketManager()
-        self.mm1 = VirtualMarketManager("co", VirtualMarketApiType.COINONE, 0.001, 60000, 0.1)
-        self.mm2 = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.0008, 60000, 0.1)
+        if not self.is_backtesting:
+            self.mm1 = CoinoneMarketManager()
+            self.mm2 = KorbitMarketManager()
+        else:
+            self.mm1 = VirtualMarketManager("co", VirtualMarketApiType.COINONE, 0.001, 60000, 0.1)
+            self.mm2 = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.0008, 60000, 0.1)
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
         self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
 
@@ -35,15 +46,9 @@ class StatArbBot:
 
         # init other attributes
         self.spread_stack = np.array([], dtype=np.float32)
-        self.trade_manager = TradeManager()
+        self.trade_manager = TradeManager(should_db_logging=True, is_from_local=is_from_local,
+                                          is_backtesting=is_backtesting)
         self.loop_count = 0
-
-        # for optional backtesting
-        self.is_back_testing = is_back_testing
-        self.start_time = start_time
-        self.end_time = end_time
-        self.mm1_ticker_cursor = None
-        self.mm2_ticker_cursor = None
 
     def run(self):
         #################################
@@ -59,7 +64,7 @@ class StatArbBot:
         #################################
 
         logging.info("Collecting initial spread stack, please wait...")
-        if not self.is_back_testing:
+        if not self.is_backtesting:
             last_request_time = self.collect_initial_stack(int(time.time()))
         else:
             last_request_time = self.collect_initial_stack(self.start_time)
@@ -71,7 +76,7 @@ class StatArbBot:
         #################################
 
         # on actual execution
-        if not self.is_back_testing:
+        if not self.is_backtesting:
 
             # calculate and wait for request time gap to match the trade interval
             current_ts = time.time()
@@ -113,7 +118,7 @@ class StatArbBot:
         lower = mean - stdev * StatArbBot.Z_SCORE_SIGMA
 
         # get current spread
-        if not self.is_back_testing:
+        if not self.is_backtesting:
             mm1_ticker = self.mm1.get_ticker(self.mm1_currency)
             mm2_ticker = self.mm2.get_ticker(self.mm2_currency)
             cur_spread, mm1_last, mm2_last = Analyzer.get_ticker_log_spread(mm1_ticker, mm2_ticker)
@@ -161,7 +166,7 @@ class StatArbBot:
         # if any trade was executed
         if trade is not None:
             # change timestamp of trade when backtesting
-            if self.is_back_testing:
+            if self.is_backtesting:
                 current_ts = mm1_ticker["requestTime"]
                 trade.set_timestamp(current_ts)
 
@@ -204,7 +209,7 @@ class StatArbBot:
         loop_end_time = time.time()
         loop_spent_time = loop_end_time - loop_start_time
         sleep_time = self.TRADE_INTERVAL_IN_SEC - loop_spent_time
-        if sleep_time > 0 and not self.is_back_testing:
+        if sleep_time > 0 and not self.is_backtesting:
             time.sleep(sleep_time)
 
     def collect_initial_stack(self, current_timestamp: int):

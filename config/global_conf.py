@@ -68,4 +68,4 @@ class Global:
     @staticmethod
     def get_unique_process_tag():
         # should only be called in initialization phase
-        return "%s_%d" % (datetime.today().strftime("%Y%m%d"), os.getpid())
+        return "%s_%d" % (datetime.today().strftime("%Y%m%d%H%M"), os.getpid())

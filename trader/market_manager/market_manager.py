@@ -69,6 +69,9 @@ class MarketManager(ABC):
         else:
             return True
 
+    def cancel_order(self, currency: Currency, order: Order):
+        return self.market_api.cancel_order(currency, order)
+
     @staticmethod
     @abstractmethod
     def get_market_currency(target_currency: str):
