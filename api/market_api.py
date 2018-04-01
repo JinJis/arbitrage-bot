@@ -1,5 +1,5 @@
 import logging
-import threading
+from threading import Lock
 from abc import ABC, abstractmethod
 from .currency import Currency
 from trader.market.order import Order
@@ -13,11 +13,14 @@ from trader.market.order import Order
 class MarketApi(ABC):
     # note that parent's class variables are not shared, but instead are inherited onto child classes
     # so don't need worry about different implementations using the same variables
-    __singleton_lock = threading.Lock()
-    __singleton_lock_public = threading.Lock()
+    __singleton_lock = Lock()
+    __singleton_lock_public = Lock()
     __singleton_instance = None
     __singleton_instance_public = None
     __singleton_creation_checked = False
+
+    # needed when refreshing the token in child classes
+    __access_token_lock = Lock()
 
     @classmethod
     def instance(cls, is_public_access_only=False):

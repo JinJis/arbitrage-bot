@@ -160,7 +160,10 @@ class KorbitApi(MarketApi):
         # the api gives specific number on the expiration time
         # here we are refreshing the access token 5 minutes before it expires
         if delta.seconds >= (self._expires_in_seconds - 60 * 5):
-            self.refresh_access_token()
+            # make it thread safe
+            with self.__access_token_lock:
+                if delta.seconds >= (self._expires_in_seconds - 60 * 5):
+                    self.refresh_access_token()
 
         return self._access_token
 

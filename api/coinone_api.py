@@ -140,7 +140,10 @@ class CoinoneApi(MarketApi):
         # refresh access token if not
         delta = datetime.today() - self._access_token_last_updated
         if delta.days >= self._access_token_refresh_interval_in_days:
-            self.refresh_access_token()
+            # make it thread safe
+            with self.__access_token_lock:
+                if delta.days >= self._access_token_refresh_interval_in_days:
+                    self.refresh_access_token()
 
         return self._access_token
 
