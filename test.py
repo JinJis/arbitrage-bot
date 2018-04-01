@@ -148,7 +148,7 @@ from trader.stat_arb_bot import StatArbBot
 
 from api.coinone_error import CoinoneErrorCode, CoinoneError
 
-from trader.market.order import OrderType
-
-KorbitApi.instance()
-CoinoneApi.instance()
+print(CoinoneApi.instance().get_order_info(CoinoneCurrency.ETH, "89F54099-09FA-4471-8B10-634963864FE1"))
+# print(CoinoneApi.instance().get_past_trades(CoinoneCurrency.ETH))
+# print(KorbitApi.instance().get_past_trades(KorbitCurrency.ETH))
+print(KorbitApi.instance().get_order_info(KorbitCurrency.ETH, "15742897"))

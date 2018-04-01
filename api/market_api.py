@@ -31,11 +31,13 @@ class MarketApi(ABC):
                     if not cls.__singleton_instance:
                         cls.__singleton_creation_checked = True
                         cls.__singleton_instance = cls()
+            return cls.__singleton_instance
         else:
             if not cls.__singleton_instance_public:
                 with cls.__singleton_lock_public:
                     if not cls.__singleton_instance_public:
                         cls.__singleton_instance_public = cls(is_public_access_only)
+            return cls.__singleton_instance_public
 
     @abstractmethod
     def __init__(self, is_public_access_only=False):

@@ -249,7 +249,24 @@ class KorbitApi(MarketApi):
             "id": order_id,
             "nonce": self.get_nonce()
         })
-        return self.filter_successful_response(res)
+        res_json = self.filter_successful_response(res)
+
+        if not len(res_json) > 0:
+            raise KorbitError("No such order of requested id: %s" % order_id)
+
+        order_info = res_json[0]
+        order_amount = float(order_info["order_amount"])
+        filled_amount = float(order_info["filled_amount"])
+        fee = order_info.get("fee")
+
+        return {
+            "status": order_info["status"],
+            "avg_filled_price": int(float(order_info["avg_price"])),
+            "order_amount": order_amount,
+            "filled_amount": filled_amount,
+            "remain_amount": order_amount - filled_amount,
+            "fee": float(fee) if fee is not None else 0
+        }
 
     def get_open_orders(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
         res = requests.get(self.BASE_URL + "/v1/user/orders/open", headers=self.get_auth_header(), params={

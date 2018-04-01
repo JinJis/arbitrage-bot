@@ -217,10 +217,25 @@ class CoinoneApi(MarketApi):
         })
 
     def get_order_info(self, currency: CoinoneCurrency, order_id: str):
-        return self.coinone_post(self.BASE_URL + "/v2/order/order_info", payload={
+        res_json = self.coinone_post(self.BASE_URL + "/v2/order/order_info", payload={
             "order_id": order_id,
             "currency": currency.value
         })
+
+        order_status = res_json["status"]
+        order_status = "unfilled" if order_status == "live" else order_status
+        order_info = res_json["info"]
+        order_amount = float(order_info["qty"])
+        remain_amount = float(order_info["remainQty"])
+
+        return {
+            "status": order_status,
+            "avg_filled_price": int(float(order_info["price"])),
+            "order_amount": order_amount,
+            "filled_amount": order_amount - remain_amount,
+            "remain_amount": remain_amount,
+            "fee": float(order_info["fee"])
+        }
 
     def get_open_orders(self, currency: CoinoneCurrency):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_orders", payload={

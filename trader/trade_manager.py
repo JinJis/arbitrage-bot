@@ -11,7 +11,6 @@ from collections import deque
 
 
 # TODO: keep track of trades in trade manager
-# TODO: manage(& track) order
 class TradeManager:
     # remember only last <*_LIMIT> number of trade / switch_over if it's not in a backtesting mode
     TRADE_INSTANCE_LIMIT = 50
@@ -36,9 +35,6 @@ class TradeManager:
             self.filled_order_col = target_db["filled_order"]
             self.balance_col = target_db["balance"]
 
-        # if not self.is_backtesting:
-
-
     def add_trade(self, cur_trade: Trade):
         # see if this is not the first trade, and the trade tag has changed from the tag of last trade
         last_trade = self.get_last_trade()
@@ -57,6 +53,8 @@ class TradeManager:
         self.log_trade(cur_trade)
         # log orders in current trade
         for order in cur_trade.orders:
+            # initiate watcher for every order
+            # TODO: manage(& track) order
             self.log_order(order)
 
     def add_switch_over(self, switch_over: SwitchOver):
