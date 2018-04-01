@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from .currency import Currency
+from trader.market.order import Order
 
 
 class MarketApi(ABC):

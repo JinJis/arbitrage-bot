@@ -1,13 +1,13 @@
+import time
 import requests
+import configparser
+from decimal import Decimal
+from bson import Decimal128
+from datetime import datetime
 from .market_api import MarketApi
 from .currency import KorbitCurrency
-from bson import Decimal128
-import configparser
-from datetime import datetime
-import time
-from urllib import parse
+from .korbit_error import KorbitError
 from config.global_conf import Global
-from decimal import Decimal
 
 
 class KorbitApi(MarketApi):
@@ -38,8 +38,7 @@ class KorbitApi(MarketApi):
         res = requests.get(self.BASE_URL + "/v1/ticker/detailed", params={
             "currency_pair": currency.value
         })
-        # raise ValueError if no valid json exists
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         # reformat result
         result = {
@@ -69,7 +68,7 @@ class KorbitApi(MarketApi):
         res = requests.get(self.BASE_URL + "/v1/orderbook", params={
             "currency_pair": currency.value
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         # normalize asks
         _asks = res_json["asks"]
@@ -106,7 +105,7 @@ class KorbitApi(MarketApi):
             "currency_pair": currency.value,
             "time": time_range
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         result = list()
         for _item in res_json:
@@ -127,7 +126,7 @@ class KorbitApi(MarketApi):
             "password": self._password,
             "grant_type": "password"
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         self._access_token = res_json["access_token"]
         self._refresh_token = res_json["refresh_token"]
@@ -143,7 +142,7 @@ class KorbitApi(MarketApi):
             "refresh_token": self._refresh_token,
             "grant_type": "refresh_token"
         })
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         self._access_token = res_json["access_token"]
         self._refresh_token = res_json["refresh_token"]
@@ -174,7 +173,7 @@ class KorbitApi(MarketApi):
 
     def get_balance(self):
         res = requests.get(self.BASE_URL + "/v1/user/balances", headers=self.get_auth_header())
-        res_json = res.json()
+        res_json = self.filter_successful_response(res)
 
         result = dict()
         for coin_name in res_json.keys():
@@ -196,7 +195,8 @@ class KorbitApi(MarketApi):
             "coin_amount": amount,
             "nonce": self.get_nonce()
         })
-        return res.json()
+        res_json = self.filter_successful_response_on_order(res)
+        return res_json
 
     def order_limit_sell(self, currency: KorbitCurrency, price: int, amount: float):
         res = requests.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
@@ -206,7 +206,8 @@ class KorbitApi(MarketApi):
             "coin_amount": amount,
             "nonce": self.get_nonce()
         })
-        return res.json()
+        res_json = self.filter_successful_response_on_order(res)
+        return res_json
 
     def order_market_buy(self, currency: KorbitCurrency, amount_of_krw: int):
         res = requests.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
@@ -215,7 +216,8 @@ class KorbitApi(MarketApi):
             "fiat_amount": amount_of_krw,
             "nonce": self.get_nonce()
         })
-        return res.json()
+        res_json = self.filter_successful_response_on_order(res)
+        return res_json
 
     def order_market_sell(self, currency: KorbitCurrency, amount_of_coin: float):
         res = requests.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
@@ -224,7 +226,8 @@ class KorbitApi(MarketApi):
             "coin_amount": amount_of_coin,
             "nonce": self.get_nonce()
         })
-        return res.json()
+        res_json = self.filter_successful_response_on_order(res)
+        return res_json
 
     def cancel_order(self, currency: KorbitCurrency, order_id: str):
         res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
@@ -232,7 +235,8 @@ class KorbitApi(MarketApi):
             "nonce": self.get_nonce(),
             "id": order_id
         })
-        return res.json()
+        res_json = self.filter_successful_response_on_order(res)
+        return res_json
 
     def get_order_info(self, currency: KorbitCurrency, order_id: str):
         res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
@@ -240,7 +244,7 @@ class KorbitApi(MarketApi):
             "id": order_id,
             "nonce": self.get_nonce()
         })
-        return res.json()
+        return self.filter_successful_response(res)
 
     def get_open_orders(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
         res = requests.get(self.BASE_URL + "/v1/user/orders/open", headers=self.get_auth_header(), params={
@@ -249,7 +253,7 @@ class KorbitApi(MarketApi):
             "limit": limit,
             "nonce": self.get_nonce()
         })
-        return res.json()
+        return self.filter_successful_response(res)
 
     def get_past_trades(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
         res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
@@ -258,4 +262,20 @@ class KorbitApi(MarketApi):
             "limit": limit,
             "nonce": self.get_nonce()
         })
-        return res.json()
+        return self.filter_successful_response(res)
+
+    @staticmethod
+    def filter_successful_response(res: requests.Response):
+        if res.status_code != 200:
+            raise Exception("Network request has failed!")
+        else:
+            return res.json()
+
+    # applies to placing or cancelling orders
+    @staticmethod
+    def filter_successful_response_on_order(res: requests.Response):
+        res_json = KorbitApi.filter_successful_response(res)
+        if res_json["status"] != "success":
+            raise KorbitError(res_json["status"])
+        else:
+            return res_json
