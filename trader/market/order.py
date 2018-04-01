@@ -5,10 +5,20 @@ import time
 
 
 class OrderType(Enum):
-    LIMIT_BUY = "limit_buy"
-    LIMIT_SELL = "limit_sell"
-    MARKET_BUY = "market_buy"
-    MARKET_SELL = "market_sell"
+    LIMIT_BUY = ("limit", "buy")
+    LIMIT_SELL = ("limit", "sell")
+    MARKET_BUY = ("market", "buy")
+    MARKET_SELL = ("market", "sell")
+
+    def __new__(cls, *args, **kwargs):
+        obj = object.__new__(cls)
+        obj._value_ = "%s_%s" % args
+        obj._strategy = args[0]
+        obj._action = args[1]
+        return obj
+
+    def is_sell_order(self) -> bool:
+        return self._action == "sell"
 
 
 class Order:
@@ -45,3 +55,6 @@ class Order:
             "amount": Decimal128(str(self.amount)),
             "is_filled": self.is_filled
         }
+
+    def is_sell_order(self):
+        return self.order_type.is_sell_order()

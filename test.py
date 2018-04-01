@@ -148,7 +148,6 @@ from trader.stat_arb_bot import StatArbBot
 
 from api.coinone_error import CoinoneErrorCode, CoinoneError
 
-# test = CoinoneErrorCode(1)
-# print(test)
+from trader.market.order import OrderType
 
-raise CoinoneError(4)
+print(OrderType.LIMIT_BUY)

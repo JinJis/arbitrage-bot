@@ -8,6 +8,7 @@ from .market_api import MarketApi
 from .currency import KorbitCurrency
 from .korbit_error import KorbitError
 from config.global_conf import Global
+from trader.market.order import Order
 
 
 class KorbitApi(MarketApi):
@@ -229,11 +230,11 @@ class KorbitApi(MarketApi):
         res_json = self.filter_successful_response_on_order(res)
         return res_json
 
-    def cancel_order(self, currency: KorbitCurrency, order_id: str):
+    def cancel_order(self, currency: KorbitCurrency, order: Order):
         res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
             "currency_pair": currency.value,
             "nonce": self.get_nonce(),
-            "id": order_id
+            "id": order.order_id
         })
         res_json = self.filter_successful_response_on_order(res)
         return res_json

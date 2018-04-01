@@ -58,12 +58,11 @@ class CoinoneErrorCode(Enum):
     UserNotFound1209 = (1209, "User not found")
 
     def __new__(cls, *args, **kwargs):
-        # args will be the tuple on each enum
-        # save the code as the actual enum value
-        value = args[0]
-        # manually create enum singleton instance
+        # manually create singleton enum member
         obj = object.__new__(cls)
-        obj._value_ = value
+        # args will be the tuple on each member
+        # save the code as the actual enum value
+        obj._value_ = args[0]
         # save the message as singleton's attribute
         obj.message = args[1]
         return obj

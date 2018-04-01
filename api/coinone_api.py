@@ -12,6 +12,7 @@ from .market_api import MarketApi
 from .currency import CoinoneCurrency
 from config.global_conf import Global
 from .coinone_error import CoinoneError
+from trader.market.order import Order
 
 # in order to match the korbit orderbook item count
 orderbook_item_limit = 30
@@ -202,12 +203,12 @@ class CoinoneApi(MarketApi):
             "currency": currency.value,
         })
 
-    def cancel_order(self, currency: CoinoneCurrency, price: int, amount: float, order_id: str, is_sell_order: bool):
+    def cancel_order(self, currency: CoinoneCurrency, order: Order):
         return self.coinone_post(self.BASE_URL + "/v2/order/cancel", payload={
-            "order_id": order_id,
-            "price": price,
-            "qty": amount,
-            "is_ask": 1 if is_sell_order else 0,
+            "order_id": order.order_id,
+            "price": order.price,
+            "qty": order.price,
+            "is_ask": 1 if order.is_sell_order() else 0,
             "currency": currency.value
         })
 
