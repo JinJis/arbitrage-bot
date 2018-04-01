@@ -224,3 +224,9 @@ class CoinoneApi(MarketApi):
         return self.coinone_post(self.BASE_URL + "/v2/order/complete_orders", payload={
             "currency": currency.value
         })
+
+    # def filter_error(self, res: requests.Response):
+    #     if res.status_code != 200:
+    #         raise Exception("Network request has failed!")
+    #     elif res.json()["result"] != "error":
+    #         raise

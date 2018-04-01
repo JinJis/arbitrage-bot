@@ -140,8 +140,15 @@ from config.global_conf import Global
 
 from trader.stat_arb_bot import StatArbBot
 
-Global.configure_default_root_logging(should_log_to_file=True)
-# Global.configure_default_root_logging()
-start_time = Global.convert_local_datetime_to_epoch("2018.03.25 00:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.03.30 00:00:00", timezone="kr")
-StatArbBot(is_from_local=True, is_back_testing=True, start_time=start_time, end_time=end_time).run()
+# Global.configure_default_root_logging(should_log_to_file=True)
+# # Global.configure_default_root_logging()
+# start_time = Global.convert_local_datetime_to_epoch("2018.03.25 00:00:00", timezone="kr")
+# end_time = Global.convert_local_datetime_to_epoch("2018.03.30 00:00:00", timezone="kr")
+# StatArbBot(is_from_local=True, is_back_testing=True, start_time=start_time, end_time=end_time).run()
+
+from api.coinone_error import CoinoneErrorCode, CoinoneError
+
+# test = CoinoneErrorCode(1)
+# print(test)
+
+raise CoinoneError(4)
