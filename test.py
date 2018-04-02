@@ -181,4 +181,3 @@ from trader.market.order import OrderType, OrderStatus
 #
 # TestScheduler().run()
 
-print(round(3.1414, 3))

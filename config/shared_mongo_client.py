@@ -2,6 +2,8 @@ from pymongo import MongoClient
 from .global_conf import Global
 
 
+# note that MongoClient is thread-safe
+# see [http://api.mongodb.com/python/current/faq.html#is-pymongo-thread-safe]
 class SharedMongoClient:
     __singleton_instance = None
 

@@ -23,7 +23,9 @@ class OrderWatcher(Thread):
         self.order = order
         self.interval_sec = interval_sec
         self.max_wait_sec = max_wait_sec
-        self.api = self.supported_markets.get(self.order.market).instance()
+        matched_api = self.supported_markets.get(self.order.market)
+        if matched_api is not None:
+            self.api = matched_api.instance()
 
     def do_interval(self):
         res_json = self.api.get_order_info(self.order.currency, self.order.order_id)
