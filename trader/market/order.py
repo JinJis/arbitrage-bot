@@ -46,19 +46,15 @@ class Order:
         self.price = price
         self.amount = amount
 
-        # TODO: request for filled orders until the order is completely filled
-        self.is_filled = False
-        self.filled_orders = list()
-
     def __repr__(self):
-        return "<Order %s>: %s in %s at %d (price %d, amount %f, is_filled: %r)" % (
+        return "<Order %s>: %s in %s at %d (price %d, amount %f, status: %r)" % (
             self.order_id,
             self.order_type.value,
             self.market.value,
             self.timestamp,
             self.price,
             self.amount,
-            self.is_filled
+            self.status.value
         )
 
     def to_dict(self):
@@ -68,12 +64,8 @@ class Order:
             "order": self.order_type.value,
             "order_id": self.order_id,
             "price": Decimal128(str(self.price)),
-            "amount": Decimal128(str(self.amount)),
-            "is_filled": self.is_filled
+            "amount": Decimal128(str(self.amount))
         }
 
     def is_sell_order(self):
         return self.order_type.is_sell_order()
-
-    # def update(self, data: dict):
-    #     self.

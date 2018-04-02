@@ -6,8 +6,8 @@ from .csv_writer import CsvWriter
 class DbToCsv:
     ticker_columns = ("timestamp", "high", "low", "last", "volume", "requestTime")
 
-    def __init__(self, is_from_local: bool = True):
-        mongodb_uri = Global.read_mongodb_uri(is_from_local)
+    def __init__(self, should_use_localhost_db: bool):
+        mongodb_uri = Global.read_mongodb_uri(should_use_localhost_db)
         self.mongo_client = MongoClient(mongodb_uri)
 
     def save_ticker_as_csv(self, target_db: str, target_currency: str, start_time: int, end_time: int):

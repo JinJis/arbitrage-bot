@@ -20,7 +20,7 @@ class StatArbBot:
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
     Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.5)
 
-    def __init__(self, is_from_local: bool = False,
+    def __init__(self, should_use_localhost_db: bool = True,
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
         # for backtesting
         self.is_backtesting = is_backtesting
@@ -40,13 +40,13 @@ class StatArbBot:
         self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
 
         # init mongo client
-        self.mongo_client = MongoClient(Global.read_mongodb_uri(is_from_local))
+        self.mongo_client = MongoClient(Global.read_mongodb_uri(should_use_localhost_db))
         self.mm1_ticker_col = self.mongo_client["coinone"][self.TARGET_CURRENCY + "_ticker"]
         self.mm2_ticker_col = self.mongo_client["korbit"][self.TARGET_CURRENCY + "_ticker"]
 
         # init other attributes
         self.spread_stack = np.array([], dtype=np.float32)
-        self.trade_manager = TradeManager(should_db_logging=True, is_from_local=is_from_local,
+        self.trade_manager = TradeManager(should_db_logging=True, should_use_localhost_db=should_use_localhost_db,
                                           is_backtesting=is_backtesting)
         self.loop_count = 0
 

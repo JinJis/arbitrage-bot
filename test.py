@@ -162,9 +162,21 @@ from trader.market.order import OrderType, OrderStatus
 # ow.run()
 
 # print(OrderType("limit_buy"))
-test1 = OrderStatus.get("live")
-test2 = OrderStatus.get("unfilled")
-test3 = OrderStatus.get("live")
-print(test1 is test2)
-print(test1 is test3)
-print(test2 is test3)
+# test1 = OrderStatus.get("live")
+# test2 = OrderStatus.get("unfilled")
+# test3 = OrderStatus.get("live")
+# print(test1 is test2)
+# print(test1 is test3)
+# print(test2 is test3)
+
+from collector.scheduler_base import SchedulerBase
+
+
+class TestScheduler(SchedulerBase):
+    @SchedulerBase.interval_waiter(5)
+    def _actual_run_in_loop(self):
+        print(time.time())
+        time.sleep(1)
+
+
+TestScheduler().run()

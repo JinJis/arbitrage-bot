@@ -12,19 +12,19 @@ from time import gmtime, strftime
 
 class Global:
     USER_CONFIG_LOCATION = "config/conf_user.ini"
-    DB_CONFIG_LOCATION = "config/conf_db.ini"
-    DB_LOCAL_CONFIG_LOCATION = "config/conf_db_local.ini"
+    LOCALHOST_DB_CONFIG_LOCATION = "config/conf_db_localhost.ini"
+    REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
     COIN_FILTER_FOR_BALANCE = ("eth", "krw")
 
     @staticmethod
-    def read_mongodb_uri(is_from_local: bool = False):
+    def read_mongodb_uri(should_use_localhost_db: bool = True):
         config = configparser.ConfigParser()
 
         # read different file if the request is not from the remote server itself but from the local
-        if is_from_local:
-            config.read(Global.DB_LOCAL_CONFIG_LOCATION)
+        if should_use_localhost_db:
+            config.read(Global.LOCALHOST_DB_CONFIG_LOCATION)
         else:
-            config.read(Global.DB_CONFIG_LOCATION)
+            config.read(Global.REMOTE_DB_CONFIG_LOCATION)
 
         mongo = config["MONGO"]
         host = mongo["host"]

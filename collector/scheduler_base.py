@@ -1,14 +1,14 @@
 from .collector import Collector
-import schedule
 import time
 import signal
 import sys
 import logging
 from config.global_conf import Global
+from abc import ABC, abstractmethod
 
 
-class Scheduler:
-    def __init__(self):
+class SchedulerBase(ABC):
+    def __init__(self, should_use_localhost_db: bool = True):
         # init root logger
         Global.configure_default_root_logging()
         # set the log level for the schedule
@@ -16,7 +16,7 @@ class Scheduler:
         logging.getLogger("schedule").setLevel(logging.CRITICAL)
 
         # init collector
-        mongodb_uri = Global.read_mongodb_uri()
+        mongodb_uri = Global.read_mongodb_uri(should_use_localhost_db)
         # currency param should be a lower-cased currency symbol listed in api.currency
         self.collector = Collector(mongodb_uri, "eth")
 
@@ -30,33 +30,31 @@ class Scheduler:
 
     @staticmethod
     def handle_sigterm(signal, frame):
-        Scheduler.handle_exit()
+        SchedulerBase.handle_exit()
 
-    def every_5_sec(self):
-        request_time = int(time.time())
-        Global.run_threaded(self.collector.collect_co_ticker, [request_time])
-        Global.run_threaded(self.collector.collect_co_orderbook, [request_time])
-        Global.run_threaded(self.collector.collect_kb_ticker, [request_time])
-        Global.run_threaded(self.collector.collect_kb_orderbook, [request_time])
+    @staticmethod
+    def interval_waiter(interval_time_sec: int):
+        def interval_waiter_decorator(func):
+            def interval_function(*args, **kwargs):
+                start_time = time.time()
+                func(*args, **kwargs)
+                end_time = time.time()
+                wait_time = interval_time_sec - (end_time - start_time)
+                if wait_time > 0:
+                    time.sleep(wait_time)
 
-    def every_hour(self):
-        Global.run_threaded(self.collector.collect_co_filled_orders)
-        Global.run_threaded(self.collector.collect_kb_filled_orders)
+            return interval_function
+
+        return interval_waiter_decorator
+
+    @abstractmethod
+    def _actual_run_in_loop(self):
+        pass
 
     def run(self):
-        schedule.every(5).seconds.do(self.every_5_sec)
-        schedule.every().hour.do(self.every_hour)
-
-        # run initial
         logging.info("Collector Bot started at " + time.ctime())
-        schedule.run_all()
-
         while True:
             try:
-                schedule.run_pending()
+                self._actual_run_in_loop()
             except KeyboardInterrupt:
                 self.handle_exit()
-
-
-if __name__ == "__main__":
-    Scheduler().run()

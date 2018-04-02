@@ -16,7 +16,7 @@ class TradeManager:
     TRADE_INSTANCE_LIMIT = 50
     SWITCH_OVER_INSTANCE_LIMIT = 100
 
-    def __init__(self, should_db_logging: bool, is_from_local: bool = False, is_backtesting: bool = False):
+    def __init__(self, should_db_logging: bool, should_use_localhost_db: bool, is_backtesting: bool = False):
         self.should_db_logging = should_db_logging
         self.is_backtesting = is_backtesting
 
@@ -28,7 +28,7 @@ class TradeManager:
 
         if self.should_db_logging:
             # init db related
-            self.mongo_client = MongoClient(Global.read_mongodb_uri(is_from_local))
+            self.mongo_client = MongoClient(Global.read_mongodb_uri(should_use_localhost_db))
             target_db = self.mongo_client[Global.get_unique_process_tag()]
             self.trade_col = target_db["trade"]
             self.order_col = target_db["order"]
