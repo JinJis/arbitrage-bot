@@ -148,7 +148,23 @@ from trader.stat_arb_bot import StatArbBot
 
 from api.coinone_error import CoinoneErrorCode, CoinoneError
 
-print(CoinoneApi.instance().get_order_info(CoinoneCurrency.ETH, "89F54099-09FA-4471-8B10-634963864FE1"))
+# print(CoinoneApi.instance().get_order_info(CoinoneCurrency.ETH, "89F54099-09FA-4471-8B10-634963864FE1"))
 # print(CoinoneApi.instance().get_past_trades(CoinoneCurrency.ETH))
 # print(KorbitApi.instance().get_past_trades(KorbitCurrency.ETH))
-print(KorbitApi.instance().get_order_info(KorbitCurrency.ETH, "15742897"))
+# print(KorbitApi.instance().get_order_info(KorbitCurrency.ETH, "15742897"))
+
+from trader.market.order_watcher import OrderWatcher, Order, Market
+from trader.market.order import OrderType, OrderStatus
+
+#
+# Global.configure_default_root_logging()
+# ow = OrderWatcher(Order(Market.COINONE, OrderType.LIMIT_BUY, "12321", 123, 1.2), 5, 500)
+# ow.run()
+
+# print(OrderType("limit_buy"))
+test1 = OrderStatus.get("live")
+test2 = OrderStatus.get("unfilled")
+test3 = OrderStatus.get("live")
+print(test1 is test2)
+print(test1 is test3)
+print(test2 is test3)

@@ -1,11 +1,13 @@
+import os
+import sys
+import logging
+import requests
+import threading
 import configparser
 import urllib.parse
-import logging
-import sys
+import scipy.stats as st
 from datetime import datetime
 from time import gmtime, strftime
-import scipy.stats as st
-import os
 
 
 class Global:
@@ -69,3 +71,14 @@ class Global:
     def get_unique_process_tag():
         # should only be called in initialization phase
         return "%s_%d" % (datetime.today().strftime("%Y%m%d%H%M"), os.getpid())
+
+    @staticmethod
+    def run_threaded(job_func, args=()):
+        job_thread = threading.Thread(target=job_func, args=args)
+        job_thread.start()
+
+    @staticmethod
+    def send_to_slack_channel(message: str):
+        requests.post("https://hooks.slack.com/services/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", json={
+            "text": message
+        })

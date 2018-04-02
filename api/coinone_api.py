@@ -12,7 +12,7 @@ from .market_api import MarketApi
 from .currency import CoinoneCurrency
 from config.global_conf import Global
 from .coinone_error import CoinoneError
-from trader.market.order import Order
+from trader.market.order import Order, OrderStatus
 
 # in order to match the korbit orderbook item count
 orderbook_item_limit = 30
@@ -222,14 +222,12 @@ class CoinoneApi(MarketApi):
             "currency": currency.value
         })
 
-        order_status = res_json["status"]
-        order_status = "unfilled" if order_status == "live" else order_status
         order_info = res_json["info"]
         order_amount = float(order_info["qty"])
         remain_amount = float(order_info["remainQty"])
 
         return {
-            "status": order_status,
+            "status": OrderStatus.get(res_json["status"]),
             "avg_filled_price": int(float(order_info["price"])),
             "order_amount": order_amount,
             "filled_amount": order_amount - remain_amount,

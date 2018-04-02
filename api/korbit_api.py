@@ -8,7 +8,7 @@ from .market_api import MarketApi
 from .currency import KorbitCurrency
 from .korbit_error import KorbitError
 from config.global_conf import Global
-from trader.market.order import Order
+from trader.market.order import Order, OrderStatus
 
 
 class KorbitApi(MarketApi):
@@ -257,10 +257,11 @@ class KorbitApi(MarketApi):
         order_info = res_json[0]
         order_amount = float(order_info["order_amount"])
         filled_amount = float(order_info["filled_amount"])
+        # korbit api says that no fee data will be sent if the order has never been filled
         fee = order_info.get("fee")
 
         return {
-            "status": order_info["status"],
+            "status": OrderStatus.get(order_info["status"]),
             "avg_filled_price": int(float(order_info["avg_price"])),
             "order_amount": order_amount,
             "filled_amount": filled_amount,
