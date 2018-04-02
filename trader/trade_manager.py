@@ -1,13 +1,12 @@
 import time
 import numpy
 import logging
-from pymongo import MongoClient
 from trader.market.trade import Trade, TradeTag
 from trader.market.switch_over import SwitchOver
 from trader.market.order import Order
 from trader.market.balance import Balance
-from config.global_conf import Global
 from collections import deque
+from config.shared_mongo_client import SharedMongoClient
 
 
 # TODO: keep track of trades in trade manager
@@ -28,12 +27,8 @@ class TradeManager:
 
         if self.should_db_logging:
             # init db related
-            self.mongo_client = MongoClient(Global.read_mongodb_uri(should_use_localhost_db))
-            target_db = self.mongo_client[Global.get_unique_process_tag()]
-            self.trade_col = target_db["trade"]
-            self.order_col = target_db["order"]
-            self.filled_order_col = target_db["filled_order"]
-            self.balance_col = target_db["balance"]
+            self.mongo_client = SharedMongoClient.instance(should_use_localhost_db)
+            self.target_db = self.mongo_client[SharedMongoClient.p_db]
 
     def add_trade(self, cur_trade: Trade):
         # see if this is not the first trade, and the trade tag has changed from the tag of last trade
@@ -54,7 +49,6 @@ class TradeManager:
         # log orders in current trade
         for order in cur_trade.orders:
             # initiate watcher for every order
-            # TODO: manage(& track) order
             self.log_order(order)
 
     def add_switch_over(self, switch_over: SwitchOver):
@@ -85,16 +79,16 @@ class TradeManager:
     def log_trade(self, trade: Trade):
         logging.info(trade)
         if self.should_db_logging:
-            self.trade_col.insert_one(trade.to_dict())
+            self.target_db["trade"].insert_one(trade.to_dict())
 
     def log_order(self, order: Order):
         logging.info(order)
         if self.should_db_logging:
-            self.order_col.insert_one(order.to_dict())
+            self.target_db["order"].insert_one(order.to_dict())
 
     def log_balance(self, balance: Balance):
         logging.info(balance)
         if self.should_db_logging:
             balance_dic = balance.to_dict()
             balance_dic["timestamp"] = int(time.time())
-            self.balance_col.insert_one(balance_dic)
+            self.target_db["balance"].insert_one(balance_dic)

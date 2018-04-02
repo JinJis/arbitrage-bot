@@ -35,7 +35,7 @@ class StatArbBot:
             self.mm2 = KorbitMarketManager()
         else:
             self.mm1 = VirtualMarketManager("co", VirtualMarketApiType.COINONE, 0.001, 60000, 0.1)
-            self.mm2 = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.0008, 60000, 0.1)
+            self.mm2 = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.002, 60000, 0.1)
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
         self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
 

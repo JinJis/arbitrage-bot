@@ -169,14 +169,16 @@ from trader.market.order import OrderType, OrderStatus
 # print(test1 is test3)
 # print(test2 is test3)
 
-from collector.scheduler_base import SchedulerBase
+# from collector.scheduler_base import SchedulerBase
+#
+#
+# class TestScheduler(SchedulerBase):
+#     @SchedulerBase.interval_waiter(5)
+#     def _actual_run_in_loop(self):
+#         print(time.time())
+#         time.sleep(1)
+#
+#
+# TestScheduler().run()
 
-
-class TestScheduler(SchedulerBase):
-    @SchedulerBase.interval_waiter(5)
-    def _actual_run_in_loop(self):
-        print(time.time())
-        time.sleep(1)
-
-
-TestScheduler().run()
+print(round(3.1414, 3))
