@@ -2,11 +2,11 @@ import time
 import logging
 from itertools import zip_longest
 import numpy as np
-from pymongo import MongoClient
 from analyzer.analyzer import Analyzer
 from config.global_conf import Global
+from config.shared_mongo_client import SharedMongoClient
 from trader.market.trade import Trade, TradeTag, StatArbTradeMeta
-from trader.trade_manager import TradeManager
+from trader.trade_manager.trade_manager import TradeManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
 from trader.market_manager.virtual_market_manager import VirtualMarketManager, VirtualMarketApiType
@@ -20,8 +20,7 @@ class StatArbBot:
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
     Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.5)
 
-    def __init__(self, should_use_localhost_db: bool = True,
-                 is_backtesting: bool = False, start_time: int = None, end_time: int = None):
+    def __init__(self, is_backtesting: bool = False, start_time: int = None, end_time: int = None):
         # for backtesting
         self.is_backtesting = is_backtesting
         self.start_time = start_time
@@ -39,15 +38,14 @@ class StatArbBot:
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
         self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
 
-        # init mongo client
-        self.mongo_client = MongoClient(Global.read_mongodb_uri(should_use_localhost_db))
+        # init mongo related
+        self.mongo_client = SharedMongoClient.instance()
         self.mm1_ticker_col = self.mongo_client["coinone"][self.TARGET_CURRENCY + "_ticker"]
         self.mm2_ticker_col = self.mongo_client["korbit"][self.TARGET_CURRENCY + "_ticker"]
 
         # init other attributes
         self.spread_stack = np.array([], dtype=np.float32)
-        self.trade_manager = TradeManager(should_db_logging=True, should_use_localhost_db=should_use_localhost_db,
-                                          is_backtesting=is_backtesting)
+        self.trade_manager = TradeManager(should_db_logging=True, is_backtesting=is_backtesting)
         self.loop_count = 0
 
     def run(self):

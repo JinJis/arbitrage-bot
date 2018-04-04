@@ -181,3 +181,7 @@ from trader.market.order import OrderType, OrderStatus
 #
 # TestScheduler().run()
 
+from config.shared_mongo_client import SharedMongoClient
+
+Global.configure_default_root_logging()
+SharedMongoClient.initialize(True)

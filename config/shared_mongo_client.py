@@ -15,8 +15,6 @@ class SharedMongoClient:
         trade, order, balance
     """
 
-    # TODO: remove all `should_use_localhost_db` flag... never allow manually creating mongo client instance
-
     @classmethod
     def initialize(cls, should_use_localhost_db: bool = True):
         cls.__singleton_instance = MongoClient(Global.read_mongodb_uri(should_use_localhost_db))

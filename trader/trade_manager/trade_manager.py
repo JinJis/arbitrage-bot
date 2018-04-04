@@ -15,7 +15,7 @@ class TradeManager:
     TRADE_INSTANCE_LIMIT = 50
     SWITCH_OVER_INSTANCE_LIMIT = 100
 
-    def __init__(self, should_db_logging: bool, should_use_localhost_db: bool, is_backtesting: bool = False):
+    def __init__(self, should_db_logging: bool, is_backtesting: bool = False):
         self.should_db_logging = should_db_logging
         self.is_backtesting = is_backtesting
 
@@ -27,7 +27,7 @@ class TradeManager:
 
         if self.should_db_logging:
             # init db related
-            self.mongo_client = SharedMongoClient.instance(should_use_localhost_db)
+            self.mongo_client = SharedMongoClient.instance()
             self.target_db = self.mongo_client[SharedMongoClient.p_db]
 
     def add_trade(self, cur_trade: Trade):
