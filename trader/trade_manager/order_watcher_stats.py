@@ -28,6 +28,8 @@ class OrderWatcherStats(Thread):
         if cls._instance is None:
             cls._init_flag = True
             cls._instance = cls()
+            # start thread
+            cls._instance.start()
         else:
             raise Exception("OrderWatcherStats already initialized!")
 
@@ -51,6 +53,7 @@ class OrderWatcherStats(Thread):
         self._spent_time_avg = 0
 
         self.operation_queue = Queue()
+        self.stop_flag = False
         super().__init__()
 
     @classmethod
@@ -77,13 +80,13 @@ class OrderWatcherStats(Thread):
             Operation(OperationType.ERROR, order_id)
         )
 
-    def find_item(self, order_id: str):
+    def _find_item(self, order_id: str):
         for item in self._active:
             if item["order_id"] == order_id:
                 return item
         logging.critical("Could not find item with specified id: %s!" % order_id)
 
-    def process_operation(self, operation: Operation):
+    def _process_operation(self, operation: Operation):
         if operation.op_type is OperationType.STARTED:
             self._active.append({
                 "timestamp": operation.timestamp,
@@ -91,7 +94,7 @@ class OrderWatcherStats(Thread):
             })
             self._total_order_count += 1
         elif operation.op_type is OperationType.DONE:
-            item = self.find_item(operation.order_id)
+            item = self._find_item(operation.order_id)
             if item:
                 spent_time = operation.timestamp - item["timestamp"]
                 self._spent_time_avg = (self._spent_time_avg * self._total_done_count + spent_time) \
@@ -99,12 +102,12 @@ class OrderWatcherStats(Thread):
                 self._active.remove(item)
                 self._total_done_count += 1
         elif operation.op_type is OperationType.DELAYED:
-            item = self.find_item(operation.order_id)
+            item = self._find_item(operation.order_id)
             if item:
                 item["is_delayed"] = True
                 self._total_delayed_count += 1
         elif operation.op_type is OperationType.ERROR:
-            item = self.find_item(operation.order_id)
+            item = self._find_item(operation.order_id)
             if item:
                 self._active.remove(item)
                 self._total_error_count += 1
@@ -114,6 +117,8 @@ class OrderWatcherStats(Thread):
     def get_stats(self):
         return {
             "current_active_count": len(self._active),
+            "current_delayed_count": len(self.get_current_delayed()),
+            "spent_time_avg": self._spent_time_avg,
             "total_order_count": self._total_order_count,
             "total_done_count": self._total_done_count,
             "total_error_count": self._total_error_count,
@@ -121,11 +126,16 @@ class OrderWatcherStats(Thread):
         }
 
     def get_current_delayed(self):
-        return list([item for item in self._active if item.get("is_delayed", default=False)])
+        return list([item for item in self._active if item.get("is_delayed", False)])
 
     def run(self):
-        while True:
+        while not self.stop_flag:
             while not self.operation_queue.empty():
                 operation = self.operation_queue.get()
-                self.process_operation(operation)
+                self._process_operation(operation)
             time.sleep(0.1)
+
+    def tear_down(self):
+        self.stop_flag = True
+        # remove reference
+        OrderWatcherStats._instance = None
