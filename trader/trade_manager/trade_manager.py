@@ -7,9 +7,10 @@ from trader.market.order import Order
 from trader.market.balance import Balance
 from collections import deque
 from config.shared_mongo_client import SharedMongoClient
+from .order_watcher import OrderWatcher
+from .order_watcher_stats import OrderWatcherStats
 
 
-# TODO: keep track of trades in trade manager
 class TradeManager:
     # remember only last <*_LIMIT> number of trade / switch_over if it's not in a backtesting mode
     TRADE_INSTANCE_LIMIT = 50
@@ -24,6 +25,9 @@ class TradeManager:
         # deque has its own `pop_left()` for this functionality
         self._trade_list = deque()
         self._switch_over_list = deque()
+
+        # initialize global order_watcher_stats
+        OrderWatcherStats.initialize()
 
         if self.should_db_logging:
             # init db related
@@ -49,6 +53,7 @@ class TradeManager:
         # log orders in current trade
         for order in cur_trade.orders:
             # initiate watcher for every order
+            OrderWatcher(order).start()
             self.log_order(order)
 
     def add_switch_over(self, switch_over: SwitchOver):

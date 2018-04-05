@@ -11,6 +11,9 @@ from .order_watcher_stats import OrderWatcherStats
 
 
 class OrderWatcher(Thread):
+    TARGET_INTERVAL_SEC = 5
+    DELAYED_FLAG_SEC = 60 * 5
+
     supported_markets = {
         Market.COINONE: CoinoneApi,
         Market.KORBIT: KorbitApi
@@ -20,11 +23,11 @@ class OrderWatcher(Thread):
     def is_watchable(order: Order):
         return order.market in OrderWatcher.supported_markets.keys()
 
-    def __init__(self, order: Order, interval_sec: int, delayed_flag_sec: int):
+    def __init__(self, order: Order):
         super().__init__()
         self.order = order
-        self.interval_sec = interval_sec
-        self.delayed_flag_sec = delayed_flag_sec
+        self.interval_sec = OrderWatcher.TARGET_INTERVAL_SEC
+        self.delayed_flag_sec = OrderWatcher.DELAYED_FLAG_SEC
         self.is_delayed = False
         self.order_col = SharedMongoClient.get_pdb_order_col()
 
@@ -44,7 +47,7 @@ class OrderWatcher(Thread):
             logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
         finally:
             order_dic = self.order.to_dict()
-            order_dic["requestTime"] = request_time
+            order_dic["timestamp"] = request_time
             self.order_col.insert_one(order_dic)
 
     def run(self):
