@@ -19,6 +19,10 @@ class Operation:
         self.order_id = order_id
 
 
+# manage order watcher stats using Queue
+# since each of order watcher is a thread
+# and we need to make sure it's thread safe
+# see `run` for detail
 class OrderWatcherStats(Thread):
     _init_flag = False
     _instance = None
@@ -50,7 +54,7 @@ class OrderWatcherStats(Thread):
         self._total_delayed_count = 0
         self._total_done_count = 0
         self._total_error_count = 0
-        self._spent_time_avg = 0
+        self._fill_spent_time_avg = 0
 
         self.operation_queue = Queue()
         self.stop_flag = False
@@ -96,9 +100,9 @@ class OrderWatcherStats(Thread):
         elif operation.op_type is OperationType.DONE:
             item = self._find_item(operation.order_id)
             if item:
-                spent_time = operation.timestamp - item["timestamp"]
-                self._spent_time_avg = (self._spent_time_avg * self._total_done_count + spent_time) \
-                                       / (self._total_done_count + 1)
+                fill_spent_time = operation.timestamp - item["timestamp"]
+                fill_spent_time_total = self._fill_spent_time_avg * self._total_done_count + fill_spent_time
+                self._fill_spent_time_avg = fill_spent_time_total / (self._total_done_count + 1)
                 self._active.remove(item)
                 self._total_done_count += 1
         elif operation.op_type is OperationType.DELAYED:
@@ -114,11 +118,18 @@ class OrderWatcherStats(Thread):
         else:
             raise Exception("Invalid OperationType has set!")
 
+    # might not be thread safe
     def get_stats(self):
+        active_order_count = len(self._active)
+        active_delayed_count = len(self.get_current_delayed())
+        done_order_without_delay = self._total_done_count - (self._total_delayed_count - active_delayed_count)
+        undelayed_fill_rate = done_order_without_delay / self._total_done_count
+
         return {
-            "current_active_count": len(self._active),
-            "current_delayed_count": len(self.get_current_delayed()),
-            "spent_time_avg": self._spent_time_avg,
+            "active_order_count": active_order_count,
+            "active_delayed_count": active_delayed_count,
+            "fill_spent_time_avg": self._fill_spent_time_avg,
+            "undelayed_fill_rate": undelayed_fill_rate,
             "total_order_count": self._total_order_count,
             "total_done_count": self._total_done_count,
             "total_error_count": self._total_error_count,

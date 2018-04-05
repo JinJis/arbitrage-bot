@@ -39,7 +39,7 @@ class SimpleTest(unittest.TestCase):
         stats = ows.get_stats()
         print(ows._active)
         print(stats)
-        delayed_count = stats.get("current_delayed_count")
+        delayed_count = stats.get("active_delayed_count")
         ows.tear_down()
         self.assertEqual(1, delayed_count)
 
@@ -59,7 +59,7 @@ class SimpleTest(unittest.TestCase):
         print(ows._active)
         print(stats)
         error_count = stats.get("total_error_count")
-        active_count = stats.get("current_active_count")
+        active_count = stats.get("active_order_count")
         ows.tear_down()
         self.assertEqual(1, error_count)
         self.assertEqual(0, active_count)

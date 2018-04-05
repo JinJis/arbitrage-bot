@@ -51,12 +51,13 @@ class OrderWatcher(Thread):
             self.order_col.insert_one(order_dic)
 
     def run(self):
-        # do nothing if the market is not watchable
-        if not self.is_watchable(self.order):
-            return
-
         # add in order watcher stats
         OrderWatcherStats.started(self.order.order_id)
+
+        # just mark it done if the market of order is not watchable
+        if not self.is_watchable(self.order):
+            OrderWatcherStats.done(self.order.order_id)
+            return
 
         # log initial time
         initial_time = time.time()
