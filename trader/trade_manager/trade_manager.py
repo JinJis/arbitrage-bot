@@ -25,10 +25,6 @@ class TradeManager:
         self._trade_list = deque()
         self._switch_over_list = deque()
 
-        if self.should_db_logging:
-            # init db related
-            self.target_db = SharedMongoClient.get_process_db()
-
     def add_trade(self, cur_trade: Trade):
         # see if this is not the first trade, and the trade tag has changed from the tag of last trade
         last_trade = self.get_last_trade()
@@ -45,10 +41,12 @@ class TradeManager:
 
         # log current trade
         self.log_trade(cur_trade)
+
         # log orders in current trade
         for order in cur_trade.orders:
-            # initiate watcher for every order
-            OrderWatcher(order).start()
+            if not self.is_backtesting:
+                # initiate watcher for every order
+                OrderWatcher(order).start()
             self.log_order(order)
 
     def add_switch_over(self, switch_over: SwitchOver):
@@ -79,16 +77,16 @@ class TradeManager:
     def log_trade(self, trade: Trade):
         logging.info(trade)
         if self.should_db_logging:
-            self.target_db["trade"].insert_one(trade.to_dict())
+            SharedMongoClient.async_trade_insert(trade.to_dict())
 
     def log_order(self, order: Order):
         logging.info(order)
         if self.should_db_logging:
-            self.target_db["order"].insert_one(order.to_dict())
+            SharedMongoClient.async_order_insert(order.to_dict())
 
     def log_balance(self, balance: Balance):
         logging.info(balance)
         if self.should_db_logging:
             balance_dic = balance.to_dict()
             balance_dic["timestamp"] = int(time.time())
-            self.target_db["balance"].insert_one(balance_dic)
+            SharedMongoClient.async_balance_insert(balance_dic)

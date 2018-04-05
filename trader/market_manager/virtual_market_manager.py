@@ -41,7 +41,7 @@ class VirtualMarketManager(MarketManager):
 
         self.vt_balance[currency.name.lower()] += amount
         self.vt_balance["krw"] -= price * actual_amount
-        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_BUY, self.generate_order_id(), price, actual_amount)
+        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_BUY, self.generate_buy_order_id(), price, actual_amount)
 
     def order_sell(self, currency: Currency, price: int, amount: float):
         if not self.has_enough_coin(currency.name.lower(), amount):
@@ -49,7 +49,7 @@ class VirtualMarketManager(MarketManager):
 
         self.vt_balance[currency.name.lower()] -= amount
         self.vt_balance["krw"] += price * amount * (1 - self.market_fee)
-        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_SELL, self.generate_order_id(), price, amount)
+        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_SELL, self.generate_sell_order_id(), price, amount)
 
     def update_balance(self):
         balance_dict = dict()
@@ -71,9 +71,15 @@ class VirtualMarketManager(MarketManager):
         else:
             raise Exception("Invalid target API type has set!")
 
-    def generate_order_id(self):
+    def _generate_order_id(self, tag: str):
         self.order_id_count += 1
-        return str(self.order_id_count)
+        return "%s_%s_%s" % (self.name, tag, str(self.order_id_count))
+
+    def generate_buy_order_id(self):
+        return self._generate_order_id("buy")
+
+    def generate_sell_order_id(self):
+        return self._generate_order_id("sell")
 
     def get_market_name(self):
         return "%s_%s" % (self.market_tag.value, self.name)

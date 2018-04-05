@@ -34,17 +34,41 @@ class SharedMongoClient:
         return cls.__singleton_instance
 
     @classmethod
-    def get_pdb_order_col(cls) -> "Collection":
-        return cls.instance()[cls.p_db]["order"]
-
-    @classmethod
-    def get_process_db(cls) -> "Database":
-        return cls.instance()[cls.p_db]
-
-    @classmethod
     def get_coinone_db(cls) -> "Database":
         return cls.instance()[cls.COINONE_DB_NAME]
 
     @classmethod
     def get_korbit_db(cls) -> "Database":
         return cls.instance()[cls.KORBIT_DB_NAME]
+
+    @classmethod
+    def get_process_db(cls) -> "Database":
+        return cls.instance()[cls.p_db]
+
+    @classmethod
+    def _async_pdb_insert(cls, col_name: str, doc: dict):
+        target_col = cls.get_process_db()[col_name]
+        Global.run_threaded(target_col.insert_one, [doc])
+
+    @classmethod
+    def _async_pdb_update(cls, col_name: str, _filter, _update):
+        target_col = cls.get_process_db()[col_name]
+        Global.run_threaded(target_col.update_one, [_filter, _update])
+
+    @classmethod
+    def async_trade_insert(cls, trade: dict):
+        cls._async_pdb_insert("trade", trade)
+
+    @classmethod
+    def async_order_insert(cls, order: dict):
+        cls._async_pdb_insert("order", order)
+
+    @classmethod
+    def async_balance_insert(cls, balance: dict):
+        cls._async_pdb_insert("balance", balance)
+
+    @classmethod
+    def async_order_update(cls, order: dict):
+        cls._async_pdb_update("order", {
+            "order_id": order["order_id"]
+        }, order)

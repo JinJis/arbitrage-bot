@@ -34,19 +34,20 @@ class StatArbBot:
         if not self.is_backtesting:
             self.mm1 = CoinoneMarketManager()
             self.mm2 = KorbitMarketManager()
+            # initialize global OrderWatcherStats
+            # will initiate a thread for OrderWatcherStats
+            OrderWatcherStats.initialize()
         else:
             self.mm1 = VirtualMarketManager("co", VirtualMarketApiType.COINONE, 0.001, 60000, 0.1)
             self.mm2 = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.002, 60000, 0.1)
+
+        # set market currency
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
         self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
 
         # init mongo related
         self.mm1_ticker_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_ticker"]
         self.mm2_ticker_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_ticker"]
-
-        # initialize global OrderWatcherStats
-        # will initiate a thread for OrderWatcherStats
-        OrderWatcherStats.initialize()
 
         # init other attributes
         self.spread_stack = np.array([], dtype=np.float32)
@@ -104,7 +105,7 @@ class StatArbBot:
             for mm1_ticker, mm2_ticker in zip(self.mm1_ticker_cursor, self.mm2_ticker_cursor):
                 self.execute_trade_loop(mm1_ticker, mm2_ticker)
 
-        # teardown resource & threads
+        # teardown resource
         OrderWatcherStats.instance().tear_down()
 
     def execute_trade_loop(self, mm1_ticker=None, mm2_ticker=None):

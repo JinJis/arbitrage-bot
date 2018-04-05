@@ -29,7 +29,6 @@ class OrderWatcher(Thread):
         self.interval_sec = OrderWatcher.TARGET_INTERVAL_SEC
         self.delayed_flag_sec = OrderWatcher.DELAYED_FLAG_SEC
         self.is_delayed = False
-        self.order_col = SharedMongoClient.get_pdb_order_col()
 
         # find matching api
         matched_api = self.supported_markets.get(self.order.market)
@@ -48,16 +47,15 @@ class OrderWatcher(Thread):
         finally:
             order_dic = self.order.to_dict()
             order_dic["timestamp"] = request_time
-            self.order_col.insert_one(order_dic)
+            SharedMongoClient.async_order_update(order_dic)
 
     def run(self):
+        # do nothing if the market of order is not watchable
+        if not self.is_watchable(self.order):
+            return
+
         # add in order watcher stats
         OrderWatcherStats.started(self.order.order_id)
-
-        # just mark it done if the market of order is not watchable
-        if not self.is_watchable(self.order):
-            OrderWatcherStats.done(self.order.order_id)
-            return
 
         # log initial time
         initial_time = time.time()
