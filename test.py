@@ -2,7 +2,7 @@ from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from trader.stat_arb_bot import StatArbBot
 
-Global.configure_default_root_logging()
+Global.configure_default_root_logging(should_log_to_file=True)
 SharedMongoClient.COINONE_DB_NAME = "coinone_180402"
 SharedMongoClient.KORBIT_DB_NAME = "korbit_180402"
 # use remote address for db

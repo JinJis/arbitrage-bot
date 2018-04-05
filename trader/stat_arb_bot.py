@@ -105,7 +105,7 @@ class StatArbBot:
                 self.execute_trade_loop(mm1_ticker, mm2_ticker)
 
         # teardown resource & threads
-        OrderWatcherStats.tear_down()
+        OrderWatcherStats.instance().tear_down()
 
     def execute_trade_loop(self, mm1_ticker=None, mm2_ticker=None):
         # print trade loop seq
@@ -207,7 +207,7 @@ class StatArbBot:
 
         # log order watcher stats
         ows_stats = OrderWatcherStats.instance().get_stats()
-        logging.info("[STAT] order watcher - " % ows_stats)
+        logging.info("[STAT] order watcher - %s" % ows_stats)
         delayed_count = ows_stats.get("active_delayed_count")
         if delayed_count > self.DELAYED_ORDER_COUNT_THRESHOLD:
             logging.warning("[Warning] delayed orders: %s" % OrderWatcherStats.instance().get_current_delayed())
