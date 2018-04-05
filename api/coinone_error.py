@@ -71,4 +71,4 @@ class CoinoneErrorCode(Enum):
 class CoinoneError(RuntimeError):
     def __init__(self, error_code: int):
         _error_code = CoinoneErrorCode(error_code)
-        super().__init__("\"%s\" (code %d)" % (_error_code.message, _error_code.value))
+        super().__init__("\"%s\" (code %s)" % (_error_code.message, _error_code.value))

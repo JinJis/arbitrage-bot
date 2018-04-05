@@ -16,7 +16,8 @@ class VirtualMarketApiType(Enum):
 class VirtualMarketManager(MarketManager):
     MARKET_TAG = Market.VIRTUAL
 
-    def __init__(self, name: str, api_type: VirtualMarketApiType, market_fee, krw_balance=100000, eth_balance=0.1):
+    def __init__(self, name: str, api_type: VirtualMarketApiType,
+                 market_fee: float, krw_balance=100000, eth_balance=0.1):
         # create api instance according to given api_type
         if api_type is VirtualMarketApiType.COINONE:
             target_api = CoinoneApi(is_public_access_only=True)

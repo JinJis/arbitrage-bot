@@ -1,5 +1,5 @@
 import unittest
-from trader.trade_manager.order_manager import OrderManager
+from trader.trade_manager.order_watcher_stats import OrderManager
 
 
 class SimpleTest(unittest.TestCase):
