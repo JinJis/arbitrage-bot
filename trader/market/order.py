@@ -84,7 +84,7 @@ class Order:
         return self.order_type.is_sell_order()
 
     def update_from_api(self, res_json: dict):
-        """
+        """ res_json
         {
             "status": OrderStatus,
             "avg_filled_price": int,

@@ -1,8 +1,9 @@
 from pymongo import MongoClient
 from .global_conf import Global
+from pymongo.collection import Collection
 
 
-# note that MongoClient is thread-safe
+# note that MongoClient is itself thread-safe
 # see [http://api.mongodb.com/python/current/faq.html#is-pymongo-thread-safe]
 class SharedMongoClient:
     __singleton_instance = None
@@ -15,6 +16,9 @@ class SharedMongoClient:
         trade, order, balance
     """
 
+    def __init__(self):
+        raise Exception("Class method `initialize` or `instance` should be called instead!")
+
     @classmethod
     def initialize(cls, should_use_localhost_db: bool = True):
         cls.__singleton_instance = MongoClient(Global.read_mongodb_uri(should_use_localhost_db))
@@ -24,3 +28,7 @@ class SharedMongoClient:
         if cls.__singleton_instance is None:
             raise Exception("SharedMongoClient has never been initialized! Call `initialize` to init first.")
         return cls.__singleton_instance
+
+    @classmethod
+    def get_pdb_order_col(cls) -> "Collection":
+        return cls.instance()[cls.p_db]["order"]
