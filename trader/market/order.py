@@ -38,6 +38,7 @@ class Order:
     def __init__(self, market: Market, currency: Currency, order_type: OrderType,
                  order_id: str, price: int, amount: float):
         self.timestamp = int(time.time())
+        self.updated_at = self.timestamp
         self.status = OrderStatus.UNFILLED
         self.market = market
         self.currency = currency
@@ -66,6 +67,7 @@ class Order:
     def to_dict(self):
         return {
             "timestamp": self.timestamp,
+            "updated_at": self.updated_at,
             "order_id": self.order_id,
             "market": self.market.value,
             "currency": self.currency.name,
@@ -94,6 +96,7 @@ class Order:
             "fee": float
         }
         """
+        self.updated_at = int(time.time())
         self.status = res_json["status"]
         self.order_amount = res_json["order_amount"]
         self.avg_filled_price = res_json["avg_filled_price"]

@@ -36,7 +36,6 @@ class OrderWatcher(Thread):
             self.api = matched_api.instance()
 
     def do_interval(self):
-        request_time = int(time.time())
         # noinspection PyBroadException
         try:
             res_json = self.api.get_order_info(self.order.currency, self.order.order_id)
@@ -45,9 +44,7 @@ class OrderWatcher(Thread):
             logging.warning(e)
             logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
         finally:
-            order_dic = self.order.to_dict()
-            order_dic["timestamp"] = request_time
-            SharedMongoClient.async_order_update(order_dic)
+            SharedMongoClient.async_order_update(self.order.to_dict())
 
     def run(self):
         # do nothing if the market of order is not watchable

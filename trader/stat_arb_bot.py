@@ -207,11 +207,12 @@ class StatArbBot:
         Analyzer.log_combined_balance(self.mm1.get_balance(), self.mm2.get_balance())
 
         # log order watcher stats
-        ows_stats = OrderWatcherStats.instance().get_stats()
-        logging.info("[STAT] order watcher - %s" % ows_stats)
-        delayed_count = ows_stats.get("active_delayed_count")
-        if delayed_count > self.DELAYED_ORDER_COUNT_THRESHOLD:
-            logging.warning("[Warning] delayed orders: %s" % OrderWatcherStats.instance().get_current_delayed())
+        if not self.is_backtesting:
+            ows_stats = OrderWatcherStats.instance().get_stats()
+            logging.info("[STAT] order watcher - %s" % ows_stats)
+            delayed_count = ows_stats.get("active_delayed_count")
+            if delayed_count > self.DELAYED_ORDER_COUNT_THRESHOLD:
+                logging.warning("[Warning] delayed orders: %s" % OrderWatcherStats.instance().get_current_delayed())
 
         # remove the earliest spread in the stack
         # append the current spread

@@ -69,6 +69,8 @@ class SharedMongoClient:
 
     @classmethod
     def async_order_update(cls, order: dict):
-        cls._async_pdb_update("order", {
-            "order_id": order["order_id"]
-        }, order)
+        cls._async_pdb_update(
+            "order",
+            {"order_id": order["order_id"]},
+            {"$set": order}
+        )
