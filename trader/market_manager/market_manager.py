@@ -74,5 +74,5 @@ class MarketManager(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_market_currency(target_currency: str):
+    def get_market_currency(target_currency: str) -> "Currency":
         pass

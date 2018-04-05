@@ -20,9 +20,9 @@ class VirtualMarketManager(MarketManager):
                  market_fee: float, krw_balance=100000, eth_balance=0.1):
         # create api instance according to given api_type
         if api_type is VirtualMarketApiType.COINONE:
-            target_api = CoinoneApi(is_public_access_only=True)
+            target_api = CoinoneApi.instance(is_public_access_only=True)
         elif api_type is VirtualMarketApiType.KORBIT:
-            target_api = KorbitApi(is_public_access_only=True)
+            target_api = KorbitApi.instance(is_public_access_only=True)
         else:
             raise Exception("Invalid target API type has set!")
 
@@ -65,7 +65,7 @@ class VirtualMarketManager(MarketManager):
         self.balance.update(balance_dict)
 
     # override static method
-    def get_market_currency(self, target_currency: str):
+    def get_market_currency(self, target_currency: str) -> "Currency":
         if self.api_type is VirtualMarketApiType.COINONE:
             return CoinoneCurrency[target_currency.upper()]
         elif self.api_type is VirtualMarketApiType.KORBIT:

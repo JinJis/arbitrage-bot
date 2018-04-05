@@ -12,5 +12,5 @@ class CoinoneMarketManager(MarketManager):
         super().__init__(self.MARKET_TAG, self.MARKET_FEE, CoinoneApi.instance())
 
     @staticmethod
-    def get_market_currency(target_currency: str):
+    def get_market_currency(target_currency: str) -> "CoinoneCurrency":
         return CoinoneCurrency[target_currency.upper()]

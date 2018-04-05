@@ -12,5 +12,5 @@ class KorbitMarketManager(MarketManager):
         super().__init__(self.MARKET_TAG, self.MARKET_FEE, KorbitApi.instance())
 
     @staticmethod
-    def get_market_currency(target_currency: str):
+    def get_market_currency(target_currency: str) -> "KorbitCurrency":
         return KorbitCurrency[target_currency.upper()]

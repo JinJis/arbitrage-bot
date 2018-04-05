@@ -41,9 +41,8 @@ class StatArbBot:
         self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
 
         # init mongo related
-        self.mongo_client = SharedMongoClient.instance()
-        self.mm1_ticker_col = self.mongo_client["coinone"][self.TARGET_CURRENCY + "_ticker"]
-        self.mm2_ticker_col = self.mongo_client["korbit"][self.TARGET_CURRENCY + "_ticker"]
+        self.mm1_ticker_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_ticker"]
+        self.mm2_ticker_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_ticker"]
 
         # init other attributes
         self.spread_stack = np.array([], dtype=np.float32)
