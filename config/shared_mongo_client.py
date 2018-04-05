@@ -38,6 +38,10 @@ class SharedMongoClient:
         return cls.instance()[cls.p_db]["order"]
 
     @classmethod
+    def get_process_db(cls) -> "Database":
+        return cls.instance()[cls.p_db]
+
+    @classmethod
     def get_coinone_db(cls) -> "Database":
         return cls.instance()[cls.COINONE_DB_NAME]
 

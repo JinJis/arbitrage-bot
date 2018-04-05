@@ -8,7 +8,6 @@ from trader.market.balance import Balance
 from collections import deque
 from config.shared_mongo_client import SharedMongoClient
 from .order_watcher import OrderWatcher
-from .order_watcher_stats import OrderWatcherStats
 
 
 class TradeManager:
@@ -26,13 +25,9 @@ class TradeManager:
         self._trade_list = deque()
         self._switch_over_list = deque()
 
-        # initialize global order_watcher_stats
-        OrderWatcherStats.initialize()
-
         if self.should_db_logging:
             # init db related
-            self.mongo_client = SharedMongoClient.instance()
-            self.target_db = self.mongo_client[SharedMongoClient.p_db]
+            self.target_db = SharedMongoClient.get_process_db()
 
     def add_trade(self, cur_trade: Trade):
         # see if this is not the first trade, and the trade tag has changed from the tag of last trade

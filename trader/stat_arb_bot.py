@@ -44,6 +44,10 @@ class StatArbBot:
         self.mm1_ticker_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_ticker"]
         self.mm2_ticker_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_ticker"]
 
+        # initialize global OrderWatcherStats
+        # will initiate a thread for OrderWatcherStats
+        OrderWatcherStats.initialize()
+
         # init other attributes
         self.spread_stack = np.array([], dtype=np.float32)
         self.trade_manager = TradeManager(should_db_logging=True, is_backtesting=is_backtesting)
@@ -99,6 +103,9 @@ class StatArbBot:
             # loop through history data
             for mm1_ticker, mm2_ticker in zip(self.mm1_ticker_cursor, self.mm2_ticker_cursor):
                 self.execute_trade_loop(mm1_ticker, mm2_ticker)
+
+        # teardown resource & threads
+        OrderWatcherStats.tear_down()
 
     def execute_trade_loop(self, mm1_ticker=None, mm2_ticker=None):
         # print trade loop seq
@@ -201,7 +208,7 @@ class StatArbBot:
         # log order watcher stats
         ows_stats = OrderWatcherStats.instance().get_stats()
         logging.info("[STAT] order watcher - " % ows_stats)
-        delayed_count = ows_stats.get("current_delayed_count")
+        delayed_count = ows_stats.get("active_delayed_count")
         if delayed_count > self.DELAYED_ORDER_COUNT_THRESHOLD:
             logging.warning("[Warning] delayed orders: %s" % OrderWatcherStats.instance().get_current_delayed())
 

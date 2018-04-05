@@ -1,7 +1,6 @@
 from .market_manager import MarketManager
 from api.currency import Currency, CoinoneCurrency, KorbitCurrency
 from trader.market.order import Market
-from decimal import Decimal
 from enum import Enum
 from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
@@ -42,7 +41,7 @@ class VirtualMarketManager(MarketManager):
 
         self.vt_balance[currency.name.lower()] += amount
         self.vt_balance["krw"] -= price * actual_amount
-        return Order(self.MARKET_TAG, OrderType.LIMIT_BUY, self.generate_order_id(), price, actual_amount)
+        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_BUY, self.generate_order_id(), price, actual_amount)
 
     def order_sell(self, currency: Currency, price: int, amount: float):
         if not self.has_enough_coin(currency.name.lower(), amount):
@@ -50,16 +49,15 @@ class VirtualMarketManager(MarketManager):
 
         self.vt_balance[currency.name.lower()] -= amount
         self.vt_balance["krw"] += price * amount * (1 - self.market_fee)
-        return Order(self.MARKET_TAG, OrderType.LIMIT_SELL, self.generate_order_id(), price, amount)
+        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_SELL, self.generate_order_id(), price, amount)
 
     def update_balance(self):
-        zero = Decimal(0)
         balance_dict = dict()
         for key in self.vt_balance.keys():
-            coin_bal = Decimal(self.vt_balance[key])
+            coin_bal = self.vt_balance[key]
             balance_dict[key] = {
                 "available": coin_bal,
-                "trade_in_use": zero,
+                "trade_in_use": 0,
                 "balance": coin_bal
             }
         self.balance.update(balance_dict)

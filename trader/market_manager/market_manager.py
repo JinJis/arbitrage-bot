@@ -31,7 +31,7 @@ class MarketManager(ABC):
         res_json = self.market_api.order_limit_buy(currency, price, actual_amount)
         logging.info(res_json)
         order_id = res_json["orderId"]
-        new_order = Order(self.market_tag, OrderType.LIMIT_BUY, order_id, price, actual_amount)
+        new_order = Order(self.market_tag, currency, OrderType.LIMIT_BUY, order_id, price, actual_amount)
         return new_order
 
     def order_sell(self, currency: Currency, price: int, amount: float):
@@ -41,7 +41,7 @@ class MarketManager(ABC):
         res_json = self.market_api.order_limit_sell(currency, price, amount)
         logging.info(res_json)
         order_id = res_json["orderId"]
-        new_order = Order(self.market_tag, OrderType.LIMIT_SELL, order_id, price, amount)
+        new_order = Order(self.market_tag, currency, OrderType.LIMIT_SELL, order_id, price, amount)
         return new_order
 
     def get_orderbook(self, currency: Currency):

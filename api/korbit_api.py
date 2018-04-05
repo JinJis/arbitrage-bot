@@ -1,7 +1,6 @@
 import time
 import requests
 import configparser
-from decimal import Decimal
 from bson import Decimal128
 from datetime import datetime
 from .market_api import MarketApi
@@ -183,8 +182,8 @@ class KorbitApi(MarketApi):
         result = dict()
         for coin_name in res_json.keys():
             coin_balance = res_json[coin_name]
-            available = Decimal(coin_balance["available"])
-            trade_in_use = Decimal(coin_balance["trade_in_use"])
+            available = float(coin_balance["available"])
+            trade_in_use = float(coin_balance["trade_in_use"])
             result[coin_name] = {
                 "available": available,
                 "trade_in_use": trade_in_use,

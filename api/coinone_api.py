@@ -5,7 +5,6 @@ import base64
 import hashlib
 import requests
 import configparser
-from decimal import Decimal
 from bson import Decimal128
 from datetime import datetime
 from .market_api import MarketApi
@@ -183,9 +182,10 @@ class CoinoneApi(MarketApi):
             _a = coin_balance.get("avail")
             _b = coin_balance.get("balance")
 
+            # note that there's some attr we don't need in api response
             if _a is not None and _b is not None:
-                available = Decimal(_a)
-                balance = Decimal(_b)
+                available = float(_a)
+                balance = float(_b)
                 result[coin_name] = {
                     "available": available,
                     "trade_in_use": (balance - available),

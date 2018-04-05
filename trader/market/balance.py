@@ -1,4 +1,3 @@
-from .market import Market
 from config.global_conf import Global
 
 

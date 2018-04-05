@@ -123,7 +123,10 @@ class OrderWatcherStats(Thread):
         active_order_count = len(self._active)
         active_delayed_count = len(self.get_current_delayed())
         done_order_without_delay = self._total_done_count - (self._total_delayed_count - active_delayed_count)
-        undelayed_fill_rate = done_order_without_delay / self._total_done_count
+        if self._total_done_count > 0:
+            undelayed_fill_rate = done_order_without_delay / self._total_done_count
+        else:
+            undelayed_fill_rate = 0
 
         return {
             "active_order_count": active_order_count,
