@@ -86,7 +86,7 @@ class OrderWatcher(Thread):
             # if it is filled
             if self.order.status is OrderStatus.FILLED:
                 OrderWatcherStats.done(self.order.order_id)
-                logging.info(self.order.get_filled_status())
+                # logging.info(self.order.get_filled_status())
 
         except Exception as e:
             # if there was any error for some unexpected reasons
