@@ -1,7 +1,7 @@
 import time
 import logging
-from itertools import zip_longest
 import numpy as np
+from itertools import zip_longest
 from analyzer.analyzer import Analyzer
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
@@ -17,9 +17,9 @@ class StatArbBot:
     TARGET_CURRENCY = "eth"
     COIN_TRADING_UNIT = 0.01
     TRADE_INTERVAL_IN_SEC = 5
-    TARGET_SPREAD_STACK_HOUR = 3  # 3-hour data
+    TARGET_SPREAD_STACK_HOUR = 9  # 3-hour data
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
-    Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.5)
+    Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.9)
     DELAYED_ORDER_COUNT_THRESHOLD = 10
     TARGET_SPREAD_FUNCTION = Analyzer.get_orderbook_mid_price_log_spread
     TARGET_DATA_COL = "orderbook"
@@ -30,8 +30,6 @@ class StatArbBot:
         self.is_backtesting = is_backtesting
         self.start_time = start_time
         self.end_time = end_time
-        self.mm1_ticker_cursor = None
-        self.mm2_ticker_cursor = None
 
         # init market managers
         if not self.is_backtesting:
@@ -107,12 +105,12 @@ class StatArbBot:
         else:
             # collect historical data from db
             logging.info("Collecting historical data, please wait...")
-            self.mm1_ticker_cursor, self.mm2_ticker_cursor = \
+            mm1_data_cursor, mm2_data_cursor = \
                 self.get_data_from_db(self.start_time, self.end_time)
 
             # loop through history data
-            for mm1_ticker, mm2_ticker in zip(self.mm1_ticker_cursor, self.mm2_ticker_cursor):
-                self.execute_trade_loop(mm1_ticker, mm2_ticker)
+            for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
+                self.execute_trade_loop(mm1_data, mm2_data)
 
     def execute_trade_loop(self, mm1_data=None, mm2_data=None):
         # print trade loop seq
@@ -259,7 +257,7 @@ class StatArbBot:
         mm2_count = mm2_cursor.count()
         if mm1_count != mm2_count:
             logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
-            logging.info("Now validating ticker data...")
+            logging.info("Now validating data...")
             for mm1_item, mm2_item in zip_longest(mm1_cursor, mm2_cursor):
                 mm1_rt = mm1_item["requestTime"]
                 mm2_rt = mm2_item["requestTime"]
