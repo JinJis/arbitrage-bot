@@ -18,7 +18,7 @@ for coin_unit in COIN_UNIT:
     for stack_hour in TARGET_SPREAD_STACK_HOUR:
         for z_prob in Z_SCORE_SIGMA_PROB:
             logging.critical("------------------------------------------------------")
-            logging.critical("coin unit: %d, stack_hour: %d, z_score: %d" % (coin_unit, stack_hour, z_prob))
+            logging.critical("coin unit: %.1f, stack_hour: %d, z_score: %d%%" % (coin_unit, stack_hour, z_prob * 100))
             StatArbBot.COIN_TRADING_UNIT = coin_unit
             StatArbBot.TARGET_SPREAD_STACK_HOUR = stack_hour
             StatArbBot.Z_SCORE_SIGMA = Global.get_z_score_for_probability(z_prob)
