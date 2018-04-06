@@ -103,18 +103,20 @@ class Analyzer:
         return log_spread, mm1_mid_price, mm2_mid_price
 
     @staticmethod
-    def log_combined_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):
+    def combine_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):
         mm1_balance_dict = mm1_balance.to_dict()
         mm2_balance_dict = mm2_balance.to_dict()
 
+        result = dict()
         for coin in target_coins:
             mm1_coin_balance = mm1_balance_dict[coin]
             mm2_coin_balance = mm2_balance_dict[coin]
-
-            logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
-                         (coin.upper(), mm1_coin_balance["available"] + mm2_coin_balance["available"],
-                          mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
-                          mm1_coin_balance["balance"] + mm2_coin_balance["balance"]))
+            result[coin.upper()] = {
+                "available": mm1_coin_balance["available"] + mm2_coin_balance["available"],
+                "trade_in_use": mm1_coin_balance["trade_in_use"] + mm2_coin_balance["trade_in_use"],
+                "balance": mm1_coin_balance["balance"] + mm2_coin_balance["balance"]
+            }
+        return result
 
     @staticmethod
     def have_enough_balance_for_arb(buy_mm: MarketManager, sell_mm: MarketManager,

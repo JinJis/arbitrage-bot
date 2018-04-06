@@ -36,18 +36,18 @@ class TradeManager:
         # limit number of trade instance
         if not self.is_backtesting and len(self._trade_list) > self.TRADE_INSTANCE_LIMIT:
             self._trade_list.popleft()
+
         # add into trade list
         self._trade_list.append(cur_trade)
 
-        # log current trade
-        self.log_trade(cur_trade)
+        if not self.is_backtesting:
+            # log current trade
+            self.log_trade(cur_trade)
 
-        # log orders in current trade
-        for order in cur_trade.orders:
-            if not self.is_backtesting:
-                # initiate watcher for every order
+            # log and initiate watcher for each order in current trade
+            for order in cur_trade.orders:
+                self.log_order(order)
                 OrderWatcher(order).start()
-            self.log_order(order)
 
     def add_switch_over(self, switch_over: SwitchOver):
         # pop the left-most element if the size has reached the set limit
