@@ -92,7 +92,11 @@ class StatArbBot:
 
             # jump into start loop
             while True:
-                self.execute_trade_loop()
+                try:
+                    self.execute_trade_loop()
+                except Exception as e:
+                    Global.send_to_slack_channel("Something happened to StatArbBot! Now it's dying from ... %s" % e)
+                    raise e
 
         # on backtesting
         else:
