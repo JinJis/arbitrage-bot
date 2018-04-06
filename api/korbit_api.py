@@ -258,10 +258,11 @@ class KorbitApi(MarketApi):
         filled_amount = float(order_info["filled_amount"])
         # korbit api says that no fee data will be sent if the order has never been filled
         fee = order_info.get("fee")
+        avg_filled_price = order_info.get("avg_price")
 
         return {
             "status": OrderStatus.get(order_info["status"]),
-            "avg_filled_price": int(float(order_info["avg_price"])),
+            "avg_filled_price": int(float(avg_filled_price)) if avg_filled_price is not None else 0,
             "order_amount": order_amount,
             "filled_amount": filled_amount,
             "remain_amount": order_amount - filled_amount,

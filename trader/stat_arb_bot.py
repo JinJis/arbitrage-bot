@@ -21,8 +21,11 @@ class StatArbBot:
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
     Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.5)
     DELAYED_ORDER_COUNT_THRESHOLD = 10
+    TARGET_SPREAD_FUNCTION = Analyzer.get_orderbook_mid_price_log_spread
+    TARGET_DATA_COL = "orderbook"
 
-    def __init__(self, is_backtesting: bool = False, start_time: int = None, end_time: int = None):
+    def __init__(self, should_db_logging: bool = True,
+                 is_backtesting: bool = False, start_time: int = None, end_time: int = None):
         # for backtesting
         self.is_backtesting = is_backtesting
         self.start_time = start_time
@@ -46,12 +49,12 @@ class StatArbBot:
         self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
 
         # init mongo related
-        self.mm1_ticker_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_ticker"]
-        self.mm2_ticker_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_ticker"]
+        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_" + self.TARGET_DATA_COL]
+        self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_" + self.TARGET_DATA_COL]
 
         # init other attributes
         self.spread_stack = np.array([], dtype=np.float32)
-        self.trade_manager = TradeManager(should_db_logging=True, is_backtesting=is_backtesting)
+        self.trade_manager = TradeManager(should_db_logging=should_db_logging, is_backtesting=is_backtesting)
         self.loop_count = 0
 
     def run(self):
@@ -96,6 +99,8 @@ class StatArbBot:
                     self.execute_trade_loop()
                 except Exception as e:
                     Global.send_to_slack_channel("Something happened to StatArbBot! Now it's dying from ... %s" % e)
+                    # stop order watcher stats thread
+                    OrderWatcherStats.instance().tear_down()
                     raise e
 
         # on backtesting
@@ -103,16 +108,13 @@ class StatArbBot:
             # collect historical data from db
             logging.info("Collecting historical data, please wait...")
             self.mm1_ticker_cursor, self.mm2_ticker_cursor = \
-                self.get_ticker_from_db(self.start_time, self.end_time)
+                self.get_data_from_db(self.start_time, self.end_time)
 
             # loop through history data
             for mm1_ticker, mm2_ticker in zip(self.mm1_ticker_cursor, self.mm2_ticker_cursor):
                 self.execute_trade_loop(mm1_ticker, mm2_ticker)
 
-        # teardown resource
-        OrderWatcherStats.instance().tear_down()
-
-    def execute_trade_loop(self, mm1_ticker=None, mm2_ticker=None):
+    def execute_trade_loop(self, mm1_data=None, mm2_data=None):
         # print trade loop seq
         self.loop_count += 1
         logging.info("========== [# %12d Trade Loop] =================================================="
@@ -130,42 +132,42 @@ class StatArbBot:
 
         # get current spread
         if not self.is_backtesting:
-            mm1_ticker = self.mm1.get_ticker(self.mm1_currency)
-            mm2_ticker = self.mm2.get_ticker(self.mm2_currency)
-            cur_spread, mm1_last, mm2_last = Analyzer.get_ticker_log_spread(mm1_ticker, mm2_ticker)
+            mm1_data = self.mm1.get_orderbook(self.mm1_currency)
+            mm2_data = self.mm2.get_orderbook(self.mm2_currency)
+            cur_spread, mm1_price, mm2_price = StatArbBot.TARGET_SPREAD_FUNCTION(mm1_data, mm2_data)
         else:
             # on backtesting
-            cur_spread, mm1_last, mm2_last = Analyzer.get_ticker_log_spread(mm1_ticker, mm2_ticker)
+            cur_spread, mm1_price, mm2_price = StatArbBot.TARGET_SPREAD_FUNCTION(mm1_data, mm2_data)
 
         # calculate plain spread
-        plain_spread = mm1_last - mm2_last
+        plain_spread = mm1_price - mm2_price
 
         # log stat
         logging.info("[STAT] cur_spread: %.8f, mean: %.8f, stdev: %.8f" % (cur_spread, mean, stdev))
-        logging.info("[STAT] mm1_last: %d, mm2_last: %d, plain_spread: %d" % (mm1_last, mm2_last, plain_spread))
+        logging.info("[STAT] mm1_price: %d, mm2_price: %d, plain_spread: %d" % (mm1_price, mm2_price, plain_spread))
         trade_meta = StatArbTradeMeta(plain_spread, cur_spread, mean, stdev, upper, lower)
 
         # make decision
         if cur_spread < lower:
             # check balance
-            if Analyzer.have_enough_balance_for_arb(self.mm1, self.mm2, mm1_last,
+            if Analyzer.have_enough_balance_for_arb(self.mm1, self.mm2, mm1_price,
                                                     self.COIN_TRADING_UNIT, self.TARGET_CURRENCY):
                 # long in mm1, short in mm2
                 logging.warning("[EXECUTE] New")
-                buy_order = self.mm1.order_buy(self.mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
-                sell_order = self.mm2.order_sell(self.mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
+                buy_order = self.mm1.order_buy(self.mm1_currency, mm1_price, self.COIN_TRADING_UNIT)
+                sell_order = self.mm2.order_sell(self.mm2_currency, mm2_price, self.COIN_TRADING_UNIT)
                 trade = Trade(TradeTag.NEW, [buy_order, sell_order], trade_meta)
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
         elif cur_spread > upper:
             # check balance
-            if Analyzer.have_enough_balance_for_arb(self.mm2, self.mm1, mm2_last,
+            if Analyzer.have_enough_balance_for_arb(self.mm2, self.mm1, mm2_price,
                                                     self.COIN_TRADING_UNIT, self.TARGET_CURRENCY):
                 # long in mm2, short in mm1
                 logging.warning("[EXECUTE] Reverse")
-                buy_order = self.mm2.order_buy(self.mm2_currency, mm2_last, self.COIN_TRADING_UNIT)
-                sell_order = self.mm1.order_sell(self.mm1_currency, mm1_last, self.COIN_TRADING_UNIT)
+                buy_order = self.mm2.order_buy(self.mm2_currency, mm2_price, self.COIN_TRADING_UNIT)
+                sell_order = self.mm1.order_sell(self.mm1_currency, mm1_price, self.COIN_TRADING_UNIT)
                 trade = Trade(TradeTag.REV, [buy_order, sell_order], trade_meta)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
@@ -177,7 +179,7 @@ class StatArbBot:
         if trade is not None:
             # change timestamp of trade when backtesting
             if self.is_backtesting:
-                current_ts = mm1_ticker["requestTime"]
+                current_ts = mm1_data["requestTime"]
                 trade.set_timestamp(current_ts)
 
             # add into trade list
@@ -232,23 +234,23 @@ class StatArbBot:
 
     def collect_initial_stack(self, current_timestamp: int):
         target_timestamp = current_timestamp - 60 * 60 * self.TARGET_SPREAD_STACK_HOUR
-        mm1_cursor, mm2_cursor = self.get_ticker_from_db(target_timestamp, current_timestamp)
+        mm1_cursor, mm2_cursor = self.get_data_from_db(target_timestamp, current_timestamp)
 
         last_request_time = None
-        for mm1_ticker, mm2_ticker in zip(mm1_cursor, mm2_cursor):
-            log_spread, _, _ = Analyzer.get_ticker_log_spread(mm1_ticker, mm2_ticker)
+        for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):
+            log_spread, _, _ = StatArbBot.TARGET_SPREAD_FUNCTION(mm1_data, mm2_data)
             self.spread_stack = np.append(self.spread_stack, log_spread)
-            last_request_time = mm1_ticker["requestTime"]
+            last_request_time = mm1_data["requestTime"]
 
         # return the last request time
         return last_request_time
 
-    def get_ticker_from_db(self, start_time: int, end_time: int):
-        mm1_cursor = self.mm1_ticker_col.find({"requestTime": {
+    def get_data_from_db(self, start_time: int, end_time: int):
+        mm1_cursor = self.mm1_data_col.find({"requestTime": {
             "$gte": start_time,
             "$lte": end_time
         }}).sort([("requestTime", 1)])
-        mm2_cursor = self.mm2_ticker_col.find({"requestTime": {
+        mm2_cursor = self.mm2_data_col.find({"requestTime": {
             "$gte": start_time,
             "$lte": end_time
         }}).sort([("requestTime", 1)])

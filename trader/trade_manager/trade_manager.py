@@ -15,7 +15,7 @@ class TradeManager:
     TRADE_INSTANCE_LIMIT = 50
     SWITCH_OVER_INSTANCE_LIMIT = 100
 
-    def __init__(self, should_db_logging: bool, is_backtesting: bool = False):
+    def __init__(self, should_db_logging: bool, is_backtesting: bool):
         self.should_db_logging = should_db_logging
         self.is_backtesting = is_backtesting
 

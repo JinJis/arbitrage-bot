@@ -17,8 +17,9 @@ class Analyzer:
 
     @staticmethod
     def get_amount_of_minask_maxbid(orderbook: dict, ask_index: int, bid_index: int):
-        return float(orderbook["asks"][ask_index]["amount"].to_decimal()), float(orderbook["bids"][bid_index]["amount"].to_decimal())
-    
+        return float(orderbook["asks"][ask_index]["amount"].to_decimal()), float(
+            orderbook["bids"][bid_index]["amount"].to_decimal())
+
     ######################################################################
     # buy at minask, sell at maxbid
     ######################################################################
@@ -43,9 +44,8 @@ class Analyzer:
         mm2_buy_price = mm2_minask_price
         mm2_sell_price = mm2_maxbid_price
 
-
-        return new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price,\
-                mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount
+        return new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price, \
+               mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount
 
     ######################################################################
     # co:   buy at ma_mb_avg ±      sell at ma_mb_avg ±
@@ -88,6 +88,19 @@ class Analyzer:
         mm2_last = int(mm2_ticker["last"].to_decimal())
         log_spread = math.log(mm1_last) - math.log(mm2_last)
         return log_spread, mm1_last, mm2_last
+
+    @staticmethod
+    def get_orderbook_mid_price_log_spread(mm1_orderbook: dict, mm2_orderbook: dict):
+        mm1_minask = int(mm1_orderbook["asks"][0]["price"].to_decimal())
+        mm1_maxbid = int(mm1_orderbook["bids"][0]["price"].to_decimal())
+        mm1_mid_price = (mm1_minask + mm1_maxbid) / 2
+
+        mm2_minask = int(mm2_orderbook["asks"][0]["price"].to_decimal())
+        mm2_maxbid = int(mm2_orderbook["bids"][0]["price"].to_decimal())
+        mm2_mid_price = (mm2_minask + mm2_maxbid) / 2
+
+        log_spread = math.log(mm1_mid_price) - math.log(mm2_mid_price)
+        return log_spread, mm1_mid_price, mm2_mid_price
 
     @staticmethod
     def log_combined_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):
