@@ -1,7 +1,7 @@
 import time
-import requests
 import configparser
 from bson import Decimal128
+from requests import Response
 from datetime import datetime
 from .market_api import MarketApi
 from .currency import KorbitCurrency
@@ -36,7 +36,7 @@ class KorbitApi(MarketApi):
             self.set_access_token()
 
     def get_ticker(self, currency: KorbitCurrency):
-        res = requests.get(self.BASE_URL + "/v1/ticker/detailed", params={
+        res = self._session.get(self.BASE_URL + "/v1/ticker/detailed", params={
             "currency_pair": currency.value
         })
         res_json = self.filter_successful_response(res)
@@ -66,7 +66,7 @@ class KorbitApi(MarketApi):
         return result
 
     def get_orderbook(self, currency: KorbitCurrency):
-        res = requests.get(self.BASE_URL + "/v1/orderbook", params={
+        res = self._session.get(self.BASE_URL + "/v1/orderbook", params={
             "currency_pair": currency.value
         })
         res_json = self.filter_successful_response(res)
@@ -102,7 +102,7 @@ class KorbitApi(MarketApi):
 
     # time_range can be "minute", "hour" or "day"
     def get_filled_orders(self, currency: KorbitCurrency, time_range: str = "hour"):
-        res = requests.get(self.BASE_URL + "/v1/transactions", params={
+        res = self._session.get(self.BASE_URL + "/v1/transactions", params={
             "currency_pair": currency.value,
             "time": time_range
         })
@@ -120,7 +120,7 @@ class KorbitApi(MarketApi):
         return result
 
     def set_access_token(self):
-        res = requests.post(self.BASE_URL + "/v1/oauth2/access_token", data={
+        res = self._session.post(self.BASE_URL + "/v1/oauth2/access_token", data={
             "client_id": self._client_id,
             "client_secret": self._client_secret,
             "username": self._username,
@@ -137,7 +137,7 @@ class KorbitApi(MarketApi):
         self._access_token_last_updated = datetime.today()
 
     def refresh_access_token(self):
-        res = requests.post(self.BASE_URL + "/v1/oauth2/access_token", data={
+        res = self._session.post(self.BASE_URL + "/v1/oauth2/access_token", data={
             "client_id": self._client_id,
             "client_secret": self._client_secret,
             "refresh_token": self._refresh_token,
@@ -176,7 +176,7 @@ class KorbitApi(MarketApi):
         return int(time.time())
 
     def get_balance(self):
-        res = requests.get(self.BASE_URL + "/v1/user/balances", headers=self.get_auth_header())
+        res = self._session.get(self.BASE_URL + "/v1/user/balances", headers=self.get_auth_header())
         res_json = self.filter_successful_response(res)
 
         result = dict()
@@ -192,7 +192,7 @@ class KorbitApi(MarketApi):
         return result
 
     def order_limit_buy(self, currency: KorbitCurrency, price: int, amount: float):
-        res = requests.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
+        res = self._session.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
             "currency_pair": currency.value,
             "type": "limit",
             "price": price,
@@ -203,7 +203,7 @@ class KorbitApi(MarketApi):
         return res_json
 
     def order_limit_sell(self, currency: KorbitCurrency, price: int, amount: float):
-        res = requests.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
+        res = self._session.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
             "currency_pair": currency.value,
             "type": "limit",
             "price": price,
@@ -214,7 +214,7 @@ class KorbitApi(MarketApi):
         return res_json
 
     def order_market_buy(self, currency: KorbitCurrency, amount_of_krw: int):
-        res = requests.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
+        res = self._session.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
             "currency_pair": currency.value,
             "type": "market",
             "fiat_amount": amount_of_krw,
@@ -224,7 +224,7 @@ class KorbitApi(MarketApi):
         return res_json
 
     def order_market_sell(self, currency: KorbitCurrency, amount_of_coin: float):
-        res = requests.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
+        res = self._session.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
             "currency_pair": currency.value,
             "type": "market",
             "coin_amount": amount_of_coin,
@@ -234,7 +234,7 @@ class KorbitApi(MarketApi):
         return res_json
 
     def cancel_order(self, currency: KorbitCurrency, order: Order):
-        res = requests.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
+        res = self._session.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
             "currency_pair": currency.value,
             "nonce": self.get_nonce(),
             "id": order.order_id
@@ -243,7 +243,7 @@ class KorbitApi(MarketApi):
         return res_json
 
     def get_order_info(self, currency: KorbitCurrency, order_id: str):
-        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
+        res = self._session.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
             "currency_pair": currency.value,
             "id": order_id,
             "nonce": self.get_nonce()
@@ -269,7 +269,7 @@ class KorbitApi(MarketApi):
         }
 
     def get_open_orders(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
-        res = requests.get(self.BASE_URL + "/v1/user/orders/open", headers=self.get_auth_header(), params={
+        res = self._session.get(self.BASE_URL + "/v1/user/orders/open", headers=self.get_auth_header(), params={
             "currency_pair": currency.value,
             "offset": offset,
             "limit": limit,
@@ -278,7 +278,7 @@ class KorbitApi(MarketApi):
         return self.filter_successful_response(res)
 
     def get_past_trades(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
-        res = requests.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
+        res = self._session.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
             "currency_pair": currency.value,
             "offset": offset,
             "limit": limit,
@@ -287,7 +287,7 @@ class KorbitApi(MarketApi):
         return self.filter_successful_response(res)
 
     @staticmethod
-    def filter_successful_response(res: requests.Response):
+    def filter_successful_response(res: Response):
         if res.status_code != 200:
             raise Exception("Network request has failed!")
         else:
@@ -295,7 +295,7 @@ class KorbitApi(MarketApi):
 
     # applies to placing or cancelling orders
     @staticmethod
-    def filter_successful_response_on_order(res: requests.Response):
+    def filter_successful_response_on_order(res: Response):
         res_json = KorbitApi.filter_successful_response(res)
         if res_json["status"] != "success":
             raise KorbitError(res_json["status"])

@@ -3,7 +3,7 @@ import json
 import time
 import base64
 import hashlib
-import requests
+from requests import Response
 import configparser
 from bson import Decimal128
 from datetime import datetime
@@ -41,7 +41,7 @@ class CoinoneApi(MarketApi):
             self.refresh_access_token()
 
     def get_ticker(self, currency: CoinoneCurrency):
-        res = requests.get(self.BASE_URL + "/ticker", params={
+        res = self._session.get(self.BASE_URL + "/ticker", params={
             "currency": currency.value
         })
         res_json = self.filter_successful_response(res)
@@ -64,7 +64,7 @@ class CoinoneApi(MarketApi):
         return result
 
     def get_orderbook(self, currency: CoinoneCurrency):
-        res = requests.get(self.BASE_URL + "/orderbook", params={
+        res = self._session.get(self.BASE_URL + "/orderbook", params={
             "currency": currency.value
         })
         res_json = self.filter_successful_response(res)
@@ -100,7 +100,7 @@ class CoinoneApi(MarketApi):
 
     # time_range can be "hour" or "day"
     def get_filled_orders(self, currency: CoinoneCurrency, time_range: str = "hour"):
-        res = requests.get(self.BASE_URL + "/trades", params={
+        res = self._session.get(self.BASE_URL + "/trades", params={
             "currency": currency.value,
             "period": time_range
         })
@@ -119,7 +119,7 @@ class CoinoneApi(MarketApi):
 
     def refresh_access_token(self):
         # request for refresh, save in config file
-        res = requests.post(self.BASE_URL + "/oauth/refresh_token", data={
+        res = self._session.post(self.BASE_URL + "/oauth/refresh_token", data={
             "access_token": self._access_token
         })
         res_json = self.filter_successful_response(res)
@@ -163,7 +163,7 @@ class CoinoneApi(MarketApi):
         encoded_payload = self.encode_payload(payload)
         signature = self.get_signature(encoded_payload)
 
-        res = requests.post(url, headers={
+        res = self._session.post(url, headers={
             "X-COINONE-PAYLOAD": encoded_payload,
             "X-COINONE-SIGNATURE": signature
         }, json=payload)
@@ -246,7 +246,7 @@ class CoinoneApi(MarketApi):
         })
 
     @staticmethod
-    def filter_successful_response(res: requests.Response):
+    def filter_successful_response(res: Response):
         if res.status_code != 200:
             raise Exception("Network request has failed!")
         else:
