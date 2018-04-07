@@ -16,7 +16,7 @@ end_time = Global.convert_local_datetime_to_epoch("2018.03.30 00:00:00", timezon
 
 COIN_UNIT = (0.1,)
 TARGET_SPREAD_STACK_HOUR = (24, 36)
-Z_SCORE_SIGMA_PROB = (0.9)
+Z_SCORE_SIGMA_PROB = (0.9,)
 
 for coin_unit in COIN_UNIT:
     for stack_hour in TARGET_SPREAD_STACK_HOUR:
