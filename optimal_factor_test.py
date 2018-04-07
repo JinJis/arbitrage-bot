@@ -4,18 +4,18 @@ from trader.stat_arb_bot import StatArbBot
 import logging
 
 Global.configure_default_root_logging(log_level=logging.CRITICAL, should_log_to_file=True)
-SharedMongoClient.COINONE_DB_NAME = "coinone_180402"
-SharedMongoClient.KORBIT_DB_NAME = "korbit_180402"
-# SharedMongoClient.KORBIT_DB_NAME = "korbit"
-# SharedMongoClient.COINONE_DB_NAME = "coinone"
+# SharedMongoClient.COINONE_DB_NAME = "coinone_180402"
+# SharedMongoClient.KORBIT_DB_NAME = "korbit_180402"
+SharedMongoClient.KORBIT_DB_NAME = "korbit"
+SharedMongoClient.COINONE_DB_NAME = "coinone"
 SharedMongoClient.initialize(should_use_localhost_db=False)
-start_time = Global.convert_local_datetime_to_epoch("2018.03.25 00:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.03.30 00:00:00", timezone="kr")
-# start_time = Global.convert_local_datetime_to_epoch("2018.04.06 10:00:00", timezone="kr")
-# end_time = Global.convert_local_datetime_to_epoch("2018.04.06 22:00:00", timezone="kr")
+# start_time = Global.convert_local_datetime_to_epoch("2018.03.25 00:00:00", timezone="kr")
+# end_time = Global.convert_local_datetime_to_epoch("2018.03.30 00:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.04.06 10:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.04.06 22:00:00", timezone="kr")
 
 COIN_UNIT = (0.1,)
-TARGET_SPREAD_STACK_HOUR = (24, 36)
+TARGET_SPREAD_STACK_HOUR = (18, 21, 24, 27)
 Z_SCORE_SIGMA_PROB = (0.9,)
 
 for coin_unit in COIN_UNIT:

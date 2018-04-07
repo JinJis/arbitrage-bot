@@ -104,6 +104,24 @@ class Analyzer:
         return mid_price, minask, maxbid
 
     @staticmethod
+    def get_orderbook_mid_vwap(orderbook: dict, depth: int):
+        vwap = dict()
+        for key in ("asks", "bids"):
+            items = orderbook[key]
+            volume_sum = 0
+            weighted_sum = 0
+            for i in range(depth):
+                price = int(items[i]["price"].to_decimal())
+                volume = float(items[i]["amount"].to_decimal())
+                volume_sum += volume
+                weighted_sum += price * volume
+            vwap[key] = weighted_sum / volume_sum
+        ask_vwap = vwap["asks"]
+        bid_vwap = vwap["bids"]
+        mid_vwap = (ask_vwap + bid_vwap) / 2
+        return mid_vwap, ask_vwap, bid_vwap
+
+    @staticmethod
     def combine_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):
         mm1_balance_dict = mm1_balance.to_dict()
         mm2_balance_dict = mm2_balance.to_dict()

@@ -55,3 +55,21 @@ class DbToCsv:
             csv_writer.write_joinable((request_time, last, mid_price, minask, maxbid))
 
         csv_writer.close()
+
+    def save_mid_vwap_mid_price(self, target_db: str, target_currency: str, start_time: int, end_time: int, depth: int):
+        orderbook_col = self.mongo_client[target_db][target_currency + "_orderbook"]
+        orderbook_cursor = orderbook_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        csv_writer = CsvWriter("stat", "%s_%s_mid_vwap_%d_%d" % (target_db, target_currency, start_time, end_time),
+                               ("request_time", "mid_price", "mid_vwap", "ask_vwap", "bid_vwap", "minask", "maxbid"))
+
+        for orderbook in orderbook_cursor:
+            request_time = int(orderbook["requestTime"])
+            mid_price, minask, maxbid = Analyzer.get_orderbook_mid_price(orderbook)
+            mid_vwap, ask_vwap, bid_vwap = Analyzer.get_orderbook_mid_vwap(orderbook, depth)
+            csv_writer.write_joinable((request_time, mid_price, mid_vwap, ask_vwap, bid_vwap, minask, maxbid))
+
+        csv_writer.close()
