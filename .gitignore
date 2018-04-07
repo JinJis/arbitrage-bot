@@ -227,3 +227,4 @@ pip-selfcheck.json
 config/conf_user.ini
 ticker/*
 log/*
+stat/*
