@@ -1,7 +1,6 @@
 import time
 import logging
 import numpy as np
-from itertools import zip_longest
 from analyzer.analyzer import Analyzer
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
@@ -17,7 +16,7 @@ class StatArbBot:
     TARGET_CURRENCY = "eth"
     COIN_TRADING_UNIT = 0.01
     TRADE_INTERVAL_IN_SEC = 5
-    TARGET_SPREAD_STACK_HOUR = 12  # 3-hour data
+    TARGET_SPREAD_STACK_HOUR = 12
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
     Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.9)
     DELAYED_ORDER_COUNT_THRESHOLD = 10
@@ -54,6 +53,8 @@ class StatArbBot:
         self.spread_stack = np.array([], dtype=np.float32)
         self.trade_manager = TradeManager(should_db_logging=should_db_logging, is_backtesting=is_backtesting)
         self.loop_count = 0
+        self.new_oppty_counter = 0
+        self.rev_oppty_counter = 0
 
     def run(self):
         #################################
@@ -150,6 +151,7 @@ class StatArbBot:
 
         # make decision
         if cur_spread < lower:
+            self.new_oppty_counter += 1
             # check balance
             if Analyzer.have_enough_balance_for_arb(self.mm1, self.mm2, mm1_price,
                                                     self.COIN_TRADING_UNIT, self.TARGET_CURRENCY):
@@ -162,6 +164,7 @@ class StatArbBot:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
         elif cur_spread > upper:
+            self.rev_oppty_counter += 1
             # check balance
             if Analyzer.have_enough_balance_for_arb(self.mm2, self.mm1, mm2_price,
                                                     self.COIN_TRADING_UNIT, self.TARGET_CURRENCY):
@@ -241,12 +244,7 @@ class StatArbBot:
         if mm1_count != mm2_count:
             logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
             logging.info("Now validating data...")
-            for mm1_item, mm2_item in zip_longest(mm1_cursor, mm2_cursor):
-                mm1_rt = mm1_item["requestTime"]
-                mm2_rt = mm2_item["requestTime"]
-                if mm1_rt != mm2_rt:
-                    raise Exception("Please manually check and fix the data on DB: "
-                                    "mm1 requestTime - %d, mm2 requestTime - %d" % (mm1_rt, mm2_rt))
+            Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
 
         return mm1_cursor, mm2_cursor
 
@@ -261,22 +259,27 @@ class StatArbBot:
         trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
         trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
         try:
-            logging.info("[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
-                         (trade_total, trade_new, trade_new / trade_total * 100,
-                          trade_rev, trade_rev / trade_total * 100))
+            logging.critical("[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
+                             (trade_total, trade_new, trade_new / trade_total * 100,
+                              trade_rev, trade_rev / trade_total * 100))
         except ZeroDivisionError:
-            logging.info("[STAT] total trades: 0, new trades: 0, rev trades: 0")
+            logging.critical("[STAT] total trades: 0, new trades: 0, rev trades: 0")
+
+        # log opportunity counter
+        logging.critical("[STAT] total oppty: %d, new oppty: %d, rev oppty: %d" %
+                         (self.new_oppty_counter + self.rev_oppty_counter,
+                          self.new_oppty_counter, self.rev_oppty_counter))
 
         # log switch over stat
         last_switch_over = self.trade_manager.get_last_switch_over()
-        logging.info("[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
-                     (self.trade_manager.get_switch_over_count(),
-                      self.trade_manager.get_average_switch_over_spent_time(),
-                      last_switch_over.get("spent_time") if last_switch_over is not None else 0))
+        logging.critical("[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
+                         (self.trade_manager.get_switch_over_count(),
+                          self.trade_manager.get_average_switch_over_spent_time(),
+                          last_switch_over.get("spent_time") if last_switch_over is not None else 0))
 
         # log combined balance
         combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance())
         for coin_name in combined.keys():
             balance = combined[coin_name]
-            logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
-                         (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
+            logging.critical("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
+                             (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))

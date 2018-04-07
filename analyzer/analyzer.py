@@ -91,16 +91,17 @@ class Analyzer:
 
     @staticmethod
     def get_orderbook_mid_price_log_spread(mm1_orderbook: dict, mm2_orderbook: dict):
-        mm1_minask = int(mm1_orderbook["asks"][0]["price"].to_decimal())
-        mm1_maxbid = int(mm1_orderbook["bids"][0]["price"].to_decimal())
-        mm1_mid_price = (mm1_minask + mm1_maxbid) / 2
-
-        mm2_minask = int(mm2_orderbook["asks"][0]["price"].to_decimal())
-        mm2_maxbid = int(mm2_orderbook["bids"][0]["price"].to_decimal())
-        mm2_mid_price = (mm2_minask + mm2_maxbid) / 2
-
+        mm1_mid_price, _, _ = Analyzer.get_orderbook_mid_price(mm1_orderbook)
+        mm2_mid_price, _, _ = Analyzer.get_orderbook_mid_price(mm2_orderbook)
         log_spread = math.log(mm1_mid_price) - math.log(mm2_mid_price)
         return log_spread, mm1_mid_price, mm2_mid_price
+
+    @staticmethod
+    def get_orderbook_mid_price(orderbook: dict):
+        minask = int(orderbook["asks"][0]["price"].to_decimal())
+        maxbid = int(orderbook["bids"][0]["price"].to_decimal())
+        mid_price = (minask + maxbid) / 2
+        return mid_price, minask, maxbid
 
     @staticmethod
     def combine_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):

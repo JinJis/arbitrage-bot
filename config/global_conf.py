@@ -8,6 +8,8 @@ import urllib.parse
 import scipy.stats as st
 from datetime import datetime
 from time import gmtime, strftime
+from pymongo.cursor import Cursor
+from itertools import zip_longest
 
 
 class Global:
@@ -82,3 +84,12 @@ class Global:
         requests.post("https://hooks.slack.com/services/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", json={
             "text": message
         })
+
+    @staticmethod
+    def request_time_validation_on_cursor_count_diff(a_cursor: Cursor, b_cursor: Cursor):
+        for a_item, b_item in zip_longest(a_cursor, b_cursor):
+            a_rt = a_item["requestTime"]
+            b_rt = b_item["requestTime"]
+            if a_rt != b_rt:
+                raise Exception("Please manually check and fix the data on DB: "
+                                "a_cursor requestTime - %d, b_cursor requestTime - %d" % (a_rt, b_rt))
