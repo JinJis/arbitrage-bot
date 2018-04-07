@@ -63,7 +63,8 @@ class DbToCsv:
             "$lte": end_time
         }}).sort([("requestTime", 1)])
 
-        csv_writer = CsvWriter("stat", "%s_%s_mid_vwap_%d_%d" % (target_db, target_currency, start_time, end_time),
+        csv_writer = CsvWriter("stat", "%s_%s_mid_vwap_%d_%d_%d_depth" %
+                               (target_db, target_currency, start_time, end_time, depth),
                                ("request_time", "mid_price", "mid_vwap", "ask_vwap", "bid_vwap", "minask", "maxbid"))
 
         for orderbook in orderbook_cursor:
