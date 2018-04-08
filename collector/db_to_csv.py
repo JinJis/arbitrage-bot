@@ -82,3 +82,32 @@ class DbToCsv:
             csv_writer.write_joinable((request_time, mid_price, mid_vwap, ask_vwap, bid_vwap, minask, maxbid))
 
         csv_writer.close()
+
+    def save_orderbook_index(self, target_db: str, target_currency: str, start_time: int, end_time: int, depth: int):
+        orderbook_col = self.mongo_client[target_db][target_currency + "_orderbook"]
+        orderbook_cursor = orderbook_col.find({"timestamp": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("timestamp", 1)])
+
+        csv_writer = CsvWriter("stat", "%s_%s_orderbook_indexed_%d_%d_%d_depth" %
+                               (target_db, target_currency, start_time, end_time, depth),
+                               ("timestamp", "index", "ask_price", "ask_amount", "bid_price", "bid_amount"))
+
+        for item in orderbook_cursor:
+            timestamp = item["timestamp"]
+            asks = item["asks"]
+            bids = item["bids"]
+
+            for i in range(depth):
+                result = [timestamp, i]
+                ask = asks[i]
+                bid = bids[i]
+                for value in (ask, bid):
+                    price = int(value["price"].to_decimal())
+                    amount = float(value["amount"].to_decimal())
+                    result.append(price)
+                    result.append(amount)
+                csv_writer.write_joinable(result)
+
+        csv_writer.close()
