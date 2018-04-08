@@ -228,3 +228,5 @@ config/conf_user.ini
 ticker/*
 log/*
 stat/*
+.idea/arbitrage-bot.iml
+.idea/misc.xml
