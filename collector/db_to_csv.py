@@ -6,26 +6,34 @@ from analyzer.analyzer import Analyzer
 
 class DbToCsv:
     ticker_columns = ("timestamp", "high", "low", "last", "volume", "requestTime")
+    filled_orders_columns = ("timestamp", "price", "amount")
 
     def __init__(self, should_use_localhost_db: bool):
         mongodb_uri = Global.read_mongodb_uri(should_use_localhost_db)
         self.mongo_client = MongoClient(mongodb_uri)
 
-    def save_ticker_as_csv(self, target_db: str, target_currency: str, start_time: int, end_time: int):
-        # ex) target_db = "korbit", target_currency = "eth"
-        target_col = self.mongo_client[target_db][target_currency + "_ticker"]
-        cursor = target_col.find({"requestTime": {
+    def save_any_flat_col_as_csv(self, target_db: str, target_col: str, time_col_name: str,
+                                 start_time: int, end_time: int, columns: tuple):
+        col = self.mongo_client[target_db][target_col]
+        cursor = col.find({time_col_name: {
             "$gte": start_time,
             "$lte": end_time
-        }}).sort([("requestTime", 1)])
+        }}).sort([(time_col_name, 1)])
 
-        csv_writer = CsvWriter("ticker", "%s_%s_ticker_%d_%d" % (target_db, target_currency, start_time, end_time),
-                               self.ticker_columns)
+        csv_writer = CsvWriter("stat", "%s_%s_%d_%d" % (target_db, target_col, start_time, end_time), columns)
 
         for item in cursor:
-            csv_writer.write_joinable([item[key] for key in self.ticker_columns])
+            csv_writer.write_joinable([item[key] for key in columns])
 
         csv_writer.close()
+
+    def save_ticker_as_csv(self, target_db: str, target_currency: str, start_time: int, end_time: int):
+        self.save_any_flat_col_as_csv(target_db, target_currency + "_ticker", "requestTime", start_time, end_time,
+                                      DbToCsv.ticker_columns)
+
+    def save_filled_orders_as_csv(self, target_db: str, target_currency: str, start_time: int, end_time: int):
+        self.save_any_flat_col_as_csv(target_db, target_currency + "_filled_orders", "timestamp",
+                                      start_time, end_time, DbToCsv.filled_orders_columns)
 
     def save_processed_info(self, target_db: str, target_currency: str, start_time: int, end_time: int):
         ticker_col = self.mongo_client[target_db][target_currency + "_ticker"]

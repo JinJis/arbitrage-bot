@@ -15,4 +15,7 @@ end_time = Global.convert_local_datetime_to_epoch("2018.04.06 22:00:00", timezon
 
 """Get VWAP mid price"""
 # db_to_csv.save_mid_vwap_mid_price("coinone", "eth", start_time, end_time, 5)
-db_to_csv.save_mid_vwap_mid_price("korbit", "eth", start_time, end_time, 10)
+# db_to_csv.save_mid_vwap_mid_price("korbit", "eth", start_time, end_time, 5)
+
+"""Korbit timestamp not normalized, it's in ms unit"""
+db_to_csv.save_filled_orders_as_csv("korbit", "eth", start_time * 1000, end_time * 1000)
