@@ -83,7 +83,7 @@ class DbToCsv:
 
         csv_writer.close()
 
-    def save_orderbook_index(self, target_db: str, target_currency: str, start_time: int, end_time: int, depth: int):
+    def save_order_book_index(self, target_db: str, target_currency: str, start_time: int, end_time: int, depth: int):
         orderbook_col = self.mongo_client[target_db][target_currency + "_orderbook"]
         orderbook_cursor = orderbook_col.find({"timestamp": {
             "$gte": start_time,
@@ -92,22 +92,41 @@ class DbToCsv:
 
         csv_writer = CsvWriter("stat", "%s_%s_orderbook_indexed_%d_%d_%d_depth" %
                                (target_db, target_currency, start_time, end_time, depth),
-                               ("timestamp", "index", "ask_price", "ask_amount", "bid_price", "bid_amount"))
+                               ("timestamp", "index", "ask_price", "ask_amount", "ask_total_amount", "bid_price",
+                                "bid_amount", "bid_total_amount"))
 
         for item in orderbook_cursor:
             timestamp = item["timestamp"]
             asks = item["asks"]
             bids = item["bids"]
+            ask_total_amount_result = 0
+            bid_total_amount_result = 0
 
             for i in range(depth):
                 result = [timestamp, i]
                 ask = asks[i]
                 bid = bids[i]
-                for value in (ask, bid):
-                    price = int(value["price"].to_decimal())
-                    amount = float(value["amount"].to_decimal())
-                    result.append(price)
-                    result.append(amount)
-                csv_writer.write_joinable(result)
 
+                if i != depth - 1:
+                    for value in (ask, bid):
+                        price = int(value["price"].to_decimal())
+                        amount = float(value["amount"].to_decimal())
+                        result.extend([price, amount, ""])
+                        if value is ask:
+                            ask_total_amount_result += amount
+                        elif value is bid:
+                            bid_total_amount_result += amount
+                    csv_writer.write_joinable(result)
+
+                elif i == depth - 1:
+                    for value in (ask, bid):
+                        price = int(value["price"].to_decimal())
+                        amount = float(value["amount"].to_decimal())
+                        if value is ask:
+                            ask_total_amount_result += amount
+                            result.extend([price, amount, ask_total_amount_result])
+                        elif value is bid:
+                            bid_total_amount_result += amount
+                            result.extend([price, amount, bid_total_amount_result])
+                    csv_writer.write_joinable(result)
         csv_writer.close()
