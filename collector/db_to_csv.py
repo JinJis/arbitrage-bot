@@ -83,7 +83,7 @@ class DbToCsv:
 
         csv_writer.close()
 
-    def save_order_book_index(self, target_db: str, target_currency: str, start_time: int, end_time: int, depth: int):
+    def save_orderbook_index(self, target_db: str, target_currency: str, start_time: int, end_time: int, depth: int):
         orderbook_col = self.mongo_client[target_db][target_currency + "_orderbook"]
         orderbook_cursor = orderbook_col.find({"timestamp": {
             "$gte": start_time,
