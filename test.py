@@ -42,7 +42,7 @@ import time
 
 from collector.scheduler.filled_order_scheduler import FilledOrderScheduler
 
-FilledOrderScheduler("eth", False).run()
+FilledOrderScheduler("eth").run()
 
 # from collector.filled_order_collector import FilledOrderCollector
 #
@@ -50,3 +50,20 @@ FilledOrderScheduler("eth", False).run()
 # collector.collect_kb_filled_orders()
 # time.sleep(5)
 # collector.collect_kb_filled_orders()
+
+# from config.global_conf import Global
+# from pymongo import MongoClient
+# from api.coinone_api import CoinoneApi, CoinoneCurrency
+# from collector.filled_order_collector import FilledOrderCollector
+#
+# mongodb_uri = Global.read_mongodb_uri()
+# db_client = MongoClient(mongodb_uri)
+# coinone_db = db_client["coinone"]
+# coinone_api = CoinoneApi.instance(True)
+# filled_orders_col_name = "eth_filled_orders"
+#
+# co_collector = FilledOrderCollector(coinone_api, CoinoneCurrency.ETH, coinone_db[filled_orders_col_name])
+#
+# co_collector.collect_filled_orders()
+# time.sleep(20)
+# co_collector.collect_filled_orders()

@@ -24,11 +24,13 @@ class FilledOrderScheduler(BaseScheduler):
         filled_orders_col_name = currency + "_filled_orders"
 
         self.kb_collector = FilledOrderCollector(korbit_api, korbit_currency, korbit_db[filled_orders_col_name])
+        self.co_collector = FilledOrderCollector(coinone_api, coinone_currency, coinone_db[filled_orders_col_name])
 
-    @BaseScheduler.interval_waiter(5)
+    @BaseScheduler.interval_waiter(3)
     def _actual_run_in_loop(self):
         Global.run_threaded(self.kb_collector.collect_filled_orders)
+        Global.run_threaded(self.co_collector.collect_filled_orders)
 
 
 if __name__ == "__main__":
-    FilledOrderScheduler().run()
+    FilledOrderScheduler("eth").run()

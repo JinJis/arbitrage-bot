@@ -3,6 +3,7 @@ import json
 import time
 import base64
 import hashlib
+from operator import itemgetter
 from requests import Response
 import configparser
 from bson import Decimal128
@@ -114,6 +115,9 @@ class CoinoneApi(MarketApi):
                 "amount": Decimal128(_item["qty"])
             }
             result.append(item)
+
+        # sort it before return cause coinone api does not return the orders in recent occurrence
+        result.sort(key=itemgetter("timestamp"), reverse=True)
 
         return result
 

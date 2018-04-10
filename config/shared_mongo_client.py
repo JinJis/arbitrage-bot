@@ -46,31 +46,29 @@ class SharedMongoClient:
         return cls.instance()[cls.p_db]
 
     @classmethod
-    def _async_pdb_insert(cls, col_name: str, doc: dict):
-        target_col = cls.get_process_db()[col_name]
+    def _async_insert(cls, target_col: Collection, doc: dict):
         Global.run_threaded(target_col.insert_one, [doc])
 
     @classmethod
-    def _async_pdb_update(cls, col_name: str, _filter, _update):
-        target_col = cls.get_process_db()[col_name]
+    def _async_update(cls, target_col: Collection, _filter, _update):
         Global.run_threaded(target_col.update_one, [_filter, _update])
 
     @classmethod
     def async_trade_insert(cls, trade: dict):
-        cls._async_pdb_insert("trade", trade)
+        cls._async_insert(cls.get_process_db()["trade"], trade)
 
     @classmethod
     def async_order_insert(cls, order: dict):
-        cls._async_pdb_insert("order", order)
+        cls._async_insert(cls.get_process_db()["order"], order)
 
     @classmethod
     def async_balance_insert(cls, balance: dict):
-        cls._async_pdb_insert("balance", balance)
+        cls._async_insert(cls.get_process_db()["balance"], balance)
 
     @classmethod
     def async_order_update(cls, order: dict):
-        cls._async_pdb_update(
-            "order",
+        cls._async_update(
+            cls.get_process_db()["order"],
             {"order_id": order["order_id"]},
             {"$set": order}
         )

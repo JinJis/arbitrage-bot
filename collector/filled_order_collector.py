@@ -21,7 +21,9 @@ class FilledOrderCollector:
         if (self.last_ob is not None) and (self.last_fo is not None):
             fo_within = FilledOrderAnalyzer.get_filled_orders_within(self.last_fo, cur_fo)
             FilledOrderAnalyzer.set_take_type_from_orderbook(fo_within, self.last_ob)
-            print(fo_within)
+            # if the list is not empty
+            if fo_within:
+                self.target_col.insert_many(fo_within)
 
         self.last_ob = cur_ob
         self.last_fo = cur_fo

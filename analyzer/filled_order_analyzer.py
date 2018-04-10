@@ -16,7 +16,7 @@ class FilledOrderAnalyzer:
         if len(prev_filled_orders) == 0:
             return cur_filled_orders
 
-        # new orders are in front
+        # recent orders should be in front of the list
         prev_first = prev_filled_orders[0]
         found_at_index = None
         for index, item in enumerate(cur_filled_orders):
