@@ -211,7 +211,7 @@ class CoinoneApi(MarketApi):
         return self.coinone_post(self.BASE_URL + "/v2/order/cancel", payload={
             "order_id": order.order_id,
             "price": order.price,
-            "qty": order.price,
+            "qty": order.order_amount,
             "is_ask": 1 if order.is_sell_order() else 0,
             "currency": currency.value
         })
@@ -252,7 +252,10 @@ class CoinoneApi(MarketApi):
         else:
             res_json = res.json()
             if res_json["result"] == "error":
-                raise CoinoneError(int(res_json["errorCode"]))
+                try:
+                    raise CoinoneError(int(res_json["errorCode"]))
+                except ValueError:
+                    raise Exception("Unknown CoinoneError! %s" % res_json)
             elif res_json["result"] != "success":
                 raise Exception("Unknown response: %s" % res_json)
             else:
