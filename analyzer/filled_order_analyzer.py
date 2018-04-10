@@ -10,12 +10,29 @@ class TakeType:
 
 class FilledOrderAnalyzer:
     @staticmethod
-    def get_filled_orders_within(prev_filled_orders: list, curr_filled_orders: list):
-        if len(curr_filled_orders) == 0:
+    def get_filled_orders_within(prev_filled_orders: list, cur_filled_orders: list):
+        if len(cur_filled_orders) == 0:
             return list()
         if len(prev_filled_orders) == 0:
-            return list(curr_filled_orders)
-        return list(curr_filled_orders[:curr_filled_orders.index(prev_filled_orders[0])])
+            return cur_filled_orders
+
+        # new orders are in front
+        prev_first = prev_filled_orders[0]
+        found_at_index = None
+        for index, item in enumerate(cur_filled_orders):
+            if (item["timestamp"] == prev_first["timestamp"] and
+                    item["price"] == prev_first["price"] and
+                    item["amount"] == prev_first["amount"]):
+                found_at_index = index
+                break
+
+        if found_at_index is None:
+            logging.warning("No overlapping items were found! Returning entire cur_filled_orders.")
+            return cur_filled_orders
+
+        return cur_filled_orders[:found_at_index]
+        # previous beautiful one liner
+        # return list(curr_filled_orders[:curr_filled_orders.index(prev_filled_orders[0])])
 
     @staticmethod
     def set_take_type_from_orderbook(filled_orders_within: list, orderbook: dict):
