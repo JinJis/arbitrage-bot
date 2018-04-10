@@ -19,13 +19,26 @@ import time
 # from api.currency import KorbitCurrency
 #
 # korbit_api = KorbitApi.instance()
-# order_info = korbit_api.get_order_info(KorbitCurrency.ETH, "16507904")
-# print(order_info)
-
+# # order_info = korbit_api.get_order_info(KorbitCurrency.ETH, "16507904")
+# # print(order_info)
+# print(korbit_api.get_balance())
 
 from api.coinone_api import CoinoneApi
 from api.currency import CoinoneCurrency
+#
+# api = CoinoneApi.instance(True)
+# balance = api.get_balance()
+# print(balance)
+# print(api.order_limit_buy(CoinoneCurrency.ETH, 425000, 0.041))
+# api.get_filled_orders(CoinoneCurrency.ETH)
 
-api = CoinoneApi.instance()
-balance = api.get_balance()
-print(balance)
+from collector.scheduler.filled_order_scheduler import FilledOrderScheduler
+
+FilledOrderScheduler().run()
+
+# from collector.filled_order_collector import FilledOrderCollector
+#
+# collector = FilledOrderCollector(Global.read_mongodb_uri(False), "eth")
+# collector.collect_kb_filled_orders()
+# time.sleep(5)
+# collector.collect_kb_filled_orders()

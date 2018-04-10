@@ -1,4 +1,3 @@
-from .collector import Collector
 import time
 import signal
 import sys
@@ -7,18 +6,13 @@ from config.global_conf import Global
 from abc import ABC, abstractmethod
 
 
-class SchedulerBase(ABC):
-    def __init__(self, should_use_localhost_db: bool = True):
+class BaseScheduler(ABC):
+    def __init__(self):
         # init root logger
         Global.configure_default_root_logging()
         # set the log level for the schedule
         # in order not to display any extraneous log
         logging.getLogger("schedule").setLevel(logging.CRITICAL)
-
-        # init collector
-        mongodb_uri = Global.read_mongodb_uri(should_use_localhost_db)
-        # currency param should be a lower-cased currency symbol listed in api.currency
-        self.collector = Collector(mongodb_uri, "eth")
 
         # add SIGTERM handler
         signal.signal(signal.SIGTERM, self.handle_sigterm)
@@ -30,7 +24,7 @@ class SchedulerBase(ABC):
 
     @staticmethod
     def handle_sigterm(signal, frame):
-        SchedulerBase.handle_exit()
+        BaseScheduler.handle_exit()
 
     @staticmethod
     def interval_waiter(interval_time_sec: int):
