@@ -41,8 +41,10 @@ import time
 # print(api.get_open_orders(CoinoneCurrency.ETH))
 
 from collector.scheduler.filled_order_scheduler import FilledOrderScheduler
+from collector.scheduler.ticker_orderbook_scheduler import TickerOrderbookScheduler
 
 FilledOrderScheduler("eth").run()
+# TickerOrderbookScheduler("eth").run()
 
 # from collector.filled_order_collector import FilledOrderCollector
 #
