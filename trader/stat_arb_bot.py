@@ -17,9 +17,9 @@ from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 class StatArbBot:
     TARGET_CURRENCY = "eth"
-    COIN_TRADING_UNIT = 0.01
+    COIN_TRADING_UNIT = 0.1
     TRADE_INTERVAL_IN_SEC = 5
-    TARGET_SPREAD_STACK_HOUR = 12
+    TARGET_SPREAD_STACK_HOUR = 18
     TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
     Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.9)
     DELAYED_ORDER_COUNT_THRESHOLD = 10
@@ -41,12 +41,12 @@ class StatArbBot:
             # will initiate a thread for OrderWatcherStats
             OrderWatcherStats.initialize()
         else:
-            self.mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 60000, 0.1)
-            self.mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 60000, 0.1)
+            self.mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 45000, 0.11)
+            self.mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.0008, 45000, 0.11)
 
         # init fee accumulator
-        GlobalFeeAccumulator.initialize_market(self.mm1.get_market_name())
-        GlobalFeeAccumulator.initialize_market(self.mm2.get_market_name())
+        GlobalFeeAccumulator.initialize_market(self.mm1.get_market_tag())
+        GlobalFeeAccumulator.initialize_market(self.mm2.get_market_tag())
 
         # set market currency
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
@@ -160,7 +160,7 @@ class StatArbBot:
         if cur_spread < lower:
             # NEW: long in mm1, short in mm2
             self.new_oppty_counter += 1
-            fee, should_fee = self.get_fee_consideration(self.mm1.market_tag)
+            fee, should_fee = self.get_fee_consideration(self.mm1.get_market_tag())
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
@@ -173,14 +173,14 @@ class StatArbBot:
 
                 # subtract considered fee if there was one
                 if should_fee:
-                    GlobalFeeAccumulator.sub_fee_consideration(self.mm1.market_tag, self.TARGET_CURRENCY, fee)
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY, fee)
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
         elif cur_spread > upper:
             # REV: long in mm2, short in mm1
             self.rev_oppty_counter += 1
-            fee, should_fee = self.get_fee_consideration(self.mm2.market_tag)
+            fee, should_fee = self.get_fee_consideration(self.mm2.get_market_tag())
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
@@ -193,7 +193,7 @@ class StatArbBot:
 
                 # subtract considered fee if there was one
                 if should_fee:
-                    GlobalFeeAccumulator.sub_fee_consideration(self.mm2.market_tag, self.TARGET_CURRENCY, fee)
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY, fee)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
