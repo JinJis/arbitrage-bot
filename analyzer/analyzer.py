@@ -140,7 +140,7 @@ class Analyzer:
     @staticmethod
     def have_enough_balance_for_arb(buy_mm: MarketManager, sell_mm: MarketManager,
                                     buy_price: int, coin_trade_amount: float, coin_currency: str):
-        buy_mm_needed_krw = buy_mm.calc_actual_coin_need_to_buy(coin_trade_amount) * buy_price
+        buy_mm_needed_krw = coin_trade_amount * buy_price
         sell_mm_needed_coin = coin_trade_amount
         return (buy_mm.has_enough_coin("krw", buy_mm_needed_krw) and
                 sell_mm.has_enough_coin(coin_currency, sell_mm_needed_coin))

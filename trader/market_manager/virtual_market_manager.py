@@ -35,13 +35,12 @@ class VirtualMarketManager(MarketManager):
         super().__init__(self.MARKET_TAG, market_fee, target_api)
 
     def order_buy(self, currency: Currency, price: int, amount: float):
-        actual_amount = self.calc_actual_coin_need_to_buy(amount)
-        if not self.has_enough_coin("krw", actual_amount * price):
+        if not self.has_enough_coin("krw", amount * price):
             raise Exception("[%s] Could not order_buy" % self.market_tag)
 
-        self.vt_balance[currency.name.lower()] += amount
-        self.vt_balance["krw"] -= price * actual_amount
-        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_BUY, self.generate_buy_order_id(), price, actual_amount)
+        self.vt_balance[currency.name.lower()] += amount * (1 - self.market_fee)
+        self.vt_balance["krw"] -= amount * price
+        return Order(self.MARKET_TAG, currency, OrderType.LIMIT_BUY, self.generate_buy_order_id(), price, amount)
 
     def order_sell(self, currency: Currency, price: int, amount: float):
         if not self.has_enough_coin(currency.name.lower(), amount):

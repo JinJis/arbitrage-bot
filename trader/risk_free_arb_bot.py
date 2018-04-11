@@ -16,11 +16,12 @@ from analyzer.analyzer import Analyzer
 MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 """
 
+
 class RiskFreeArbBot:
     TARGET_CURRENCY = "eth"
     COIN_TRADING_UNIT = 0.01
     TRADE_INTERVAL_IN_SEC = 3
-    
+
     # maxbid에 사서 minask에 파는 시장가 전략 이용
     TARGET_STRATEGY = Analyzer.buy_sell_strategy_1
     NEW_SPREAD_THRESHOLD = 0
@@ -65,7 +66,8 @@ class RiskFreeArbBot:
 
             # get current spread
             new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price, \
-            mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount = strategy_fun(mm1, mm1_currency, mm2, mm2_currency)
+            mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount = strategy_fun(mm1, mm1_currency,
+                                                                                                      mm2, mm2_currency)
 
             # log stat
             logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (mm1.get_market_name(),
@@ -95,7 +97,7 @@ class RiskFreeArbBot:
                             mm2_sell_price >= reverse_spread_order["sell_price"]
                             and mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
                             and mm2_maxbid_amount >= self.COIN_TRADING_UNIT + self.slippage_hedge
-                    ):  
+                    ):
                         mm2.order_sell(mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
                         self.reverse_spread_orders.remove(reverse_spread_order)
 
@@ -111,7 +113,7 @@ class RiskFreeArbBot:
                 new_spread_order = {
                     "order_buy": mm1.order_buy(mm1_currency, mm1_buy_price, self.COIN_TRADING_UNIT),
                     "order_sell": mm2.order_sell(mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT),
-                    "sell_price": mm2_sell_price 
+                    "sell_price": mm2_sell_price
                 }
                 self.new_spread_orders.append(new_spread_order)
                 self.new_spread_count += 1
@@ -127,7 +129,7 @@ class RiskFreeArbBot:
                 reverse_spread_order = {
                     "order_buy": mm2.order_buy(mm2_currency, mm2_buy_price, self.COIN_TRADING_UNIT),
                     "order_sell": mm1.order_sell(mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT),
-                    "sell_price": mm1_sell_price 
+                    "sell_price": mm1_sell_price
                 }
                 self.reverse_spread_orders.append(reverse_spread_order)
                 self.reverse_spread_count += 1
@@ -139,5 +141,6 @@ class RiskFreeArbBot:
 
             # sleep for interval
             time.sleep(self.TRADE_INTERVAL_IN_SEC)
+
 
 RiskFreeArbBot().run()

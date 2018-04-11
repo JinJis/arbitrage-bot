@@ -12,7 +12,7 @@ from .order_watcher_stats import OrderWatcherStats
 
 class OrderWatcher(Thread):
     TARGET_INTERVAL_SEC = 5
-    DELAYED_FLAG_SEC = 60 * 5
+    DELAYED_FLAG_SEC = 60 * 15
 
     supported_markets = {
         Market.COINONE: CoinoneApi,
@@ -82,7 +82,12 @@ class OrderWatcher(Thread):
             # if it is filled
             if self.order.status is OrderStatus.FILLED:
                 OrderWatcherStats.done(self.order.order_id)
-                # logging.info(self.order.get_filled_status())
+                # if sell, krw as fee
+                # if buy, coin as fee
+                if self.order.is_sell_order():
+                    OrderWatcherStats.add_fee_expenditure("krw", self.order.fee)
+                else:
+                    OrderWatcherStats.add_fee_expenditure(self.order.currency.name.lower(), self.order.fee)
 
         except Exception as e:
             # if there was any error for some unexpected reasons

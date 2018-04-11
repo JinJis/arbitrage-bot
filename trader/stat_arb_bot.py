@@ -114,7 +114,7 @@ class StatArbBot:
                 self.execute_trade_loop(mm1_data, mm2_data)
 
             # log backtesting result
-            self.log_common_stat()
+            self.log_common_stat(log_level=logging.CRITICAL)
 
     def execute_trade_loop(self, mm1_data=None, mm2_data=None):
         # print trade loop seq
@@ -249,7 +249,7 @@ class StatArbBot:
         return mm1_cursor, mm2_cursor
 
     # extracted for backtesting result logging
-    def log_common_stat(self):
+    def log_common_stat(self, log_level: int = logging.INFO):
         # log balance
         self.trade_manager.log_balance(self.mm1.get_balance())
         self.trade_manager.log_balance(self.mm2.get_balance())
@@ -259,27 +259,27 @@ class StatArbBot:
         trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
         trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
         try:
-            logging.critical("[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
-                             (trade_total, trade_new, trade_new / trade_total * 100,
-                              trade_rev, trade_rev / trade_total * 100))
+            logging.log(log_level, "[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
+                        (trade_total, trade_new, trade_new / trade_total * 100,
+                         trade_rev, trade_rev / trade_total * 100))
         except ZeroDivisionError:
-            logging.critical("[STAT] total trades: 0, new trades: 0, rev trades: 0")
+            logging.log(log_level, "[STAT] total trades: 0, new trades: 0, rev trades: 0")
 
         # log opportunity counter
-        logging.critical("[STAT] total oppty: %d, new oppty: %d, rev oppty: %d" %
-                         (self.new_oppty_counter + self.rev_oppty_counter,
-                          self.new_oppty_counter, self.rev_oppty_counter))
+        logging.log(log_level, "[STAT] total oppty: %d, new oppty: %d, rev oppty: %d" %
+                    (self.new_oppty_counter + self.rev_oppty_counter,
+                     self.new_oppty_counter, self.rev_oppty_counter))
 
         # log switch over stat
         last_switch_over = self.trade_manager.get_last_switch_over()
-        logging.critical("[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
-                         (self.trade_manager.get_switch_over_count(),
-                          self.trade_manager.get_average_switch_over_spent_time(),
-                          last_switch_over.get("spent_time") if last_switch_over is not None else 0))
+        logging.log(log_level, "[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
+                    (self.trade_manager.get_switch_over_count(),
+                     self.trade_manager.get_average_switch_over_spent_time(),
+                     last_switch_over.get("spent_time") if last_switch_over is not None else 0))
 
         # log combined balance
         combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance())
         for coin_name in combined.keys():
             balance = combined[coin_name]
-            logging.critical("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
-                             (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
+            logging.log(log_level, "[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
+                        (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
