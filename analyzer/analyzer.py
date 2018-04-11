@@ -93,6 +93,11 @@ class Analyzer:
     def get_orderbook_mid_price_log_spread(mm1_orderbook: dict, mm2_orderbook: dict):
         mm1_mid_price, _, _ = Analyzer.get_orderbook_mid_price(mm1_orderbook)
         mm2_mid_price, _, _ = Analyzer.get_orderbook_mid_price(mm2_orderbook)
+
+        # round to 2 decimals
+        mm1_mid_price = round(mm1_mid_price / 100) * 100
+        mm2_mid_price = round(mm2_mid_price / 100) * 100
+
         log_spread = math.log(mm1_mid_price) - math.log(mm2_mid_price)
         return log_spread, mm1_mid_price, mm2_mid_price
 

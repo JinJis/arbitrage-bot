@@ -12,7 +12,7 @@ from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class OrderWatcher(Thread):
-    TARGET_INTERVAL_SEC = 5
+    TARGET_INTERVAL_SEC = 10
     DELAYED_FLAG_SEC = 60 * 15
 
     supported_markets = {
@@ -45,7 +45,7 @@ class OrderWatcher(Thread):
             logging.warning(e)
             logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
         finally:
-            SharedMongoClient.async_order_update(self.order.to_dict())
+            SharedMongoClient.async_order_insert(self.order.to_dict())
 
     def run(self):
         # do nothing if the market of order is not watchable
