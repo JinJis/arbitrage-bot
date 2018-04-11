@@ -1,15 +1,18 @@
 import time
+import math
 import logging
 import numpy as np
 from analyzer.analyzer import Analyzer
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
+from trader.market.market import Market
 from trader.market.trade import Trade, TradeTag, StatArbTradeMeta
 from trader.trade_manager.trade_manager import TradeManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
-from trader.market_manager.virtual_market_manager import VirtualMarketManager, VirtualMarketApiType
+from trader.market_manager.virtual_market_manager import VirtualMarketManager
 from trader.trade_manager.order_watcher_stats import OrderWatcherStats
+from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class StatArbBot:
@@ -38,8 +41,12 @@ class StatArbBot:
             # will initiate a thread for OrderWatcherStats
             OrderWatcherStats.initialize()
         else:
-            self.mm1 = VirtualMarketManager("co", VirtualMarketApiType.COINONE, 0.001, 60000, 0.1)
-            self.mm2 = VirtualMarketManager("kb", VirtualMarketApiType.KORBIT, 0.002, 60000, 0.1)
+            self.mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 60000, 0.1)
+            self.mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 60000, 0.1)
+
+        # init fee accumulator
+        GlobalFeeAccumulator.initialize_market(self.mm1.get_market_name())
+        GlobalFeeAccumulator.initialize_market(self.mm2.get_market_name())
 
         # set market currency
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
@@ -151,28 +158,42 @@ class StatArbBot:
 
         # make decision
         if cur_spread < lower:
+            # NEW: long in mm1, short in mm2
             self.new_oppty_counter += 1
+            fee, should_fee = self.get_fee_consideration(self.mm1.market_tag)
+            trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
+
             # check balance
             if Analyzer.have_enough_balance_for_arb(self.mm1, self.mm2, mm1_price,
-                                                    self.COIN_TRADING_UNIT, self.TARGET_CURRENCY):
-                # long in mm1, short in mm2
+                                                    trading_unit, self.TARGET_CURRENCY):
                 logging.warning("[EXECUTE] New")
-                buy_order = self.mm1.order_buy(self.mm1_currency, mm1_price, self.COIN_TRADING_UNIT)
-                sell_order = self.mm2.order_sell(self.mm2_currency, mm2_price, self.COIN_TRADING_UNIT)
+                buy_order = self.mm1.order_buy(self.mm1_currency, mm1_price, trading_unit)
+                sell_order = self.mm2.order_sell(self.mm2_currency, mm2_price, trading_unit)
                 trade = Trade(TradeTag.NEW, [buy_order, sell_order], trade_meta)
+
+                # subtract considered fee if there was one
+                if should_fee:
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm1.market_tag, self.TARGET_CURRENCY, fee)
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
         elif cur_spread > upper:
+            # REV: long in mm2, short in mm1
             self.rev_oppty_counter += 1
+            fee, should_fee = self.get_fee_consideration(self.mm2.market_tag)
+            trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
+
             # check balance
             if Analyzer.have_enough_balance_for_arb(self.mm2, self.mm1, mm2_price,
-                                                    self.COIN_TRADING_UNIT, self.TARGET_CURRENCY):
-                # long in mm2, short in mm1
+                                                    trading_unit, self.TARGET_CURRENCY):
                 logging.warning("[EXECUTE] Reverse")
-                buy_order = self.mm2.order_buy(self.mm2_currency, mm2_price, self.COIN_TRADING_UNIT)
-                sell_order = self.mm1.order_sell(self.mm1_currency, mm1_price, self.COIN_TRADING_UNIT)
+                buy_order = self.mm2.order_buy(self.mm2_currency, mm2_price, trading_unit)
+                sell_order = self.mm1.order_sell(self.mm1_currency, mm1_price, trading_unit)
                 trade = Trade(TradeTag.REV, [buy_order, sell_order], trade_meta)
+
+                # subtract considered fee if there was one
+                if should_fee:
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm2.market_tag, self.TARGET_CURRENCY, fee)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
@@ -283,3 +304,12 @@ class StatArbBot:
             balance = combined[coin_name]
             logging.log(log_level, "[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
                         (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
+
+    def get_fee_consideration(self, buy_market: Market) -> (float, bool):
+        fee = GlobalFeeAccumulator.get_fee(buy_market, self.TARGET_CURRENCY)
+        # round down to #4 decimal
+        rounded_fee = math.floor(fee * 10000) / 10000
+        # 0.0001 is the smallest order unit in coinone
+        if rounded_fee >= 0.0001:
+            return rounded_fee, True
+        return 0, False

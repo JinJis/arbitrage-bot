@@ -8,6 +8,7 @@ from api.korbit_api import KorbitApi
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from .order_watcher_stats import OrderWatcherStats
+from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class OrderWatcher(Thread):
@@ -85,9 +86,10 @@ class OrderWatcher(Thread):
                 # if sell, krw as fee
                 # if buy, coin as fee
                 if self.order.is_sell_order():
-                    OrderWatcherStats.add_fee_expenditure("krw", self.order.fee)
+                    GlobalFeeAccumulator.add_fee_expenditure(self.order.market, "krw", self.order.fee)
                 else:
-                    OrderWatcherStats.add_fee_expenditure(self.order.currency.name.lower(), self.order.fee)
+                    GlobalFeeAccumulator.add_fee_expenditure(self.order.market, self.order.currency.name.lower(),
+                                                             self.order.fee)
 
         except Exception as e:
             # if there was any error for some unexpected reasons
