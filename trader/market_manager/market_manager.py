@@ -1,10 +1,11 @@
 import logging
-from abc import ABC, abstractmethod
 from api.currency import Currency
-from trader.market.balance import Balance
-from trader.market.market import Market
+from abc import ABC, abstractmethod
 from api.market_api import MarketApi
+from trader.market.market import Market
+from trader.market.balance import Balance
 from trader.market.order import Order, OrderType
+from config.shared_mongo_client import SharedMongoClient
 from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
@@ -79,3 +80,8 @@ class MarketManager(ABC):
     @abstractmethod
     def get_market_currency(target_currency: str) -> "Currency":
         pass
+
+    def db_log_balance(self, timestamp: int):
+        balance_dic = self.get_balance().to_dict()
+        balance_dic["timestamp"] = timestamp
+        SharedMongoClient.async_balance_insert(balance_dic)

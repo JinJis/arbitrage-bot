@@ -1,10 +1,8 @@
-import time
 import numpy
 import logging
 from trader.market.trade import Trade, TradeTag
 from trader.market.switch_over import SwitchOver
 from trader.market.order import Order
-from trader.market.balance import Balance
 from collections import deque
 from config.shared_mongo_client import SharedMongoClient
 from .order_watcher import OrderWatcher
@@ -42,11 +40,11 @@ class TradeManager:
 
         if not self.is_backtesting:
             # log current trade
-            self.log_trade(cur_trade)
+            self._log_trade(cur_trade)
 
             # log and initiate watcher for each order in current trade
             for order in cur_trade.orders:
-                self.log_order(order)
+                self._log_order(order)
                 OrderWatcher(order).start()
 
     def add_switch_over(self, switch_over: SwitchOver):
@@ -74,19 +72,12 @@ class TradeManager:
     def get_switch_over_count(self):
         return len(self._switch_over_list)
 
-    def log_trade(self, trade: Trade):
+    def _log_trade(self, trade: Trade):
         logging.info(trade)
         if self.should_db_logging:
             SharedMongoClient.async_trade_insert(trade.to_dict())
 
-    def log_order(self, order: Order):
+    def _log_order(self, order: Order):
         logging.info(order)
         if self.should_db_logging:
             SharedMongoClient.async_order_insert(order.to_dict())
-
-    def log_balance(self, balance: Balance):
-        logging.info(balance)
-        if self.should_db_logging:
-            balance_dic = balance.to_dict()
-            balance_dic["timestamp"] = int(time.time())
-            SharedMongoClient.async_balance_insert(balance_dic)

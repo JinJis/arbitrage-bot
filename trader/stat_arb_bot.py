@@ -1,62 +1,44 @@
 import time
 import logging
 import numpy as np
-from analyzer.analyzer import Analyzer
 from config.global_conf import Global
-from config.shared_mongo_client import SharedMongoClient
+from analyzer.analyzer import Analyzer
 from trader.market.market import Market
+from trader.base_arb_bot import BaseArbBot
+from config.shared_mongo_client import SharedMongoClient
 from trader.market.trade import Trade, TradeTag, StatArbTradeMeta
-from trader.trade_manager.trade_manager import TradeManager
-from trader.market_manager.coinone_market_manager import CoinoneMarketManager
-from trader.market_manager.korbit_market_manager import KorbitMarketManager
-from trader.market_manager.virtual_market_manager import VirtualMarketManager
 from trader.trade_manager.order_watcher_stats import OrderWatcherStats
+from trader.market_manager.virtual_market_manager import VirtualMarketManager
 from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
-class StatArbBot:
-    TARGET_CURRENCY = "eth"
-    COIN_TRADING_UNIT = 0.1
-    TRADE_INTERVAL_IN_SEC = 5
-    TARGET_SPREAD_STACK_HOUR = 18
-    TARGET_SPREAD_STACK_SIZE = (60 / TRADE_INTERVAL_IN_SEC) * 60 * TARGET_SPREAD_STACK_HOUR
-    Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.9)
-    DELAYED_ORDER_COUNT_THRESHOLD = 10
+class StatArbBot(BaseArbBot):
     TARGET_SPREAD_FUNCTION = Analyzer.get_orderbook_mid_price_log_spread
-    TARGET_DATA_COL = "orderbook"
 
-    def __init__(self, should_db_logging: bool = True,
+    def __init__(self,
+                 target_currency: str = "eth", target_interval_in_sec: int = 5,
+                 should_db_logging: bool = True,
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
-        # for backtesting
-        self.is_backtesting = is_backtesting
-        self.start_time = start_time
-        self.end_time = end_time
 
-        # init market managers
-        if not self.is_backtesting:
-            self.mm1 = CoinoneMarketManager()
-            self.mm2 = KorbitMarketManager()
-            # initialize global OrderWatcherStats
-            # will initiate a thread for OrderWatcherStats
-            OrderWatcherStats.initialize()
-        else:
-            self.mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 45000, 0.11)
-            self.mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.0008, 45000, 0.11)
+        # init virtual mm when backtesting
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 45000, 0.11) if is_backtesting else None
+        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.0008, 45000, 0.11) if is_backtesting else None
 
-        # set market currency
-        self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
-        self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
+        super().__init__(target_currency, target_interval_in_sec,
+                         should_db_logging, is_backtesting, start_time, end_time, v_mm1, v_mm2)
+
+        self.COIN_TRADING_UNIT = 0.1
+        self.TARGET_SPREAD_STACK_HOUR = 18
+        self.TARGET_SPREAD_STACK_SIZE = (60 / self.TRADE_INTERVAL_IN_SEC) * 60 * self.TARGET_SPREAD_STACK_HOUR
+        self.Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.9)
+        self.TARGET_DATA_COL = "orderbook"
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_" + self.TARGET_DATA_COL]
         self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_" + self.TARGET_DATA_COL]
 
-        # init other attributes
+        # init spread stack
         self.spread_stack = np.array([], dtype=np.float32)
-        self.trade_manager = TradeManager(should_db_logging=should_db_logging, is_backtesting=is_backtesting)
-        self.loop_count = 0
-        self.new_oppty_counter = 0
-        self.rev_oppty_counter = 0
 
     def run(self):
         #################################
@@ -118,21 +100,14 @@ class StatArbBot:
             # log backtesting result
             self.log_common_stat(log_level=logging.CRITICAL)
 
-    def execute_trade_loop(self, mm1_data=None, mm2_data=None):
-        # print trade loop seq
-        self.loop_count += 1
-        logging.info("========== [# %12d Trade Loop] =================================================="
-                     % self.loop_count)
-        loop_start_time = time.time()
-        trade = None
-
+    def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         # get previous mean, standard deviation
         mean = self.spread_stack.mean()
         stdev = self.spread_stack.std()
 
         # get upper & lower bound
-        upper = mean + stdev * StatArbBot.Z_SCORE_SIGMA
-        lower = mean - stdev * StatArbBot.Z_SCORE_SIGMA
+        upper = mean + stdev * self.Z_SCORE_SIGMA
+        lower = mean - stdev * self.Z_SCORE_SIGMA
 
         # get current spread
         if not self.is_backtesting:
@@ -164,7 +139,7 @@ class StatArbBot:
                 logging.warning("[EXECUTE] New")
                 buy_order = self.mm1.order_buy(self.mm1_currency, mm1_price, trading_unit)
                 sell_order = self.mm2.order_sell(self.mm2_currency, mm2_price, trading_unit)
-                trade = Trade(TradeTag.NEW, [buy_order, sell_order], trade_meta)
+                self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], trade_meta)
 
                 # subtract considered fee if there was one
                 if should_fee:
@@ -184,7 +159,7 @@ class StatArbBot:
                 logging.warning("[EXECUTE] Reverse")
                 buy_order = self.mm2.order_buy(self.mm2_currency, mm2_price, trading_unit)
                 sell_order = self.mm1.order_sell(self.mm1_currency, mm1_price, trading_unit)
-                trade = Trade(TradeTag.REV, [buy_order, sell_order], trade_meta)
+                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], trade_meta)
 
                 # subtract considered fee if there was one
                 if should_fee:
@@ -196,14 +171,14 @@ class StatArbBot:
             logging.warning("[EXECUTE] No")
 
         # if any trade was executed
-        if trade is not None:
+        if self.cur_trade is not None:
             # change timestamp of trade when backtesting
             if self.is_backtesting:
                 current_ts = mm1_data["requestTime"]
-                trade.set_timestamp(current_ts)
+                self.cur_trade.set_timestamp(current_ts)
 
             # add into trade list
-            self.trade_manager.add_trade(trade)
+            self.trade_manager.add_trade(self.cur_trade)
 
             # update balance
             self.mm1.update_balance()
@@ -212,25 +187,15 @@ class StatArbBot:
         # log stat if it's not back testing
         if not self.is_backtesting:
             self.log_common_stat()
-
-            # log order watcher stats
-            ows_stats = OrderWatcherStats.instance().get_stats()
-            logging.info("[STAT] order watcher - %s" % ows_stats)
-            delayed_count = ows_stats.get("active_delayed_count")
-            if delayed_count > self.DELAYED_ORDER_COUNT_THRESHOLD:
-                logging.warning("[Warning] delayed orders: %s" % OrderWatcherStats.instance().get_current_delayed())
+            # db log balance
+            timestamp = int(time.time())
+            self.mm1.db_log_balance(timestamp)
+            self.mm2.db_log_balance(timestamp)
 
         # remove the earliest spread in the stack
         # append the current spread
         self.spread_stack = np.delete(self.spread_stack, 0)
         self.spread_stack = np.append(self.spread_stack, cur_spread)
-
-        # sleep for diff between the set interval and execution time
-        loop_end_time = time.time()
-        loop_spent_time = loop_end_time - loop_start_time
-        sleep_time = self.TRADE_INTERVAL_IN_SEC - loop_spent_time
-        if sleep_time > 0 and not self.is_backtesting:
-            time.sleep(sleep_time)
 
     def collect_initial_stack(self, current_timestamp: int):
         target_timestamp = current_timestamp - 60 * 60 * self.TARGET_SPREAD_STACK_HOUR
@@ -263,39 +228,3 @@ class StatArbBot:
             Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
 
         return mm1_cursor, mm2_cursor
-
-    # extracted for backtesting result logging
-    def log_common_stat(self, log_level: int = logging.INFO):
-        # log balance
-        self.trade_manager.log_balance(self.mm1.get_balance())
-        self.trade_manager.log_balance(self.mm2.get_balance())
-
-        # log trade stat
-        trade_total = self.trade_manager.get_trade_count()
-        trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
-        trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
-        try:
-            logging.log(log_level, "[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
-                        (trade_total, trade_new, trade_new / trade_total * 100,
-                         trade_rev, trade_rev / trade_total * 100))
-        except ZeroDivisionError:
-            logging.log(log_level, "[STAT] total trades: 0, new trades: 0, rev trades: 0")
-
-        # log opportunity counter
-        logging.log(log_level, "[STAT] total oppty: %d, new oppty: %d, rev oppty: %d" %
-                    (self.new_oppty_counter + self.rev_oppty_counter,
-                     self.new_oppty_counter, self.rev_oppty_counter))
-
-        # log switch over stat
-        last_switch_over = self.trade_manager.get_last_switch_over()
-        logging.log(log_level, "[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
-                    (self.trade_manager.get_switch_over_count(),
-                     self.trade_manager.get_average_switch_over_spent_time(),
-                     last_switch_over.get("spent_time") if last_switch_over is not None else 0))
-
-        # log combined balance
-        combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance())
-        for coin_name in combined.keys():
-            balance = combined[coin_name]
-            logging.log(log_level, "[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
-                        (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
