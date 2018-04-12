@@ -31,11 +31,10 @@ class StatArbBot(BaseArbBot):
         self.TARGET_SPREAD_STACK_HOUR = 18
         self.TARGET_SPREAD_STACK_SIZE = (60 / self.TRADE_INTERVAL_IN_SEC) * 60 * self.TARGET_SPREAD_STACK_HOUR
         self.Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.9)
-        self.TARGET_DATA_COL = "orderbook"
 
         # init mongo related
-        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_" + self.TARGET_DATA_COL]
-        self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_" + self.TARGET_DATA_COL]
+        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
+        self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_orderbook"]
 
         # init spread stack
         self.spread_stack = np.array([], dtype=np.float32)
@@ -91,7 +90,8 @@ class StatArbBot(BaseArbBot):
             # collect historical data from db
             logging.info("Collecting historical data, please wait...")
             mm1_data_cursor, mm2_data_cursor = \
-                self.get_data_from_db(self.start_time, self.end_time)
+                self.get_data_from_db(self.mm1_data_col, self.mm2_data_col,
+                                      self.start_time, self.end_time)
 
             # loop through history data
             for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
@@ -199,7 +199,8 @@ class StatArbBot(BaseArbBot):
 
     def collect_initial_stack(self, current_timestamp: int):
         target_timestamp = current_timestamp - 60 * 60 * self.TARGET_SPREAD_STACK_HOUR
-        mm1_cursor, mm2_cursor = self.get_data_from_db(target_timestamp, current_timestamp)
+        mm1_cursor, mm2_cursor = self.get_data_from_db(self.mm1_data_col, self.mm2_data_col,
+                                                       target_timestamp, current_timestamp)
 
         last_request_time = None
         for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):
@@ -209,22 +210,3 @@ class StatArbBot(BaseArbBot):
 
         # return the last request time
         return last_request_time
-
-    def get_data_from_db(self, start_time: int, end_time: int):
-        mm1_cursor = self.mm1_data_col.find({"requestTime": {
-            "$gte": start_time,
-            "$lte": end_time
-        }}).sort([("requestTime", 1)])
-        mm2_cursor = self.mm2_data_col.find({"requestTime": {
-            "$gte": start_time,
-            "$lte": end_time
-        }}).sort([("requestTime", 1)])
-
-        mm1_count = mm1_cursor.count()
-        mm2_count = mm2_cursor.count()
-        if mm1_count != mm2_count:
-            logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
-            logging.info("Now validating data...")
-            Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
-
-        return mm1_cursor, mm2_cursor

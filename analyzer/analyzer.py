@@ -27,21 +27,19 @@ class Analyzer:
     ######################################################################
 
     @staticmethod
-    def buy_sell_strategy_1(mm1: MarketManager, mm1_currency: Currency, mm2: MarketManager, mm2_currency: Currency):
-        mm1_orderbook = mm1.get_orderbook(mm1_currency)
+    def buy_sell_strategy_1(mm1_orderbook: dict, mm2_orderbook: dict, mm1_market_fee: float, mm2_market_fee: float):
         mm1_minask_price, mm1_maxbid_price = Analyzer.get_price_of_minask_maxbid(mm1_orderbook)
         mm1_minask_amount, mm1_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm1_orderbook)
 
-        mm2_orderbook = mm2.get_orderbook(mm2_currency)
         mm2_minask_price, mm2_maxbid_price = Analyzer.get_price_of_minask_maxbid(mm2_orderbook)
         mm2_minask_amount, mm2_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm2_orderbook)
 
         # new => buy in mm1, sell in mm2
-        new_spread = Analyzer.calc_spread(mm1_minask_price, mm1.market_fee,
-                                          mm2_maxbid_price, mm2.market_fee)
+        new_spread = Analyzer.calc_spread(mm1_minask_price, mm1_market_fee,
+                                          mm2_maxbid_price, mm2_market_fee)
         # rev => buy in mm2, sell in mm1
-        rev_spread = Analyzer.calc_spread(mm2_minask_price, mm2.market_fee,
-                                          mm1_maxbid_price, mm1.market_fee)
+        rev_spread = Analyzer.calc_spread(mm2_minask_price, mm2_market_fee,
+                                          mm1_maxbid_price, mm1_market_fee)
 
         return new_spread, rev_spread, \
                mm1_minask_price, mm1_maxbid_price, \

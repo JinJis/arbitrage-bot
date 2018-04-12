@@ -1,8 +1,10 @@
 import time
 import logging
 from abc import ABC, abstractmethod
+from config.global_conf import Global
 from analyzer.analyzer import Analyzer
 from trader.market.trade import TradeTag
+from pymongo.collection import Collection
 from trader.trade_manager.trade_manager import TradeManager
 from trader.trade_manager.order_watcher_stats import OrderWatcherStats
 from trader.market_manager.korbit_market_manager import KorbitMarketManager
@@ -125,3 +127,23 @@ class BaseArbBot(ABC):
         delayed_count = ows_stats.get("active_delayed_count")
         if delayed_count > self.DELAYED_ORDER_COUNT_THRESHOLD:
             logging.warning("[Warning] delayed orders: %s" % OrderWatcherStats.instance().get_current_delayed())
+
+    @staticmethod
+    def get_data_from_db(mm1_data_col: Collection, mm2_data_col: Collection, start_time: int, end_time: int):
+        mm1_cursor = mm1_data_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+        mm2_cursor = mm2_data_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        mm1_count = mm1_cursor.count()
+        mm2_count = mm2_cursor.count()
+        if mm1_count != mm2_count:
+            logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
+            logging.info("Now validating data...")
+            Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
+
+        return mm1_cursor, mm2_cursor
