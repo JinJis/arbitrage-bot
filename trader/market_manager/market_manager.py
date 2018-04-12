@@ -24,14 +24,13 @@ class MarketManager(ABC):
         return str(self.market_tag.value)
 
     def order_buy(self, currency: Currency, price: int, amount: float):
-        actual_amount = round(self.calc_actual_coin_need_to_buy(amount), 4)
-        if not self.has_enough_coin("krw", actual_amount * price):
+        if not self.has_enough_coin("krw", amount * price):
             raise Exception("[%s] Could not order_buy" % self.get_market_name())
 
-        res_json = self.market_api.order_limit_buy(currency, price, actual_amount)
+        res_json = self.market_api.order_limit_buy(currency, price, amount)
         logging.info(res_json)
         order_id = res_json["orderId"]
-        new_order = Order(self.market_tag, currency, OrderType.LIMIT_BUY, order_id, price, actual_amount)
+        new_order = Order(self.market_tag, currency, OrderType.LIMIT_BUY, order_id, price, amount)
         return new_order
 
     def order_sell(self, currency: Currency, price: int, amount: float):

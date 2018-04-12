@@ -8,11 +8,12 @@ from api.korbit_api import KorbitApi
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from .order_watcher_stats import OrderWatcherStats
+from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class OrderWatcher(Thread):
-    TARGET_INTERVAL_SEC = 5
-    DELAYED_FLAG_SEC = 60 * 5
+    TARGET_INTERVAL_SEC = 10
+    DELAYED_FLAG_SEC = 60 * 15
 
     supported_markets = {
         Market.COINONE: CoinoneApi,
@@ -44,7 +45,7 @@ class OrderWatcher(Thread):
             logging.warning(e)
             logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
         finally:
-            SharedMongoClient.async_order_update(self.order.to_dict())
+            SharedMongoClient.async_order_insert(self.order.to_dict())
 
     def run(self):
         # do nothing if the market of order is not watchable
@@ -82,7 +83,13 @@ class OrderWatcher(Thread):
             # if it is filled
             if self.order.status is OrderStatus.FILLED:
                 OrderWatcherStats.done(self.order.order_id)
-                # logging.info(self.order.get_filled_status())
+                # if sell, krw as fee
+                # if buy, coin as fee
+                if self.order.is_sell_order():
+                    GlobalFeeAccumulator.add_fee_expenditure(self.order.market, "krw", self.order.fee)
+                else:
+                    GlobalFeeAccumulator.add_fee_expenditure(self.order.market, self.order.currency.name.lower(),
+                                                             self.order.fee)
 
         except Exception as e:
             # if there was any error for some unexpected reasons

@@ -3,6 +3,7 @@ import json
 import time
 import base64
 import hashlib
+from operator import itemgetter
 from requests import Response
 import configparser
 from bson import Decimal128
@@ -115,6 +116,9 @@ class CoinoneApi(MarketApi):
             }
             result.append(item)
 
+        # sort it before return cause coinone api does not return the orders in recent occurrence
+        result.sort(key=itemgetter("timestamp"), reverse=True)
+
         return result
 
     def refresh_access_token(self):
@@ -211,7 +215,7 @@ class CoinoneApi(MarketApi):
         return self.coinone_post(self.BASE_URL + "/v2/order/cancel", payload={
             "order_id": order.order_id,
             "price": order.price,
-            "qty": order.price,
+            "qty": order.order_amount,
             "is_ask": 1 if order.is_sell_order() else 0,
             "currency": currency.value
         })
@@ -248,11 +252,14 @@ class CoinoneApi(MarketApi):
     @staticmethod
     def filter_successful_response(res: Response):
         if res.status_code != 200:
-            raise Exception("Network request has failed!")
+            raise Exception("Network request has failed! (status code: %d)" % res.status_code)
         else:
             res_json = res.json()
             if res_json["result"] == "error":
-                raise CoinoneError(int(res_json["errorCode"]))
+                try:
+                    raise CoinoneError(int(res_json["errorCode"]))
+                except ValueError:
+                    raise Exception("Unknown CoinoneError! %s" % res_json)
             elif res_json["result"] != "success":
                 raise Exception("Unknown response: %s" % res_json)
             else:
