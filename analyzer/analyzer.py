@@ -1,8 +1,9 @@
-from api.currency import Currency
-from trader.market_manager.market_manager import MarketManager
-import logging
 import math
+import logging
+from api.currency import Currency
 from trader.market.balance import Balance
+from trader.market_manager.market_manager import MarketManager, Market
+from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class Analyzer:
@@ -13,12 +14,13 @@ class Analyzer:
 
     @staticmethod
     def get_price_of_minask_maxbid(orderbook: dict):
-        return int(orderbook["asks"][0]["price"].to_decimal()), int(orderbook["bids"][0]["price"].to_decimal())
+        return int(orderbook["asks"][0]["price"].to_decimal()), \
+               int(orderbook["bids"][0]["price"].to_decimal())
 
     @staticmethod
-    def get_amount_of_minask_maxbid(orderbook: dict, ask_index: int, bid_index: int):
-        return float(orderbook["asks"][ask_index]["amount"].to_decimal()), float(
-            orderbook["bids"][bid_index]["amount"].to_decimal())
+    def get_amount_of_minask_maxbid(orderbook: dict):
+        return float(orderbook["asks"][0]["amount"].to_decimal()), \
+               float(orderbook["bids"][0]["amount"].to_decimal())
 
     ######################################################################
     # buy at minask, sell at maxbid
@@ -28,23 +30,20 @@ class Analyzer:
     def buy_sell_strategy_1(mm1: MarketManager, mm1_currency: Currency, mm2: MarketManager, mm2_currency: Currency):
         mm1_orderbook = mm1.get_orderbook(mm1_currency)
         mm1_minask_price, mm1_maxbid_price = Analyzer.get_price_of_minask_maxbid(mm1_orderbook)
-        mm1_minask_amount, mm1_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm1_orderbook, 0, 0)
+        mm1_minask_amount, mm1_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm1_orderbook)
 
         mm2_orderbook = mm2.get_orderbook(mm2_currency)
         mm2_minask_price, mm2_maxbid_price = Analyzer.get_price_of_minask_maxbid(mm2_orderbook)
-        mm2_minask_amount, mm2_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm1_orderbook, 0, 0)
+        mm2_minask_amount, mm2_maxbid_amount = Analyzer.get_amount_of_minask_maxbid(mm2_orderbook)
 
+        # new => buy in mm1, sell in mm2
         new_spread = Analyzer.calc_spread(mm1_minask_price, mm1.market_fee,
                                           mm2_maxbid_price, mm2.market_fee)
+        # rev => buy in mm2, sell in mm1
         rev_spread = Analyzer.calc_spread(mm2_minask_price, mm2.market_fee,
                                           mm1_maxbid_price, mm1.market_fee)
 
-        mm1_buy_price = mm1_minask_price
-        mm1_sell_price = mm1_maxbid_price
-        mm2_buy_price = mm2_minask_price
-        mm2_sell_price = mm2_maxbid_price
-
-        return new_spread, rev_spread, mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price, \
+        return new_spread, rev_spread, mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price, \
                mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount
 
     ######################################################################
@@ -149,3 +148,13 @@ class Analyzer:
         sell_mm_needed_coin = coin_trade_amount
         return (buy_mm.has_enough_coin("krw", buy_mm_needed_krw) and
                 sell_mm.has_enough_coin(coin_currency, sell_mm_needed_coin))
+
+    @staticmethod
+    def get_fee_consideration(buy_market: Market, currency: str) -> (float, bool):
+        fee = GlobalFeeAccumulator.get_fee(buy_market, currency)
+        # round down to #4 decimal
+        rounded_fee = math.floor(fee * 10000) / 10000
+        # 0.0001 is the smallest order unit in coinone
+        if rounded_fee >= 0.0001:
+            return rounded_fee, True
+        return 0, False

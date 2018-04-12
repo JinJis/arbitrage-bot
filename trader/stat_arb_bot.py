@@ -1,5 +1,4 @@
 import time
-import math
 import logging
 import numpy as np
 from analyzer.analyzer import Analyzer
@@ -43,10 +42,6 @@ class StatArbBot:
         else:
             self.mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 45000, 0.11)
             self.mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.0008, 45000, 0.11)
-
-        # init fee accumulator
-        GlobalFeeAccumulator.initialize_market(self.mm1.get_market_tag())
-        GlobalFeeAccumulator.initialize_market(self.mm2.get_market_tag())
 
         # set market currency
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
@@ -160,7 +155,7 @@ class StatArbBot:
         if cur_spread < lower:
             # NEW: long in mm1, short in mm2
             self.new_oppty_counter += 1
-            fee, should_fee = self.get_fee_consideration(self.mm1.get_market_tag())
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
@@ -180,7 +175,7 @@ class StatArbBot:
         elif cur_spread > upper:
             # REV: long in mm2, short in mm1
             self.rev_oppty_counter += 1
-            fee, should_fee = self.get_fee_consideration(self.mm2.get_market_tag())
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
@@ -304,12 +299,3 @@ class StatArbBot:
             balance = combined[coin_name]
             logging.log(log_level, "[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
                         (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
-
-    def get_fee_consideration(self, buy_market: Market) -> (float, bool):
-        fee = GlobalFeeAccumulator.get_fee(buy_market, self.TARGET_CURRENCY)
-        # round down to #4 decimal
-        rounded_fee = math.floor(fee * 10000) / 10000
-        # 0.0001 is the smallest order unit in coinone
-        if rounded_fee >= 0.0001:
-            return rounded_fee, True
-        return 0, False

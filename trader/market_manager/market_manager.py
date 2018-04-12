@@ -5,6 +5,7 @@ from trader.market.balance import Balance
 from trader.market.market import Market
 from api.market_api import MarketApi
 from trader.market.order import Order, OrderType
+from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class MarketManager(ABC):
@@ -12,6 +13,9 @@ class MarketManager(ABC):
         self.market_tag = market_tag
         self.market_fee = market_fee
         self.market_api = market_api
+
+        # init fee accumulator
+        GlobalFeeAccumulator.initialize_market(self.market_tag)
 
         # Note that updating balance is already included in initialization phase
         self.balance = Balance(self.get_market_name())
