@@ -57,33 +57,28 @@ class RiskFreeArbBot(BaseArbBot):
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         # get current spread
         new_spread, rev_spread, \
-        mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price, \
-        mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount = \
+        mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price, \
+        mm1_buy_amount, mm1_sell_amount, mm2_buy_amount, mm2_sell_amount = \
             self.TARGET_STRATEGY(self.mm1, self.mm1_currency, self.mm2, self.mm2_currency)
 
         # log stat
-        logging.info("[STAT][%s] min_ask: %d, max_bid: %d" % (self.mm1.get_market_name(),
-                                                              mm1_minask_price, mm1_maxbid_price))
-        logging.info("[STAT][%s] min_ask: %d, max_bid: %d" % (self.mm2.get_market_name(),
-                                                              mm2_minask_price, mm2_maxbid_price))
+        logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (self.mm1.get_market_name(),
+                                                                   mm1_buy_price, mm1_sell_price))
+        logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (self.mm2.get_market_name(),
+                                                                   mm2_buy_price, mm2_sell_price))
         logging.info("[STAT] new_spread: %d, rev_spread: %d" % (new_spread, rev_spread))
 
         # calculate needed krw
-        mm1_buy_krw = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT) * mm1_minask_price
-        mm2_buy_krw = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT) * mm2_minask_price
-
-        mm1_buy_price = mm1_minask_price
-        mm1_sell_price = mm1_maxbid_price
-        mm2_buy_price = mm2_minask_price
-        mm2_sell_price = mm2_maxbid_price
+        mm1_buy_krw = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT) * mm1_buy_price
+        mm2_buy_krw = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT) * mm2_buy_price
 
         # make decision
         if (
                 new_spread > self.NEW_SPREAD_THRESHOLD
                 and self.mm1.has_enough_coin("krw", mm1_buy_krw)
                 and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                and mm1_minask_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
-                and mm2_maxbid_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
+                and mm1_buy_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
+                and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
         ):
             logging.warning("[EXECUTE] New")
             buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.COIN_TRADING_UNIT)
@@ -95,8 +90,8 @@ class RiskFreeArbBot(BaseArbBot):
                 rev_spread > self.REV_SPREAD_THRESHOLD
                 and self.mm2.has_enough_coin("krw", mm2_buy_krw)
                 and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                and mm2_minask_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
-                and mm1_maxbid_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
+                and mm2_buy_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
+                and mm1_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
         ):
             logging.warning("[EXECUTE] Reverse")
             buy_order = self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.COIN_TRADING_UNIT)

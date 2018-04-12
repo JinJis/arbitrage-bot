@@ -43,8 +43,11 @@ class Analyzer:
         rev_spread = Analyzer.calc_spread(mm2_minask_price, mm2.market_fee,
                                           mm1_maxbid_price, mm1.market_fee)
 
-        return new_spread, rev_spread, mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price, \
-               mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount
+        return new_spread, rev_spread, \
+               mm1_minask_price, mm1_maxbid_price, \
+               mm2_minask_price, mm2_maxbid_price, \
+               mm1_minask_amount, mm1_maxbid_amount, \
+               mm2_minask_amount, mm2_maxbid_amount
 
     ######################################################################
     # co:   buy at ma_mb_avg ±      sell at ma_mb_avg ±
