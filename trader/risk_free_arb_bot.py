@@ -48,6 +48,10 @@ class RiskFreeArbBot(BaseArbBot):
         self.mm1_buy_sell_diff_count = 0
         self.mm2_buy_sell_diff_count = 0
 
+        # if the diff count gets to a number bigger or lower than below, then perform manual new or rev
+        self.MANUAL_THRESHOLD = 1
+        self.MANUAL_THRESHOLD_MINUS = (-1) * self.MANUAL_THRESHOLD
+
         self.mm1_buy_orders = list()
         self.mm1_sell_orders = list()
         self.mm2_buy_orders = list()
@@ -184,9 +188,13 @@ class RiskFreeArbBot(BaseArbBot):
         else:
             logging.info("[EXECUTE] No")
 
+        ####################################
+        # RESOLVE UNBALANCE IN MM1
+        ####################################
+
         # if there's more buy than sell in mm1 (new > rev)
         if (
-                (self.mm1_buy_sell_diff_count > 0 or self.rev_manual_flag)
+                (self.mm1_buy_sell_diff_count > self.MANUAL_THRESHOLD or self.rev_manual_flag)
                 and not self.mm1_sell_manual_flag
                 and not self.new_manual_flag
         ):
@@ -214,7 +222,7 @@ class RiskFreeArbBot(BaseArbBot):
 
         # if there's more sell than buy in mm1 (rev > new)
         elif (
-                (self.mm1_buy_sell_diff_count < 0 or self.new_manual_flag)
+                (self.mm1_buy_sell_diff_count < self.MANUAL_THRESHOLD_MINUS or self.new_manual_flag)
                 and not self.mm1_buy_manual_flag
                 and not self.rev_manual_flag
         ):
@@ -240,9 +248,13 @@ class RiskFreeArbBot(BaseArbBot):
                         logging.warning("Manual NEW position start!")
                     break
 
+        ####################################
+        # RESOLVE UNBALANCE IN MM2
+        ####################################
+
         # if there's more buy than sell in mm2 (rev > new)
         if (
-                (self.mm2_buy_sell_diff_count > 0 or self.new_manual_flag)
+                (self.mm2_buy_sell_diff_count > self.MANUAL_THRESHOLD or self.new_manual_flag)
                 and not self.mm2_sell_manual_flag
                 and not self.rev_manual_flag
         ):
@@ -268,7 +280,7 @@ class RiskFreeArbBot(BaseArbBot):
 
         # if there's more sell than buy in mm2 (new > rev)
         elif (
-                (self.mm2_buy_sell_diff_count < 0 or self.rev_manual_flag)
+                (self.mm2_buy_sell_diff_count < self.MANUAL_THRESHOLD_MINUS or self.rev_manual_flag)
                 and not self.mm2_buy_manual_flag
                 and not self.new_manual_flag
         ):
