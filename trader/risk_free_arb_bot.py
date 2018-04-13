@@ -28,8 +28,8 @@ class RiskFreeArbBot(BaseArbBot):
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 50000, 0.15) if is_backtesting else None
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 50000, 0.15) if is_backtesting else None
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 75000, 0.05) if is_backtesting else None
+        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 25000, 0.25) if is_backtesting else None
 
         super().__init__(target_currency, target_interval_in_sec,
                          should_db_logging, is_backtesting, start_time, end_time, v_mm1, v_mm2)
@@ -57,6 +57,12 @@ class RiskFreeArbBot(BaseArbBot):
         self.mm1_sell_manual_flag = False
         self.mm2_buy_manual_flag = False
         self.mm2_sell_manual_flag = False
+
+        self.new_manual_flag = False
+        self.rev_manual_flag = False
+
+        self.new_manual_count = 0
+        self.rev_manual_count = 0
 
         self.mm1_buy_coin_trading_unit = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
         self.mm2_buy_coin_trading_unit = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
@@ -91,6 +97,10 @@ class RiskFreeArbBot(BaseArbBot):
 
             # log backtesting result
             self.log_common_stat(log_level=logging.CRITICAL)
+            logging.info("%s, %s, %s, %s" %
+                         (self.mm1_buy_manual_flag, self.mm1_sell_manual_flag,
+                          self.mm2_buy_manual_flag, self.mm2_sell_manual_flag))
+            logging.info("manual new: %d, manual rev: %d" % (self.new_manual_count, self.rev_manual_count))
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         # get current spread
@@ -124,20 +134,24 @@ class RiskFreeArbBot(BaseArbBot):
             if (
                     self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                    and mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
-                    and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
             ):
-                logging.warning("[EXECUTE] New")
-                buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
-                sell_order = self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
-                self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta(None))
-                self.trade_manager.add_trade(self.cur_trade)
+                if (
+                        mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
+                        and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
+                ):
+                    logging.warning("[EXECUTE] New")
+                    buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
+                    sell_order = self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
+                    self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta(None))
+                    self.trade_manager.add_trade(self.cur_trade)
 
-                # record orders
-                self.mm1_buy_orders.append(buy_order)
-                self.mm2_sell_orders.append(sell_order)
-                self.mm1_buy_sell_diff_count += 1
-                self.mm2_buy_sell_diff_count -= 1
+                    # record orders
+                    self.mm1_buy_orders.append(buy_order)
+                    self.mm2_sell_orders.append(sell_order)
+                    self.mm1_buy_sell_diff_count += 1
+                    self.mm2_buy_sell_diff_count -= 1
+                else:
+                    logging.error("[EXECUTE] New -> failed (not enough available amount in market!)")
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
@@ -146,28 +160,36 @@ class RiskFreeArbBot(BaseArbBot):
             if (
                     self.mm2.has_enough_coin("krw", mm2_buy_krw)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                    and mm2_buy_amount >= self.mm2_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
-                    and mm1_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
             ):
-                logging.warning("[EXECUTE] Reverse")
-                buy_order = self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.mm2_buy_coin_trading_unit)
-                sell_order = self.mm1.order_sell(self.mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
-                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
-                self.trade_manager.add_trade(self.cur_trade)
+                if (
+                        mm2_buy_amount >= self.mm2_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
+                        and mm1_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
+                ):
+                    logging.warning("[EXECUTE] Reverse")
+                    buy_order = self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.mm2_buy_coin_trading_unit)
+                    sell_order = self.mm1.order_sell(self.mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
+                    self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
+                    self.trade_manager.add_trade(self.cur_trade)
 
-                # record orders
-                self.mm2_buy_orders.append(buy_order)
-                self.mm1_sell_orders.append(sell_order)
-                self.mm2_buy_sell_diff_count += 1
-                self.mm1_buy_sell_diff_count -= 1
+                    # record orders
+                    self.mm2_buy_orders.append(buy_order)
+                    self.mm1_sell_orders.append(sell_order)
+                    self.mm2_buy_sell_diff_count += 1
+                    self.mm1_buy_sell_diff_count -= 1
+                else:
+                    logging.error("[EXECUTE] Reverse -> failed (not enough available amount in market!)")
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
         else:
-            logging.warning("[EXECUTE] No")
+            logging.info("[EXECUTE] No")
 
         # if there's more buy than sell in mm1 (new > rev)
-        if self.mm1_buy_sell_diff_count > 0 and not self.mm1_sell_manual_flag:
+        if (
+                (self.mm1_buy_sell_diff_count > 0 or self.rev_manual_flag)
+                and not self.mm1_sell_manual_flag
+                and not self.new_manual_flag
+        ):
             for mm1_buy_order in self.mm1_buy_orders:
                 # calc spread with current sell price
                 profit = Analyzer.calc_spread(mm1_buy_order.price, self.mm1.market_fee,
@@ -181,14 +203,21 @@ class RiskFreeArbBot(BaseArbBot):
                     # if mm2 buy was done before
                     if self.mm2_buy_manual_flag:
                         self.mm2_buy_manual_flag = False
+                        self.rev_manual_count += 1
+                        self.rev_manual_flag = False
                         logging.warning("Manual REV position done!")
                     else:
                         self.mm1_sell_manual_flag = True
+                        self.rev_manual_flag = True
                         logging.warning("Manual REV position start!")
                     break
 
         # if there's more sell than buy in mm1 (rev > new)
-        elif self.mm1_buy_sell_diff_count < 0 and not self.mm1_buy_manual_flag:
+        elif (
+                (self.mm1_buy_sell_diff_count < 0 or self.new_manual_flag)
+                and not self.mm1_buy_manual_flag
+                and not self.rev_manual_flag
+        ):
             for mm1_sell_order in self.mm1_sell_orders:
                 # calc spread with current buy price
                 profit = Analyzer.calc_spread(mm1_buy_price, self.mm1.market_fee,
@@ -202,14 +231,21 @@ class RiskFreeArbBot(BaseArbBot):
                     # if mm2 sell was done before
                     if self.mm2_sell_manual_flag:
                         self.mm2_sell_manual_flag = False
+                        self.new_manual_count += 1
+                        self.new_manual_flag = False
                         logging.warning("Manual NEW position done!")
                     else:
                         self.mm1_buy_manual_flag = True
+                        self.new_manual_flag = True
                         logging.warning("Manual NEW position start!")
                     break
 
         # if there's more buy than sell in mm2 (rev > new)
-        if self.mm2_buy_sell_diff_count > 0 and not self.mm2_sell_manual_flag:
+        if (
+                (self.mm2_buy_sell_diff_count > 0 or self.new_manual_flag)
+                and not self.mm2_sell_manual_flag
+                and not self.rev_manual_flag
+        ):
             for mm2_buy_order in self.mm2_buy_orders:
                 # calc spread with current sell price
                 profit = Analyzer.calc_spread(mm2_buy_order.price, self.mm2.market_fee,
@@ -223,14 +259,19 @@ class RiskFreeArbBot(BaseArbBot):
                     # if mm1 buy was done before
                     if self.mm1_buy_manual_flag:
                         self.mm1_buy_manual_flag = False
-                        logging.warning("Manual REV position done!")
+                        self.new_manual_count += 1
+                        logging.warning("Manual NEW position done!")
                     else:
                         self.mm2_sell_manual_flag = True
-                        logging.warning("Manual REV position start!")
+                        logging.warning("Manual NEW position start!")
                     break
 
         # if there's more sell than buy in mm2 (new > rev)
-        elif self.mm2_buy_sell_diff_count < 0 and not self.mm2_buy_manual_flag:
+        elif (
+                (self.mm2_buy_sell_diff_count < 0 or self.rev_manual_flag)
+                and not self.mm2_buy_manual_flag
+                and not self.new_manual_flag
+        ):
             for mm2_sell_order in self.mm2_sell_orders:
                 # calc spread with current buy price
                 profit = Analyzer.calc_spread(mm2_buy_price, self.mm2.market_fee,
@@ -244,10 +285,11 @@ class RiskFreeArbBot(BaseArbBot):
                     # if mm1 sell was done before
                     if self.mm1_sell_manual_flag:
                         self.mm1_sell_manual_flag = False
-                        logging.warning("Manual NEW position done!")
+                        self.rev_manual_count += 1
+                        logging.warning("Manual REV position done!")
                     else:
                         self.mm2_buy_manual_flag = True
-                        logging.warning("Manual NEW position start!")
+                        logging.warning("Manual REV position start!")
                     break
 
         # if there was any trade
