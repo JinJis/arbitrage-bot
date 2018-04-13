@@ -1,4 +1,5 @@
 import logging
+from trader.market.order import Order
 from config.global_conf import Global
 from analyzer.analyzer import Analyzer
 from trader.market.market import Market
@@ -27,20 +28,38 @@ class RiskFreeArbBot(BaseArbBot):
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 45000, 0.1) if is_backtesting else None
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 45000, 0.1) if is_backtesting else None
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 50000, 0.15) if is_backtesting else None
+        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 50000, 0.15) if is_backtesting else None
 
         super().__init__(target_currency, target_interval_in_sec,
                          should_db_logging, is_backtesting, start_time, end_time, v_mm1, v_mm2)
 
-        self.COIN_TRADING_UNIT = 0.1
+        self.COIN_TRADING_UNIT = 0.02
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
+        self.MARGIN_KRW_THRESHOLD = 500
         self.SLIPPAGE_HEDGE = 0  # 향후에 거래량을 보고 결정할 parameter, 0.01로 거래한다는 가정하에 0.03으로 설정
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
         self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_orderbook"]
+
+        # if buy +1, if sell -1
+        self.mm1_buy_sell_diff_count = 0
+        self.mm2_buy_sell_diff_count = 0
+
+        self.mm1_buy_orders = list()
+        self.mm1_sell_orders = list()
+        self.mm2_buy_orders = list()
+        self.mm2_sell_orders = list()
+
+        self.mm1_buy_manual_flag = False
+        self.mm1_sell_manual_flag = False
+        self.mm2_buy_manual_flag = False
+        self.mm2_sell_manual_flag = False
+
+        self.mm1_buy_coin_trading_unit = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
+        self.mm2_buy_coin_trading_unit = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
 
     def run(self):
         # log initial balance
@@ -96,10 +115,8 @@ class RiskFreeArbBot(BaseArbBot):
         logging.info("[STAT] new_spread: %d, rev_spread: %d" % (new_spread, rev_spread))
 
         # calculate needed krw
-        mm1_buy_amount_actual = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
-        mm2_buy_amount_actual = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
-        mm1_buy_krw = mm1_buy_amount_actual * mm1_buy_price
-        mm2_buy_krw = mm2_buy_amount_actual * mm2_buy_price
+        mm1_buy_krw = self.mm1_buy_coin_trading_unit * mm1_buy_price
+        mm2_buy_krw = self.mm2_buy_coin_trading_unit * mm2_buy_price
 
         # make decision
         if new_spread > self.NEW_SPREAD_THRESHOLD:
@@ -107,14 +124,20 @@ class RiskFreeArbBot(BaseArbBot):
             if (
                     self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                    and mm1_buy_amount >= mm1_buy_amount_actual + self.SLIPPAGE_HEDGE
+                    and mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
                     and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
             ):
                 logging.warning("[EXECUTE] New")
-                buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, mm1_buy_amount_actual)
+                buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
                 sell_order = self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
-                self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta({"sell_price": mm2_sell_price}))
+                self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta(None))
                 self.trade_manager.add_trade(self.cur_trade)
+
+                # record orders
+                self.mm1_buy_orders.append(buy_order)
+                self.mm2_sell_orders.append(sell_order)
+                self.mm1_buy_sell_diff_count += 1
+                self.mm2_buy_sell_diff_count -= 1
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
@@ -123,19 +146,109 @@ class RiskFreeArbBot(BaseArbBot):
             if (
                     self.mm2.has_enough_coin("krw", mm2_buy_krw)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                    and mm2_buy_amount >= mm2_buy_amount_actual + self.SLIPPAGE_HEDGE
+                    and mm2_buy_amount >= self.mm2_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
                     and mm1_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
             ):
                 logging.warning("[EXECUTE] Reverse")
-                buy_order = self.mm2.order_buy(self.mm2_currency, mm2_buy_price, mm2_buy_amount_actual)
+                buy_order = self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.mm2_buy_coin_trading_unit)
                 sell_order = self.mm1.order_sell(self.mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
-                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta({"sell_price": mm1_sell_price}))
+                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
                 self.trade_manager.add_trade(self.cur_trade)
+
+                # record orders
+                self.mm2_buy_orders.append(buy_order)
+                self.mm1_sell_orders.append(sell_order)
+                self.mm2_buy_sell_diff_count += 1
+                self.mm1_buy_sell_diff_count -= 1
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
         else:
             logging.warning("[EXECUTE] No")
+
+        # if there's more buy than sell in mm1 (new > rev)
+        if self.mm1_buy_sell_diff_count > 0 and not self.mm1_sell_manual_flag:
+            for mm1_buy_order in self.mm1_buy_orders:
+                # calc spread with current sell price
+                profit = Analyzer.calc_spread(mm1_buy_order.price, self.mm1.market_fee,
+                                              mm1_sell_price, self.mm1.market_fee)
+                if profit > self.MARGIN_KRW_THRESHOLD:
+                    # mm1 sell
+                    self.mm1.order_sell(self.mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
+                    self.mm1_buy_orders.remove(mm1_buy_order)
+                    self.mm1_buy_sell_diff_count -= 1
+
+                    # if mm2 buy was done before
+                    if self.mm2_buy_manual_flag:
+                        self.mm2_buy_manual_flag = False
+                        logging.warning("Manual REV position done!")
+                    else:
+                        self.mm1_sell_manual_flag = True
+                        logging.warning("Manual REV position start!")
+                    break
+
+        # if there's more sell than buy in mm1 (rev > new)
+        elif self.mm1_buy_sell_diff_count < 0 and not self.mm1_buy_manual_flag:
+            for mm1_sell_order in self.mm1_sell_orders:
+                # calc spread with current buy price
+                profit = Analyzer.calc_spread(mm1_buy_price, self.mm1.market_fee,
+                                              mm1_sell_order.price, self.mm1.market_fee)
+                if profit > self.MARGIN_KRW_THRESHOLD:
+                    # mm1 buy
+                    self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
+                    self.mm1_sell_orders.remove(mm1_sell_order)
+                    self.mm1_buy_sell_diff_count += 1
+
+                    # if mm2 sell was done before
+                    if self.mm2_sell_manual_flag:
+                        self.mm2_sell_manual_flag = False
+                        logging.warning("Manual NEW position done!")
+                    else:
+                        self.mm1_buy_manual_flag = True
+                        logging.warning("Manual NEW position start!")
+                    break
+
+        # if there's more buy than sell in mm2 (rev > new)
+        if self.mm2_buy_sell_diff_count > 0 and not self.mm2_sell_manual_flag:
+            for mm2_buy_order in self.mm2_buy_orders:
+                # calc spread with current sell price
+                profit = Analyzer.calc_spread(mm2_buy_order.price, self.mm2.market_fee,
+                                              mm2_sell_price, self.mm2.market_fee)
+                if profit > self.MARGIN_KRW_THRESHOLD:
+                    # mm2 sell
+                    self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
+                    self.mm2_buy_orders.remove(mm2_buy_order)
+                    self.mm2_buy_sell_diff_count -= 1
+
+                    # if mm1 buy was done before
+                    if self.mm1_buy_manual_flag:
+                        self.mm1_buy_manual_flag = False
+                        logging.warning("Manual REV position done!")
+                    else:
+                        self.mm2_sell_manual_flag = True
+                        logging.warning("Manual REV position start!")
+                    break
+
+        # if there's more sell than buy in mm2 (new > rev)
+        elif self.mm2_buy_sell_diff_count < 0 and not self.mm2_buy_manual_flag:
+            for mm2_sell_order in self.mm2_sell_orders:
+                # calc spread with current buy price
+                profit = Analyzer.calc_spread(mm2_buy_price, self.mm2.market_fee,
+                                              mm2_sell_order.price, self.mm2.market_fee)
+                if profit > self.MARGIN_KRW_THRESHOLD:
+                    # mm2 buy
+                    self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.mm2_buy_coin_trading_unit)
+                    self.mm2_sell_orders.remove(mm2_sell_order)
+                    self.mm2_buy_sell_diff_count += 1
+
+                    # if mm1 sell was done before
+                    if self.mm1_sell_manual_flag:
+                        self.mm1_sell_manual_flag = False
+                        logging.warning("Manual NEW position done!")
+                    else:
+                        self.mm2_buy_manual_flag = True
+                        logging.warning("Manual NEW position start!")
+                    break
 
         # if there was any trade
         if self.cur_trade is not None:
