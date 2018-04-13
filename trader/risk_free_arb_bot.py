@@ -35,9 +35,9 @@ class RiskFreeArbBot(BaseArbBot):
                          should_db_logging, is_backtesting, start_time, end_time, v_mm1, v_mm2)
 
         self.COIN_TRADING_UNIT = 0.02
-        self.NEW_SPREAD_THRESHOLD = 0
+        self.NEW_SPREAD_THRESHOLD = 500
         self.REV_SPREAD_THRESHOLD = 0
-        self.MARGIN_KRW_THRESHOLD = 500
+        self.MARGIN_KRW_THRESHOLD = 1000
         self.SLIPPAGE_HEDGE = 0  # 향후에 거래량을 보고 결정할 parameter, 0.01로 거래한다는 가정하에 0.03으로 설정
 
         # init mongo related
@@ -67,6 +67,8 @@ class RiskFreeArbBot(BaseArbBot):
 
         self.new_manual_count = 0
         self.rev_manual_count = 0
+
+        self.last_manual_order = None
 
         self.mm1_buy_coin_trading_unit = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
         self.mm2_buy_coin_trading_unit = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
@@ -101,10 +103,11 @@ class RiskFreeArbBot(BaseArbBot):
 
             # log backtesting result
             self.log_common_stat(log_level=logging.CRITICAL)
-            logging.info("%s, %s, %s, %s" %
+            logging.info("mm1_buy_manual: %s, mm1_sell_manual: %s, mm2_buy_manual: %s, mm2_sell_manual: %s" %
                          (self.mm1_buy_manual_flag, self.mm1_sell_manual_flag,
                           self.mm2_buy_manual_flag, self.mm2_sell_manual_flag))
             logging.info("manual new: %d, manual rev: %d" % (self.new_manual_count, self.rev_manual_count))
+            logging.info("last manual order: %s" % self.last_manual_order)
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         # get current spread
@@ -202,7 +205,10 @@ class RiskFreeArbBot(BaseArbBot):
                 # calc spread with current sell price
                 profit = Analyzer.calc_spread(mm1_buy_order.price, self.mm1.market_fee,
                                               mm1_sell_price, self.mm1.market_fee)
-                if profit > self.MARGIN_KRW_THRESHOLD:
+                if (
+                        profit > self.MARGIN_KRW_THRESHOLD
+                        and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
+                ):
                     # mm1 sell
                     self.mm1.order_sell(self.mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
                     self.mm1_buy_orders.remove(mm1_buy_order)
@@ -217,6 +223,7 @@ class RiskFreeArbBot(BaseArbBot):
                     else:
                         self.mm1_sell_manual_flag = True
                         self.rev_manual_flag = True
+                        self.last_manual_order = "REV by mm1_sell on %d" % mm1_sell_price
                         logging.warning("Manual REV position start!")
                     break
 
@@ -230,7 +237,10 @@ class RiskFreeArbBot(BaseArbBot):
                 # calc spread with current buy price
                 profit = Analyzer.calc_spread(mm1_buy_price, self.mm1.market_fee,
                                               mm1_sell_order.price, self.mm1.market_fee)
-                if profit > self.MARGIN_KRW_THRESHOLD:
+                if (
+                        profit > self.MARGIN_KRW_THRESHOLD
+                        and self.mm1.has_enough_coin("krw", mm1_buy_krw)
+                ):
                     # mm1 buy
                     self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
                     self.mm1_sell_orders.remove(mm1_sell_order)
@@ -245,6 +255,7 @@ class RiskFreeArbBot(BaseArbBot):
                     else:
                         self.mm1_buy_manual_flag = True
                         self.new_manual_flag = True
+                        self.last_manual_order = "NEW by mm1_buy on %d" % mm1_buy_price
                         logging.warning("Manual NEW position start!")
                     break
 
@@ -262,7 +273,10 @@ class RiskFreeArbBot(BaseArbBot):
                 # calc spread with current sell price
                 profit = Analyzer.calc_spread(mm2_buy_order.price, self.mm2.market_fee,
                                               mm2_sell_price, self.mm2.market_fee)
-                if profit > self.MARGIN_KRW_THRESHOLD:
+                if (
+                        profit > self.MARGIN_KRW_THRESHOLD
+                        and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
+                ):
                     # mm2 sell
                     self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
                     self.mm2_buy_orders.remove(mm2_buy_order)
@@ -275,6 +289,7 @@ class RiskFreeArbBot(BaseArbBot):
                         logging.warning("Manual NEW position done!")
                     else:
                         self.mm2_sell_manual_flag = True
+                        self.last_manual_order = "NEW by mm2_sell on %d" % mm2_sell_price
                         logging.warning("Manual NEW position start!")
                     break
 
@@ -288,7 +303,10 @@ class RiskFreeArbBot(BaseArbBot):
                 # calc spread with current buy price
                 profit = Analyzer.calc_spread(mm2_buy_price, self.mm2.market_fee,
                                               mm2_sell_order.price, self.mm2.market_fee)
-                if profit > self.MARGIN_KRW_THRESHOLD:
+                if (
+                        profit > self.MARGIN_KRW_THRESHOLD
+                        and self.mm2.has_enough_coin("krw", mm2_buy_krw)
+                ):
                     # mm2 buy
                     self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.mm2_buy_coin_trading_unit)
                     self.mm2_sell_orders.remove(mm2_sell_order)
@@ -301,6 +319,7 @@ class RiskFreeArbBot(BaseArbBot):
                         logging.warning("Manual REV position done!")
                     else:
                         self.mm2_buy_manual_flag = True
+                        self.last_manual_order = "REV by mm2_buy on %d" % mm2_buy_price
                         logging.warning("Manual REV position start!")
                     break
 
