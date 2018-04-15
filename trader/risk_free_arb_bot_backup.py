@@ -37,7 +37,7 @@ class RiskFreeArbBot(BaseArbBot):
         self.COIN_TRADING_UNIT = 0.02
         self.NEW_SPREAD_THRESHOLD = 50
         self.REV_SPREAD_THRESHOLD = 0
-        self.MARGIN_KRW_THRESHOLD = 100
+        self.MARGIN_KRW_THRESHOLD = 500
         self.SLIPPAGE_HEDGE = 0  # 향후에 거래량을 보고 결정할 parameter, 0.01로 거래한다는 가정하에 0.03으로 설정
 
         # init mongo related
@@ -71,7 +71,6 @@ class RiskFreeArbBot(BaseArbBot):
         self.rev_manual_count = 0
 
         self.last_manual_order = None
-        self.last_manual_order_pair = None
 
         self.mm1_buy_coin_trading_unit = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
         self.mm2_buy_coin_trading_unit = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
@@ -208,52 +207,31 @@ class RiskFreeArbBot(BaseArbBot):
                     and not self.mm1_sell_manual_flag
                     and not self.new_manual_flag
             ):
-                # if mm2 buy was done before
-                if self.mm2_buy_manual_flag:
-                    # calc spread with last order pair
-                    # that were previously a pair with the opponent of mm2_buy (mm2_sell)
-                    profit = Analyzer.calc_spread(self.last_manual_order_pair.price, self.mm1.market_fee,
+                for mm1_buy_order in self.mm1_buy_orders:
+                    # calc spread with current sell price
+                    profit = Analyzer.calc_spread(mm1_buy_order.price, self.mm1.market_fee,
                                                   mm1_sell_price, self.mm1.market_fee)
-
-                    # if there's enough profit opportunity and we have enough money
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
                             and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
                     ):
                         # mm1 sell
                         self.mm1.order_sell(self.mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
+                        self.mm1_buy_orders.remove(mm1_buy_order)
                         self.mm1_buy_sell_diff_count -= 1
 
-                        self.rev_manual_count += 1
-                        self.rev_manual_flag = False
-                        self.mm2_buy_manual_flag = False
-                        logging.warning("Manual REV position done!")
-                # if never done before
-                else:
-                    # loop through history buy orders
-                    for index, mm1_buy_order in enumerate(self.mm1_buy_orders):
-                        # calc spread with current sell price
-                        profit = Analyzer.calc_spread(mm1_buy_order.price, self.mm1.market_fee,
-                                                      mm1_sell_price, self.mm1.market_fee)
-                        if (
-                                profit > self.MARGIN_KRW_THRESHOLD
-                                and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                        ):
-                            # mm1 sell
-                            self.mm1.order_sell(self.mm1_currency, mm1_sell_price, self.COIN_TRADING_UNIT)
-                            self.mm1_buy_orders.remove(mm1_buy_order)
-                            self.mm1_buy_sell_diff_count -= 1
-
-                            # get the tore down arbitrage pair
-                            self.last_manual_order_pair = self.mm2_sell_orders[index]
-                            del self.mm2_sell_orders[index]
-
+                        # if mm2 buy was done before
+                        if self.mm2_buy_manual_flag:
+                            self.mm2_buy_manual_flag = False
+                            self.rev_manual_count += 1
+                            self.rev_manual_flag = False
+                            logging.warning("Manual REV position done!")
+                        else:
                             self.mm1_sell_manual_flag = True
                             self.rev_manual_flag = True
                             self.last_manual_order = "REV by mm1_sell on %d" % mm1_sell_price
                             logging.warning("Manual REV position start!")
-
-                            break
+                        break
 
             # if there's more sell than buy in mm1 (rev > new)
             elif (
@@ -261,48 +239,31 @@ class RiskFreeArbBot(BaseArbBot):
                     and not self.mm1_buy_manual_flag
                     and not self.rev_manual_flag
             ):
-                # if mm2 sell was done before
-                if self.mm2_sell_manual_flag:
+                for mm1_sell_order in self.mm1_sell_orders:
                     # calc spread with current buy price
                     profit = Analyzer.calc_spread(mm1_buy_price, self.mm1.market_fee,
-                                                  self.last_manual_order_pair.price, self.mm1.market_fee)
+                                                  mm1_sell_order.price, self.mm1.market_fee)
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
                             and self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     ):
                         # mm1 buy
                         self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
+                        self.mm1_sell_orders.remove(mm1_sell_order)
                         self.mm1_buy_sell_diff_count += 1
 
-                        self.new_manual_count += 1
-                        self.new_manual_flag = False
-                        self.mm2_sell_manual_flag = False
-                        logging.warning("Manual NEW position done!")
-                # if never done before
-                else:
-                    for index, mm1_sell_order in enumerate(self.mm1_sell_orders):
-                        # calc spread with current buy price
-                        profit = Analyzer.calc_spread(mm1_buy_price, self.mm1.market_fee,
-                                                      mm1_sell_order.price, self.mm1.market_fee)
-                        if (
-                                profit > self.MARGIN_KRW_THRESHOLD
-                                and self.mm1.has_enough_coin("krw", mm1_buy_krw)
-                        ):
-                            # mm1 buy
-                            self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
-                            self.mm1_sell_orders.remove(mm1_sell_order)
-                            self.mm1_buy_sell_diff_count += 1
-
-                            # get the tore down arbitrage pair
-                            self.last_manual_order_pair = self.mm2_buy_orders[index]
-                            del self.mm2_buy_orders[index]
-
+                        # if mm2 sell was done before
+                        if self.mm2_sell_manual_flag:
+                            self.mm2_sell_manual_flag = False
+                            self.new_manual_count += 1
+                            self.new_manual_flag = False
+                            logging.warning("Manual NEW position done!")
+                        else:
                             self.mm1_buy_manual_flag = True
                             self.new_manual_flag = True
                             self.last_manual_order = "NEW by mm1_buy on %d" % mm1_buy_price
                             logging.warning("Manual NEW position start!")
-
-                            break
+                        break
 
             ####################################
             # RESOLVE UNBALANCE IN MM2
@@ -314,10 +275,9 @@ class RiskFreeArbBot(BaseArbBot):
                     and not self.mm2_sell_manual_flag
                     and not self.rev_manual_flag
             ):
-                # if mm1 buy was done before
-                if self.mm1_buy_manual_flag:
+                for mm2_buy_order in self.mm2_buy_orders:
                     # calc spread with current sell price
-                    profit = Analyzer.calc_spread(self.last_manual_order_pair.price, self.mm2.market_fee,
+                    profit = Analyzer.calc_spread(mm2_buy_order.price, self.mm2.market_fee,
                                                   mm2_sell_price, self.mm2.market_fee)
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
@@ -325,38 +285,19 @@ class RiskFreeArbBot(BaseArbBot):
                     ):
                         # mm2 sell
                         self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
+                        self.mm2_buy_orders.remove(mm2_buy_order)
                         self.mm2_buy_sell_diff_count -= 1
 
-                        self.new_manual_count += 1
-                        self.new_manual_flag = False
-                        self.mm1_buy_manual_flag = False
-                        logging.warning("Manual NEW position done!")
-
-                # if never done before
-                else:
-                    for index, mm2_buy_order in enumerate(self.mm2_buy_orders):
-                        # calc spread with current sell price
-                        profit = Analyzer.calc_spread(mm2_buy_order.price, self.mm2.market_fee,
-                                                      mm2_sell_price, self.mm2.market_fee)
-                        if (
-                                profit > self.MARGIN_KRW_THRESHOLD
-                                and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
-                        ):
-                            # mm2 sell
-                            self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
-                            self.mm2_buy_orders.remove(mm2_buy_order)
-                            self.mm2_buy_sell_diff_count -= 1
-
-                            # get the tore down arbitrage pair
-                            self.last_manual_order_pair = self.mm1_sell_orders[index]
-                            del self.mm1_sell_orders[index]
-
+                        # if mm1 buy was done before
+                        if self.mm1_buy_manual_flag:
+                            self.mm1_buy_manual_flag = False
+                            self.new_manual_count += 1
+                            logging.warning("Manual NEW position done!")
+                        else:
                             self.mm2_sell_manual_flag = True
-                            self.new_manual_flag = True
                             self.last_manual_order = "NEW by mm2_sell on %d" % mm2_sell_price
                             logging.warning("Manual NEW position start!")
-
-                            break
+                        break
 
             # if there's more sell than buy in mm2 (new > rev)
             elif (
@@ -364,48 +305,29 @@ class RiskFreeArbBot(BaseArbBot):
                     and not self.mm2_buy_manual_flag
                     and not self.new_manual_flag
             ):
-                # if mm1 sell was done before
-                if self.mm1_sell_manual_flag:
+                for mm2_sell_order in self.mm2_sell_orders:
                     # calc spread with current buy price
                     profit = Analyzer.calc_spread(mm2_buy_price, self.mm2.market_fee,
-                                                  self.last_manual_order_pair.price, self.mm2.market_fee)
+                                                  mm2_sell_order.price, self.mm2.market_fee)
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
                             and self.mm2.has_enough_coin("krw", mm2_buy_krw)
                     ):
                         # mm2 buy
                         self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.mm2_buy_coin_trading_unit)
+                        self.mm2_sell_orders.remove(mm2_sell_order)
                         self.mm2_buy_sell_diff_count += 1
 
-                        self.rev_manual_count += 1
-                        self.rev_manual_flag = False
-                        self.mm1_sell_manual_flag = False
-                        logging.warning("Manual REV position done!")
-                # if never done before
-                else:
-                    for index, mm2_sell_order in enumerate(self.mm2_sell_orders):
-                        # calc spread with current buy price
-                        profit = Analyzer.calc_spread(mm2_buy_price, self.mm2.market_fee,
-                                                      mm2_sell_order.price, self.mm2.market_fee)
-                        if (
-                                profit > self.MARGIN_KRW_THRESHOLD
-                                and self.mm2.has_enough_coin("krw", mm2_buy_krw)
-                        ):
-                            # mm2 buy
-                            self.mm2.order_buy(self.mm2_currency, mm2_buy_price, self.mm2_buy_coin_trading_unit)
-                            self.mm2_sell_orders.remove(mm2_sell_order)
-                            self.mm2_buy_sell_diff_count += 1
-
-                            # get the tore down arbitrage pair
-                            self.last_manual_order_pair = self.mm1_buy_orders[index]
-                            del self.mm1_buy_orders[index]
-
+                        # if mm1 sell was done before
+                        if self.mm1_sell_manual_flag:
+                            self.mm1_sell_manual_flag = False
+                            self.rev_manual_count += 1
+                            logging.warning("Manual REV position done!")
+                        else:
                             self.mm2_buy_manual_flag = True
-                            self.rev_manual_flag = True
                             self.last_manual_order = "REV by mm2_buy on %d" % mm2_buy_price
                             logging.warning("Manual REV position start!")
-
-                            break
+                        break
 
         # if there was any trade
         if self.cur_trade is not None:
