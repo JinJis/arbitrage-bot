@@ -28,13 +28,13 @@ class RiskFreeArbBot(BaseArbBot):
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 75000, 0.05) if is_backtesting else None
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 25000, 0.25) if is_backtesting else None
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5) if is_backtesting else None
+        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 250000, 10) if is_backtesting else None
 
         super().__init__(target_currency, target_interval_in_sec,
                          should_db_logging, is_backtesting, start_time, end_time, v_mm1, v_mm2)
 
-        self.COIN_TRADING_UNIT = 0.01
+        self.COIN_TRADING_UNIT = 0.1
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
         self.MARGIN_KRW_THRESHOLD = 0
@@ -116,7 +116,7 @@ class RiskFreeArbBot(BaseArbBot):
                         mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
                         and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
                 ):
-                    logging.warning("[EXECUTE] New")
+                    logging.warning("[EXECUTE] New <---- Current Spread = %.2f", new_spread)
                     buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
                     sell_order = self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
                     self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta(None))
@@ -136,7 +136,7 @@ class RiskFreeArbBot(BaseArbBot):
                         mm2_buy_amount >= self.mm2_buy_coin_trading_unit * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                         and mm1_sell_amount >= self.COIN_TRADING_UNIT * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                 ):
-                    logging.warning("[EXECUTE] Reverse")
+                    logging.warning("[EXECUTE] Reverse <---- Current Spread = %.2f", rev_spread)
                     buy_order = self.mm2.order_buy(self.mm2_currency, mm2_buy_price,
                                                    self.mm2_buy_coin_trading_unit * self.REV_FACTOR)
                     sell_order = self.mm1.order_sell(self.mm1_currency, mm1_sell_price,

@@ -1,3 +1,4 @@
+import sys
 import time
 from config.global_conf import Global
 from collector.scheduler.api_scheduler import ApiScheduler
@@ -15,4 +16,4 @@ class TickerOrderbookScheduler(ApiScheduler):
 
 
 if __name__ == "__main__":
-    TickerOrderbookScheduler("eth").run()
+    TickerOrderbookScheduler(sys.argv[1]).run()
