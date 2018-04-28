@@ -8,7 +8,7 @@ from trader.market.order import Order, OrderType
 
 class VirtualMarketManager(MarketManager):
 
-    def __init__(self, market_tag: Market, market_fee: float, krw_balance=100000, eth_balance=0.1):
+    def __init__(self, market_tag: Market, market_fee: float, krw_balance=100000, coin_balance=0.1, coin_name="eth"):
         # create api instance according to given api_type
         if market_tag is Market.VIRTUAL_CO:
             target_api = CoinoneApi.instance(is_public_access_only=True)
@@ -21,7 +21,7 @@ class VirtualMarketManager(MarketManager):
 
         self.vt_balance = {
             "krw": krw_balance,
-            "eth": eth_balance
+            coin_name: coin_balance
         }
         self.order_id_count = 0
         super().__init__(market_tag, market_fee, target_api)

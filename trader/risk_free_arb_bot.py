@@ -23,18 +23,18 @@ class RiskFreeArbBot(BaseArbBot):
     TARGET_STRATEGY = Analyzer.buy_sell_strategy_1
 
     def __init__(self,
-                 target_currency: str = "eth", target_interval_in_sec: int = 5,
+                 target_currency: str, target_interval_in_sec: int = 5,
                  should_db_logging: bool = True,
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5) if is_backtesting else None
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 250000, 10) if is_backtesting else None
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 50000000, 0.5, target_currency) if is_backtesting else None
+        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 5000000, 5, target_currency) if is_backtesting else None
 
         super().__init__(target_currency, target_interval_in_sec,
                          should_db_logging, is_backtesting, start_time, end_time, v_mm1, v_mm2)
 
-        self.COIN_TRADING_UNIT = 0.1
+        self.COIN_TRADING_UNIT = 0.01
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
         self.MARGIN_KRW_THRESHOLD = 0
@@ -160,7 +160,8 @@ class RiskFreeArbBot(BaseArbBot):
             logging.info(self.mm2.get_balance())
 
             # log combined balance
-            combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance())
+            combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
+                                                (self.TARGET_CURRENCY, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

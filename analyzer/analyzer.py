@@ -127,7 +127,7 @@ class Analyzer:
         return mid_vwap, ask_vwap, bid_vwap
 
     @staticmethod
-    def combine_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):
+    def combine_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple):
         mm1_balance_dict = mm1_balance.to_dict()
         mm2_balance_dict = mm2_balance.to_dict()
 

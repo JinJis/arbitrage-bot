@@ -338,7 +338,8 @@ class RiskFreeArbBot(BaseArbBot):
             logging.info(self.mm2.get_balance())
 
             # log combined balance
-            combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance())
+            combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
+                                                (self.TARGET_CURRENCY, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

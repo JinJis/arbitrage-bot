@@ -16,7 +16,7 @@ class Global:
     USER_CONFIG_LOCATION = "config/conf_user.ini"
     LOCALHOST_DB_CONFIG_LOCATION = "config/conf_db_localhost.ini"
     REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
-    COIN_FILTER_FOR_BALANCE = ("eth", "krw")
+    COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "krw")
 
     @staticmethod
     def read_mongodb_uri(should_use_localhost_db: bool = True):

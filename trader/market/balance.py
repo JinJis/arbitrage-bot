@@ -29,7 +29,9 @@ class Balance:
     def filter_target_coins(balance_dict: dict):
         result = dict()
         for coin in Global.COIN_FILTER_FOR_BALANCE:
-            result[coin] = balance_dict[coin]
+            coin_balance = balance_dict.get(coin)
+            if coin_balance is not None:
+                result[coin] = coin_balance
         return result
 
     def get_available_coin(self, coin: str):

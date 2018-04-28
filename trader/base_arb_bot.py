@@ -115,7 +115,7 @@ class BaseArbBot(ABC):
         logging.log(log_level, mm2_balance)
 
         # log combined balance
-        combined = Analyzer.combine_balance(mm1_balance, mm2_balance)
+        combined = Analyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
         for coin_name in combined.keys():
             balance = combined[coin_name]
             logging.log(log_level, "[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
