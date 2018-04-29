@@ -31,7 +31,7 @@ class Collector:
             ticker = self.api.get_ticker(self.currency)
         except Exception:
             ticker = self.last_ticker
-            logging.exception("collect_co_ticker")
+            logging.exception("collect_ticker")
         finally:
             ticker["requestTime"] = request_time
             # need to copy the mutable dict because in `insert`,
@@ -46,7 +46,7 @@ class Collector:
             orderbook = self.api.get_orderbook(self.currency)
         except Exception:
             orderbook = self.last_orderbook
-            logging.exception("collect_co_orderbook")
+            logging.exception("collect_orderbook")
         finally:
             orderbook["requestTime"] = request_time
             self.last_orderbook = dict(orderbook)
