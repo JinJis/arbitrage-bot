@@ -44,7 +44,7 @@ class GopaxAPI(MarketApi):
         # normalize asks
         _asks = res_json["ask"]
         asks = list()
-        for _ask in _asks[:20]:
+        for _ask in _asks[:30]:
                 ask = {
                     "price": Decimal128(str(_ask[1])),
                     "amount": Decimal128(str(_ask[2]))
@@ -54,7 +54,7 @@ class GopaxAPI(MarketApi):
         # normalize bids
         _bids = res_json["bid"]
         bids = list()
-        for _bid in _bids[:20]:
+        for _bid in _bids[:30]:
                 bid = {
                     "price": Decimal128(str(_bid[1])),
                     "amount": Decimal128(str(_bid[2]))

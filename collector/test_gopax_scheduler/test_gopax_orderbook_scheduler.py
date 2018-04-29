@@ -16,4 +16,3 @@ class TickerOrderbookScheduler2(ApiScheduler2):
 
 if __name__ == "__main__":
     TickerOrderbookScheduler2(sys.argv[1]).run()
-t
