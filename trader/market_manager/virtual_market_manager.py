@@ -1,8 +1,9 @@
 from .market_manager import MarketManager
-from api.currency import Currency, CoinoneCurrency, KorbitCurrency
+from api.currency import Currency, CoinoneCurrency, KorbitCurrency, GopaxCurrency
 from trader.market.order import Market
 from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
+from api.gopax_api import GopaxAPI
 from trader.market.order import Order, OrderType
 
 
@@ -16,6 +17,9 @@ class VirtualMarketManager(MarketManager):
         elif market_tag is Market.VIRTUAL_KB:
             target_api = KorbitApi.instance(is_public_access_only=True)
             self.name = "kb"
+        elif market_tag is Market.VIRTUAL_GP:
+            target_api = GopaxAPI.instance(is_public_access_only=True)
+            self.name = "gp"
         else:
             raise Exception("Invalid market type has set for virtual market!")
 
@@ -59,6 +63,8 @@ class VirtualMarketManager(MarketManager):
             return CoinoneCurrency[target_currency.upper()]
         elif self.market_tag is Market.VIRTUAL_KB:
             return KorbitCurrency[target_currency.upper()]
+        elif self.market_tag is Market.VIRTUAL_GP:
+            return GopaxCurrency[target_currency.upper()]
         else:
             raise Exception("Invalid target API type has set!")
 

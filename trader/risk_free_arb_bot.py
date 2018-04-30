@@ -1,5 +1,4 @@
 import logging
-from trader.market.order import Order
 from config.global_conf import Global
 from analyzer.analyzer import Analyzer
 from trader.market.market import Market
@@ -28,12 +27,11 @@ class RiskFreeArbBot(BaseArbBot):
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 3000000, 1, target_currency) \
-            if is_backtesting else None
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 3000000, 1, target_currency) if is_backtesting else None
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 4000000, 0.04, target_currency)
+        v_mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 400000, 0.4, target_currency)
 
-        super().__init__(target_currency, target_interval_in_sec,
-                         should_db_logging, is_backtesting, start_time, end_time, v_mm1, v_mm2)
+        super().__init__(v_mm1, v_mm2, target_currency, target_interval_in_sec, should_db_logging,
+                         is_backtesting, start_time, end_time)
 
         self.COIN_TRADING_UNIT = 0.0005
         self.NEW_SPREAD_THRESHOLD = 0
@@ -44,7 +42,7 @@ class RiskFreeArbBot(BaseArbBot):
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
-        self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_orderbook"]
+        self.mm2_data_col = SharedMongoClient.get_gopax_db()[self.TARGET_CURRENCY + "_orderbook"]
 
         self.mm1_buy_coin_trading_unit = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
         self.mm2_buy_coin_trading_unit = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
@@ -81,19 +79,15 @@ class RiskFreeArbBot(BaseArbBot):
             self.log_common_stat(log_level=logging.CRITICAL)
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
-        # get current spread
         if not self.is_backtesting:
-            mm1_orderbook = self.mm1.get_orderbook(self.mm1_currency)
-            mm2_orderbook = self.mm2.get_orderbook(self.mm2_currency)
-            new_spread, rev_spread, \
-            mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price, \
-            mm1_buy_amount, mm1_sell_amount, mm2_buy_amount, mm2_sell_amount = \
-                RiskFreeArbBot.TARGET_STRATEGY(mm1_orderbook, mm2_orderbook, self.mm1.market_fee, self.mm2.market_fee)
-        else:
-            new_spread, rev_spread, \
-            mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price, \
-            mm1_buy_amount, mm1_sell_amount, mm2_buy_amount, mm2_sell_amount = \
-                RiskFreeArbBot.TARGET_STRATEGY(mm1_data, mm2_data, self.mm1.market_fee, self.mm2.market_fee)
+            mm1_data = self.mm1.get_orderbook(self.mm1_currency)
+            mm2_data = self.mm2.get_orderbook(self.mm2_currency)
+
+        # get current spread
+        new_spread, rev_spread, \
+        mm1_buy_price, mm1_sell_price, mm2_buy_price, mm2_sell_price, \
+        mm1_buy_amount, mm1_sell_amount, mm2_buy_amount, mm2_sell_amount = \
+            RiskFreeArbBot.TARGET_STRATEGY(mm1_data, mm2_data, self.mm1.market_fee, self.mm2.market_fee)
 
         # log stat
         logging.info("[STAT][%s] buy_price: %d, sell_price: %d" % (self.mm1.get_market_name(),
@@ -117,13 +111,17 @@ class RiskFreeArbBot(BaseArbBot):
                         mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
                         and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
                 ):
-                    logging.warning("[EXECUTE] New <---- Current Spread = %.2f", new_spread)
+                    logging.warning("[EXECUTE] New <---- Spread = %.2f / "
+                                    "Market amount [mm1 = %.4f, mm2= %.4f]"
+                                    % (new_spread, mm1_buy_amount, mm2_sell_amount))
                     buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
                     sell_order = self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
                     self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta(None))
                     self.trade_manager.add_trade(self.cur_trade)
                 else:
-                    logging.error("[EXECUTE] New -> failed (not enough available amount in market!)")
+                    logging.error("[EXECUTE] New -> failed "
+                                  "(not enough available amount in market!) "
+                                  "<-- Market amount [mm1 = %.4f, mm2= %.4f]" % (mm1_buy_amount, mm2_sell_amount))
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
@@ -137,7 +135,9 @@ class RiskFreeArbBot(BaseArbBot):
                         mm2_buy_amount >= self.mm2_buy_coin_trading_unit * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                         and mm1_sell_amount >= self.COIN_TRADING_UNIT * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                 ):
-                    logging.warning("[EXECUTE] Reverse <---- Current Spread = %.2f", rev_spread)
+                    logging.warning("[EXECUTE] Reverse <---- Spread = %.2f / "
+                                    "Market amount [mm1 = %.4f, mm2= %.4f]"
+                                    % (rev_spread, mm1_sell_amount, mm2_buy_amount))
                     buy_order = self.mm2.order_buy(self.mm2_currency, mm2_buy_price,
                                                    self.mm2_buy_coin_trading_unit * self.REV_FACTOR)
                     sell_order = self.mm1.order_sell(self.mm1_currency, mm1_sell_price,
@@ -145,7 +145,9 @@ class RiskFreeArbBot(BaseArbBot):
                     self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
                     self.trade_manager.add_trade(self.cur_trade)
                 else:
-                    logging.error("[EXECUTE] Reverse -> failed (not enough available amount in market!)")
+                    logging.error("[EXECUTE] Reverse -> failed "
+                                  "(not enough available amount in market!) "
+                                  "<-- Market amount [mm1 = %.4f, mm2= %.4f]" % (mm1_sell_amount, mm2_buy_amount))
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 
