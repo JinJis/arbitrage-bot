@@ -27,7 +27,7 @@ class RiskFreeArbBot1(BaseArbBot):
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 4000000, 0.04, target_currency)
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 4000000, 0.04, target_currency)
         v_mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 400000, 0.4, target_currency)
 
         super().__init__(v_mm1, v_mm2, target_currency, target_interval_in_sec, should_db_logging,
@@ -201,12 +201,12 @@ class RiskFreeArbBot2(BaseArbBot):
         super().__init__(v_mm1, v_mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, start_time, end_time)
 
-        self.MAX_COIN_TRADING_UNIT = 0.003
+        self.MAX_COIN_TRADING_UNIT = 0.06
         self.MIN_COIN_TRADING_UNIT = 0.0001
-        self.MAX_OB_INDEX_NUM = 5
-        self.NEW_SPREAD_THRESHOLD = 0
+        self.MAX_OB_INDEX_NUM = 2
+        self.NEW_SPREAD_THRESHOLD = 500
         self.REV_SPREAD_THRESHOLD = 0
-        self.REV_FACTOR = 10
+        self.REV_FACTOR = 5
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
@@ -267,7 +267,7 @@ class RiskFreeArbBot2(BaseArbBot):
         mm2_buy_krw = rev_trading_amount / (1 - self.mm2.market_fee) * rev_buy_price
 
         # make decision
-        if opt_new_spread > self.NEW_SPREAD_THRESHOLD and new_trading_amount >= self.MIN_COIN_TRADING_UNIT:
+        if new_spread_in_unit > self.NEW_SPREAD_THRESHOLD and new_trading_amount >= self.MIN_COIN_TRADING_UNIT:
             self.new_oppty_counter += 1
             if (
                     self.mm1.has_enough_coin("krw", mm1_buy_krw)
@@ -288,7 +288,7 @@ class RiskFreeArbBot2(BaseArbBot):
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
-        elif opt_rev_spread > self.REV_SPREAD_THRESHOLD and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
+        elif rev_spread_in_unit > self.REV_SPREAD_THRESHOLD and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
             self.rev_oppty_counter += 1
             if (
                     self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
