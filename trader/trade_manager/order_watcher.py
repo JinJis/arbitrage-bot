@@ -5,10 +5,13 @@ from trader.market.market import Market
 from threading import Thread
 from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
+from api.gopax_api import GopaxAPI
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from .order_watcher_stats import OrderWatcherStats
 from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
+from trader.market_manager.gopax_market_manager import GopaxMarketManager
+from api.coinone_error import CoinoneError
 
 
 class OrderWatcher(Thread):
@@ -17,7 +20,8 @@ class OrderWatcher(Thread):
 
     supported_markets = {
         Market.COINONE: CoinoneApi,
-        Market.KORBIT: KorbitApi
+        Market.KORBIT: KorbitApi,
+        Market.GOPAX: GopaxAPI
     }
 
     @staticmethod
@@ -40,7 +44,38 @@ class OrderWatcher(Thread):
         # noinspection PyBroadException
         try:
             res_json = self.api.get_order_info(self.order.currency, self.order.order_id)
-            self.order.update_from_api(res_json)
+            if res_json is None:
+                # it's impossible to know if a gopax order is cancelled or not
+                # this behavior may need to be changed in accordance with the api changes
+                if self.order.market is Market.GOPAX:
+                    # gopax api sucks, just consider it done (or cancelled)
+                    # see `get_order_info` method for detail
+                    self.order.updated_at = int(time.time())
+                    self.order.filled_amount = self.order.order_amount
+                    self.order.remain_amount = 0
+                    self.order.fee_rate = GopaxMarketManager.MARKET_FEE
+                    self.order.fee = self.order.fee_rate * self.order.filled_amount
+                    self.order.status = OrderStatus.FILLED
+                else:
+                    raise Exception("Unexpected response: `get_order_info` returned None")
+            else:
+                self.order.update_from_api(res_json)
+        except KorbitApi as e:
+            # consider it cancelled
+            if "Order id does not exist" in str(e):
+                logging.info("Order<%s> in %s is cancelled." % (self.order.order_id, self.order.market.value))
+                self.order.status = OrderStatus.CANCELLED
+            else:
+                logging.warning(e)
+                logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
+        except CoinoneError as e:
+            # consider it cancelled
+            if "Order id does not exist" in str(e):
+                logging.info("Order<%s> in %s is cancelled." % (self.order.order_id, self.order.market.value))
+                self.order.status = OrderStatus.CANCELLED
+            else:
+                logging.warning(e)
+                logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
         except Exception as e:
             logging.warning(e)
             logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
@@ -59,7 +94,7 @@ class OrderWatcher(Thread):
         initial_time = time.time()
 
         try:
-            while self.order.status is not OrderStatus.FILLED:
+            while (self.order.status is not OrderStatus.FILLED) and (self.order.status is not OrderStatus.CANCELLED):
                 start_time = time.time()
                 self.do_interval()
                 end_time = time.time()
@@ -90,8 +125,11 @@ class OrderWatcher(Thread):
                 else:
                     GlobalFeeAccumulator.add_fee_expenditure(self.order.market, self.order.currency.name.lower(),
                                                              self.order.fee)
+            elif self.order.status is OrderStatus.CANCELLED:
+                OrderWatcherStats.cancelled(self.order.order_id)
 
         except Exception as e:
             # if there was any error for some unexpected reasons
             OrderWatcherStats.error(self.order.order_id)
             logging.error(e)
+            # thread will be terminated after this

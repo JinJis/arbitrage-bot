@@ -10,6 +10,7 @@ class OperationType(Enum):
     DONE = "done"
     DELAYED = "delayed"
     ERROR = "error"
+    CANCELLED = "cancelled"
 
 
 class Operation:
@@ -54,6 +55,7 @@ class OrderWatcherStats(Thread):
         self._total_delayed_count = 0
         self._total_done_count = 0
         self._total_error_count = 0
+        self._total_cancelled_count = 0
         self._fill_spent_time_avg = 0
 
         self.operation_queue = Queue()
@@ -82,6 +84,12 @@ class OrderWatcherStats(Thread):
     def error(cls, order_id: str):
         cls.instance().operation_queue.put(
             Operation(OperationType.ERROR, order_id)
+        )
+
+    @classmethod
+    def cancelled(cls, order_id: str):
+        cls.instance().operation_queue.put(
+            Operation(OperationType.CANCELLED, order_id)
         )
 
     def _find_item(self, order_id: str):
@@ -115,6 +123,11 @@ class OrderWatcherStats(Thread):
             if item:
                 self._active.remove(item)
                 self._total_error_count += 1
+        elif operation.op_type is OperationType.CANCELLED:
+            item = self._find_item(operation.order_id)
+            if item:
+                self._active.remove(item)
+                self._total_cancelled_count += 1
         else:
             raise Exception("Invalid OperationType has set!")
 
@@ -136,7 +149,8 @@ class OrderWatcherStats(Thread):
             "total_order_count": self._total_order_count,
             "total_done_count": self._total_done_count,
             "total_error_count": self._total_error_count,
-            "total_delayed_count": self._total_delayed_count
+            "total_delayed_count": self._total_delayed_count,
+            "total_cancelled_count": self._total_cancelled_count
         }
 
     def get_current_delayed(self):

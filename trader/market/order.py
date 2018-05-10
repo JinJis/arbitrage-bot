@@ -25,11 +25,17 @@ class OrderType(Enum):
 class OrderStatus(Enum):
     FILLED = "filled"
     PARTIALLY_FILLED = "partially_filled"
-    UNFILLED = "unfilled"  # or "live" in coinone
+    UNFILLED = "unfilled"
+    CANCELLED = "cancelled"
 
     @classmethod
     def get(cls, order_status: str):
+        # for coinone
         _status = "unfilled" if order_status == "live" else order_status
+        # for gopax
+        _status = "unfilled" if _status == "placed" else _status
+        _status = "partially_filled" if _status == "updated" else _status
+        _status = "filled" if _status == "completed" else _status
         # noinspection PyTypeChecker
         return cls.__new__(cls, _status)
 
