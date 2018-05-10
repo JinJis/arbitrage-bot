@@ -204,7 +204,7 @@ class RiskFreeArbBot2(BaseArbBot):
         self.MAX_COIN_TRADING_UNIT = 0.02
         self.MIN_COIN_TRADING_UNIT = 0.0001
         self.MAX_OB_INDEX_NUM = 3
-        self.NEW_SPREAD_THRESHOLD = 100
+        self.NEW_SPREAD_THRESHOLD = 60
         self.REV_SPREAD_THRESHOLD = 0
         self.REV_FACTOR = 3
 
@@ -287,8 +287,8 @@ class RiskFreeArbBot2(BaseArbBot):
 
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!) ->"
-                              "Trading INFOS: Spread in unit = %.2f, MKT avail QTY = %.5f"
-                              % (new_spread_in_unit, new_trading_amount))
+                              "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
+                              % (new_spread_in_unit, opt_new_spread, new_trading_amount))
 
         elif opt_rev_spread >= self.REV_SPREAD_THRESHOLD and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
             self.rev_oppty_counter += 1
@@ -309,8 +309,8 @@ class RiskFreeArbBot2(BaseArbBot):
                     self.trade_manager.add_trade(self.cur_trade)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
-                              "Trading INFOS: Spread in unit = %.2f, MKT avail QTY = %.5f"
-                              % (rev_spread_in_unit, rev_trading_amount))
+                              "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
+                              % (rev_spread_in_unit, opt_rev_spread, rev_trading_amount))
 
         else:
             logging.info("[EXECUTE] No")
