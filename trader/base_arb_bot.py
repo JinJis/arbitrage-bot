@@ -7,19 +7,18 @@ from trader.market.trade import TradeTag
 from pymongo.collection import Collection
 from trader.trade_manager.trade_manager import TradeManager
 from trader.trade_manager.order_watcher_stats import OrderWatcherStats
-from trader.market_manager.korbit_market_manager import KorbitMarketManager
-from trader.market_manager.virtual_market_manager import VirtualMarketManager
-from trader.market_manager.coinone_market_manager import CoinoneMarketManager
+from trader.market_manager.market_manager import MarketManager
 
 
 class BaseArbBot(ABC):
     DELAYED_ORDER_COUNT_THRESHOLD = 10
 
     def __init__(self,
-                 target_currency: str = "eth", target_interval_in_sec: int = 5,
+                 mm1: MarketManager, mm2: MarketManager,
+                 target_currency: str, target_interval_in_sec: int = 5,
                  should_db_logging: bool = True,
-                 is_backtesting: bool = False, start_time: int = None, end_time: int = None,
-                 virtual_mm1: VirtualMarketManager = None, virtual_mm2: VirtualMarketManager = None):
+                 is_backtesting: bool = False,
+                 start_time: int = None, end_time: int = None):
 
         self.TARGET_CURRENCY = target_currency
         self.TRADE_INTERVAL_IN_SEC = target_interval_in_sec
@@ -30,15 +29,13 @@ class BaseArbBot(ABC):
         self.end_time = end_time
 
         # init market managers
+        self.mm1 = mm1
+        self.mm2 = mm2
+
         if not self.is_backtesting:
-            self.mm1 = CoinoneMarketManager()
-            self.mm2 = KorbitMarketManager()
             # initialize global OrderWatcherStats
             # will initiate a thread for OrderWatcherStats
             OrderWatcherStats.initialize()
-        else:
-            self.mm1 = virtual_mm1
-            self.mm2 = virtual_mm2
 
         # set market currency
         self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
@@ -115,7 +112,7 @@ class BaseArbBot(ABC):
         logging.log(log_level, mm2_balance)
 
         # log combined balance
-        combined = Analyzer.combine_balance(mm1_balance, mm2_balance)
+        combined = Analyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
         for coin_name in combined.keys():
             balance = combined[coin_name]
             logging.log(log_level, "[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

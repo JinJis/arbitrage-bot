@@ -13,6 +13,56 @@ class Analyzer:
         return (-1) * buy_price / (1 - buy_fee) + (+1) * sell_price * (1 - sell_fee)
 
     @staticmethod
+    def get_optimized_spread_infos(buy_dict: dict, buy_fee: float,
+                                   sell_dict: dict, sell_fee: float,
+                                   max_trading_unit: float, ob_index_num: int):
+
+        spread_set = list()
+        for i in range(0, ob_index_num):
+            buy_price = int(buy_dict["price"][i].to_decimal())
+            for k in range(0, ob_index_num):
+                sell_price = int(sell_dict["price"][k].to_decimal())
+
+                # since we have to trade the same amount at buy and sell side, as well as complying with each market
+                # amounts and max_trading_unit
+                buy_dict_amount = float(buy_dict["amount"][i].to_decimal())
+                sell_dict_amount = float(sell_dict["amount"][k].to_decimal())
+                possible_trading_qty = float(min(buy_dict_amount * (1 - buy_fee), sell_dict_amount, max_trading_unit))
+
+                # actual spread and append to spread list
+                spread_in_unit = (-1) * buy_price / (1 - buy_fee) + (+1) * sell_price * (1 - sell_fee)
+                spread_for_trade = spread_in_unit * possible_trading_qty
+                spread_set.append((spread_for_trade, i, k, possible_trading_qty, spread_in_unit))
+
+        # get the maximized pair for trading
+        (opt_spread, opt_buy_index,
+         opt_sell_index, opt_trading_qty, spread_in_unit) = Analyzer.get_max_pair_infos(spread_set)
+
+        opt_buy_price = int(buy_dict["price"][opt_buy_index].to_decimal())
+        opt_sell_price = int(sell_dict["price"][opt_sell_index].to_decimal())
+
+        return (opt_spread, opt_buy_price, opt_buy_index,
+                opt_sell_price, opt_sell_index, opt_trading_qty, spread_in_unit)
+
+    @staticmethod
+    def get_max_pair_infos(spread_set: list):
+        max_pair = None
+        for pair in spread_set:
+            # 초기값 설정
+            if max_pair is None:
+                max_pair = pair
+                continue
+            # 비교
+            elif pair[0] > max_pair[0]:
+                max_pair = pair
+            else:
+                continue
+
+        # return opt_spread for trade, opt_buy_index, opt_sell_index, opt_trading_qty, spread in one unit
+
+        return max_pair[0], max_pair[1], max_pair[2], max_pair[3], max_pair[4]
+
+    @staticmethod
     def get_price_of_minask_maxbid(orderbook: dict):
         return int(orderbook["asks"][0]["price"].to_decimal()), \
                int(orderbook["bids"][0]["price"].to_decimal())
@@ -21,6 +71,14 @@ class Analyzer:
     def get_amount_of_minask_maxbid(orderbook: dict):
         return float(orderbook["asks"][0]["amount"].to_decimal()), \
                float(orderbook["bids"][0]["amount"].to_decimal())
+
+    @staticmethod
+    def get_price_amount_dict_sorted(orderbook: dict, index: int):
+        return dict(price=list(orderbook["asks"][i]["price"] for i in range(0, index)),
+                    amount=list(orderbook["asks"][i]["amount"] for i in range(0, index))), \
+               dict(price=list(orderbook["bids"][i]["price"] for i in range(0, index)),
+                    amount=list(orderbook["bids"][i]["amount"] for i in range(0, index)))
+
 
     ######################################################################
     # buy at minask, sell at maxbid
@@ -52,6 +110,12 @@ class Analyzer:
     # kb:   buy at (minask-50)     sell at (maxbid+50)
     ######################################################################
 
+
+
+    ######################################################################
+    # get optimized spread
+    # by considering both "price[index]" and "qty_avail[index])"
+    ######################################################################
     @staticmethod
     def buy_sell_strategy_2(co_mm: MarketManager, co_currency: Currency, kb_mm: MarketManager, kb_currency: Currency):
         co_orderbook = co_mm.get_orderbook(co_currency)
@@ -81,6 +145,36 @@ class Analyzer:
                                           co_sell_price, co_mm.market_fee)
 
         return new_spread, rev_spread, co_buy_price, co_sell_price, kb_buy_price, kb_sell_price
+
+    @staticmethod
+    def opt_ask_bid_index_pair_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
+                                        mm1_market_fee: float, mm2_market_fee: float,
+                                        max_ob_index_num: int, max_coin_trading_unit: float):
+        mm1_asks_dict_sorted, mm1_bids_dict_sorted = \
+            Analyzer.get_price_amount_dict_sorted(mm1_orderbook, max_ob_index_num)
+
+        mm2_asks_dict_sorted, mm2_bids_dict_sorted = \
+            Analyzer.get_price_amount_dict_sorted(mm2_orderbook, max_ob_index_num)
+
+        # new => buy in mm1, sell in mm2
+        (opt_new_spread, opt_new_mm1_buy_price, opt_new_mm1_buy_index, opt_new_mm2_sell_price, opt_new_mm2_sell_index,
+         opt_new_trading_qty, new_spread_in_unit) = \
+            Analyzer.get_optimized_spread_infos(mm1_asks_dict_sorted, mm1_market_fee,
+                                                mm2_bids_dict_sorted, mm2_market_fee,
+                                                max_coin_trading_unit, max_ob_index_num)
+
+        # rev => buy in mm2, sell in mm1
+        (opt_rev_spread, opt_rev_mm2_buy_price, opt_rev_mm2_buy_index, opt_rev_mm1_sell_price, opt_rev_mm1_sell_index,
+         opt_rev_trading_qty, rev_spread_in_unit) = \
+            Analyzer.get_optimized_spread_infos(mm2_asks_dict_sorted, mm2_market_fee,
+                                                mm1_bids_dict_sorted, mm1_market_fee,
+                                                max_coin_trading_unit, max_ob_index_num)
+
+        return (new_spread_in_unit, rev_spread_in_unit, opt_new_spread, opt_rev_spread,
+                opt_new_mm1_buy_price, opt_new_mm1_buy_index,
+                opt_new_mm2_sell_price, opt_new_mm2_sell_index, opt_new_trading_qty,
+                opt_rev_mm2_buy_price, opt_rev_mm2_buy_index,
+                opt_rev_mm1_sell_price, opt_rev_mm1_sell_index, opt_rev_trading_qty)
 
     @staticmethod
     def get_ticker_log_spread(mm1_ticker: dict, mm2_ticker: dict):
@@ -127,7 +221,7 @@ class Analyzer:
         return mid_vwap, ask_vwap, bid_vwap
 
     @staticmethod
-    def combine_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple = ("eth", "krw")):
+    def combine_balance(mm1_balance: Balance, mm2_balance: Balance, target_coins: tuple):
         mm1_balance_dict = mm1_balance.to_dict()
         mm2_balance_dict = mm2_balance.to_dict()
 

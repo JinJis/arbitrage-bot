@@ -66,3 +66,29 @@ class DbFixer:
                 continue
             else:
                 break
+
+    @staticmethod
+    def fill_empty_orderbook_entry(a_db: str, a_col: str, start_time: int, end_time: int):
+        db_client = SharedMongoClient.instance()
+        a_target_col = db_client[a_db][a_col]
+
+        a_cursor = a_target_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        prev_item = None
+        for item in a_cursor:
+            if len(item["asks"]) == 0 or len(item["bids"]) == 0:
+                print(item["requestTime"])
+                if prev_item is None:
+                    raise Exception("At least first item should not be None")
+                else:
+                    item["asks"] = prev_item["asks"]
+                    item["bids"] = prev_item["bids"]
+                    SharedMongoClient._async_update(
+                        a_target_col,
+                        {"requestTime": item["requestTime"]},
+                        {"$set": item}
+                    )
+            prev_item = item

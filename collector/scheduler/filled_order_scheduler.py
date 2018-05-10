@@ -1,3 +1,4 @@
+import sys
 from collector.scheduler.api_scheduler import ApiScheduler
 from collector.scheduler.api_scheduler import BaseScheduler
 from config.global_conf import Global
@@ -11,4 +12,4 @@ class FilledOrderScheduler(ApiScheduler):
 
 
 if __name__ == "__main__":
-    FilledOrderScheduler("eth").run()
+    FilledOrderScheduler(sys.argv[1]).run()

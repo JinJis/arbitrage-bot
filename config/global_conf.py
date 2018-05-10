@@ -16,7 +16,7 @@ class Global:
     USER_CONFIG_LOCATION = "config/conf_user.ini"
     LOCALHOST_DB_CONFIG_LOCATION = "config/conf_db_localhost.ini"
     REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
-    COIN_FILTER_FOR_BALANCE = ("eth", "krw")
+    COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "krw")
 
     @staticmethod
     def read_mongodb_uri(should_use_localhost_db: bool = True):
@@ -93,3 +93,10 @@ class Global:
             if a_rt != b_rt:
                 raise Exception("Please manually check and fix the data on DB: "
                                 "a_cursor requestTime - %d, b_cursor requestTime - %d" % (a_rt, b_rt))
+
+    @staticmethod
+    def iso8601_to_unix(datestring):
+        utc_dt = datetime.strptime(datestring, '%Y-%m-%dT%H:%M:%S.%fZ')
+        converted_time = int((utc_dt - datetime(1970, 1, 1)).total_seconds())
+        return converted_time
+

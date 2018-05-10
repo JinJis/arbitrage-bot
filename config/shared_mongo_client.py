@@ -9,6 +9,7 @@ from pymongo.database import Database
 class SharedMongoClient:
     COINONE_DB_NAME = "coinone"
     KORBIT_DB_NAME = "korbit"
+    GOPAX_DB_NAME = "gopax"
 
     __singleton_instance = None
 
@@ -40,6 +41,10 @@ class SharedMongoClient:
     @classmethod
     def get_korbit_db(cls) -> "Database":
         return cls.instance()[cls.KORBIT_DB_NAME]
+
+    @classmethod
+    def get_gopax_db(cls) -> "Database":
+        return cls.instance()[cls.GOPAX_DB_NAME]
 
     @classmethod
     def get_process_db(cls) -> "Database":

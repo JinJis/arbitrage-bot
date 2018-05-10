@@ -23,3 +23,13 @@ class KorbitCurrency(Currency):
     ETH = "eth_krw"
     ETC = "etc_krw"
     XRP = "xrp_krw"
+
+
+class GopaxCurrency(Currency):
+    BTC = "BTC-KRW"
+    BCH = "BCH-KRW"
+    ETH = "ETH-KRW"
+    ETC = "ETC-KRW"
+    XRP = "XRP-KRW"
+    XLM = "XLM-KRW"
+    LTC = "LTC-KRW"
