@@ -6,10 +6,10 @@ import threading
 import configparser
 import urllib.parse
 import scipy.stats as st
-from datetime import datetime
-from time import gmtime, strftime
 from pymongo.cursor import Cursor
+from datetime import datetime
 from itertools import zip_longest
+from time import gmtime, strftime
 
 
 class Global:
@@ -95,8 +95,7 @@ class Global:
                                 "a_cursor requestTime - %d, b_cursor requestTime - %d" % (a_rt, b_rt))
 
     @staticmethod
-    def iso8601_to_unix(datestring):
-        utc_dt = datetime.strptime(datestring, '%Y-%m-%dT%H:%M:%S.%fZ')
+    def iso8601_to_unix(date_string):
+        utc_dt = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S.%fZ')
         converted_time = int((utc_dt - datetime(1970, 1, 1)).total_seconds())
         return converted_time
-

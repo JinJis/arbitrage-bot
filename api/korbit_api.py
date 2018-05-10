@@ -200,6 +200,7 @@ class KorbitApi(MarketApi):
             "nonce": self.get_nonce()
         })
         res_json = self.filter_successful_response_on_order(res)
+        # {"orderId":"58738","status":"success","currency_pair":"btc_krw"}
         return res_json
 
     def order_limit_sell(self, currency: KorbitCurrency, price: int, amount: float):
@@ -251,7 +252,8 @@ class KorbitApi(MarketApi):
         res_json = self.filter_successful_response(res)
 
         if not len(res_json) > 0:
-            raise KorbitError("No such order of requested id: %s" % order_id)
+            # note that the error will also be raised when the order has been cancelled
+            raise KorbitError("Order id does not exist: %s" % order_id)
 
         order_info = res_json[0]
         order_amount = float(order_info["order_amount"])
@@ -298,7 +300,11 @@ class KorbitApi(MarketApi):
     @staticmethod
     def filter_successful_response_on_order(res: Response):
         res_json = KorbitApi.filter_successful_response(res)
-        if res_json["status"] != "success":
-            raise KorbitError(res_json["status"])
-        else:
-            return res_json
+        if type(res_json) is dict:
+            if res_json["status"] != "success":
+                raise KorbitError(res_json["status"])
+        # cancel_order's response is in list(since the api is designed for batch request)
+        elif type(res_json) is list:
+            if res_json[0]["status"] != "success":
+                raise KorbitError(res_json[0]["status"])
+        return res_json

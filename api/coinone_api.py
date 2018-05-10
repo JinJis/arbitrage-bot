@@ -198,6 +198,7 @@ class CoinoneApi(MarketApi):
         return result
 
     def order_limit_buy(self, currency: CoinoneCurrency, price: int, amount: float):
+        # {"errorCode": "0","orderId": "8a82c561-40b4-4cb3-9bc0-9ac9ffc1d63b","result": "success"}
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_buy", payload={
             "price": price,
             "qty": amount,
