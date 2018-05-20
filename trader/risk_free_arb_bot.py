@@ -186,7 +186,7 @@ class RiskFreeArbBot1(BaseArbBot):
 
 
 class RiskFreeArbBot2(BaseArbBot):
-    TARGET_STRATEGY = Analyzer.opt_ask_bid_index_pair_strategy
+    TARGET_STRATEGY = Analyzer.optimized_tradable_spread_strategy
 
     def __init__(self,
                  target_currency: str, target_interval_in_sec: int = 5,
@@ -195,18 +195,18 @@ class RiskFreeArbBot2(BaseArbBot):
                  start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 3000000, 0.2, target_currency)
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 300000, 2, target_currency)
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
+        v_mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
 
         super().__init__(v_mm1, v_mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, start_time, end_time)
 
-        self.MAX_COIN_TRADING_UNIT = 0.02
-        self.MIN_COIN_TRADING_UNIT = 0.0001
+        self.MAX_COIN_TRADING_UNIT = 0.1
+        self.MIN_COIN_TRADING_UNIT = 0.01
         self.MAX_OB_INDEX_NUM = 3
-        self.NEW_SPREAD_THRESHOLD = 60
-        self.REV_SPREAD_THRESHOLD = 0
-        self.REV_FACTOR = 3
+        self.NEW_SPREAD_THRESHOLD = 400
+        self.REV_SPREAD_THRESHOLD = 180
+        self.REV_FACTOR = 1.5
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
@@ -248,7 +248,7 @@ class RiskFreeArbBot2(BaseArbBot):
             mm1_data = self.mm1.get_orderbook(self.mm1_currency)
             mm2_data = self.mm2.get_orderbook(self.mm2_currency)
 
-        # get optimized spread infos by using opt_ask_bid_index_pair_strategy
+        # get optimized spread infos by using OTS strategy
         (new_spread_in_unit, rev_spread_in_unit, opt_new_spread, opt_rev_spread,
          new_buy_price, new_buy_idx, new_sell_price, new_sell_idx, new_trading_amount,
          rev_buy_price, rev_buy_idx, rev_sell_price, rev_sell_idx, rev_trading_amount) = \
