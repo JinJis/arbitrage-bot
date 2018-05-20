@@ -153,7 +153,6 @@ class DbToCsv:
         mm1_count = mm1_orderbook_cursor.count()
         mm2_count = mm2_orderbook_cursor.count()
 
-
         if mm1_count != mm2_count:
             Global.request_time_validation_on_cursor_count_diff(mm1_orderbook_cursor, mm2_orderbook_cursor)
         else:
