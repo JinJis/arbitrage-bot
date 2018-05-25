@@ -130,3 +130,54 @@ class DbToCsv:
                             result.extend([price, amount, bid_total_amount_result])
                     csv_writer.write_joinable(result)
         csv_writer.close()
+
+    """RFAB2 - Optimized Traded Spread to CSV"""
+    def rfab2_ots_to_csv(self, mm1_db: str, mm2_db: str, mm1_fee: float, mm2_fee: float,
+                         target_currency: str, start_time: int, end_time: int, depth: int):
+        mm1_orderbook_col = self.mongo_client[mm1_db][target_currency + "_orderbook"]
+        mm2_orderbook_col = self.mongo_client[mm2_db][target_currency + "_orderbook"]
+        mm1_orderbook_cursor = mm1_orderbook_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+        mm2_orderbook_cursor = mm2_orderbook_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        csv_writer = CsvWriter("stat", "%s-%s_%s_OTS_in_CSV_%d_%d_%d_max-index" %
+                               (mm1_db, mm2_db, target_currency, start_time, end_time, depth),
+                               ("requestTime", "Trade type", "Spread in unit", "Buy Price", "Buy Index",
+                                "Sell Price", "Sell index", "Tradable Spread", "Tradable Qty"))
+
+        mm1_count = mm1_orderbook_cursor.count()
+        mm2_count = mm2_orderbook_cursor.count()
+
+        if mm1_count != mm2_count:
+            Global.request_time_validation_on_cursor_count_diff(mm1_orderbook_cursor, mm2_orderbook_cursor)
+        else:
+            print("# of 'mm1 and mm2 requestTime' matched perfectly!!")
+
+        for mm1_ob, mm2_ob in zip(mm1_orderbook_cursor, mm2_orderbook_cursor):
+
+            requesttime = mm1_ob["requestTime"]
+            (new_unit_spread, rev_unit_spread, opt_new_spread, opt_rev_spread,
+             opt_new_buy_price, opt_new_buy_index, opt_new_sell_price, opt_new_sell_index, new_traded_qty,
+             opt_rev_buy_price, opt_rev_buy_index, opt_rev_sell_price, opt_rev_sell_index, rev_traded_qty) = \
+                Analyzer.optimized_tradable_spread_strategy(mm1_ob, mm2_ob, mm1_fee, mm2_fee, depth)
+
+            result = [requesttime]
+            if opt_new_spread >= 0:
+                result.extend(["NEW", new_unit_spread, opt_new_buy_price, opt_new_buy_index,
+                               opt_new_sell_price, opt_new_sell_index, opt_new_spread, new_traded_qty])
+                csv_writer.write_joinable(result)
+            elif opt_rev_spread >= 0:
+                result.extend(["REV", rev_unit_spread, opt_rev_buy_price, opt_rev_buy_index,
+                               opt_rev_sell_price, opt_rev_sell_index, opt_rev_spread, rev_traded_qty])
+                csv_writer.write_joinable(result)
+        csv_writer.close()
+
+
+
+
+

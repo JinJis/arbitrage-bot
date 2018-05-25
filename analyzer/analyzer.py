@@ -15,7 +15,7 @@ class Analyzer:
     @staticmethod
     def get_optimized_spread_infos(buy_dict: dict, buy_fee: float,
                                    sell_dict: dict, sell_fee: float,
-                                   max_trading_unit: float, ob_index_num: int):
+                                   ob_index_num: int, max_trading_unit: float=None):
 
         spread_set = list()
         for i in range(0, ob_index_num):
@@ -27,7 +27,11 @@ class Analyzer:
                 # amounts and max_trading_unit
                 buy_dict_amount = float(buy_dict["amount"][i].to_decimal())
                 sell_dict_amount = float(sell_dict["amount"][k].to_decimal())
-                possible_trading_qty = float(min(buy_dict_amount * (1 - buy_fee), sell_dict_amount, max_trading_unit))
+                if max_trading_unit is None:
+                    possible_trading_qty = float(min(buy_dict_amount * (1 - buy_fee), sell_dict_amount))
+                elif max_trading_unit is not None:
+                    possible_trading_qty = \
+                        float(min(buy_dict_amount * (1 - buy_fee), sell_dict_amount, max_trading_unit))
 
                 # actual spread and append to spread list
                 spread_in_unit = (-1) * buy_price / (1 - buy_fee) + (+1) * sell_price * (1 - sell_fee)
@@ -146,10 +150,11 @@ class Analyzer:
 
         return new_spread, rev_spread, co_buy_price, co_sell_price, kb_buy_price, kb_sell_price
 
+    # Final ready-to-be-applied static function of "OTS strategy"
     @staticmethod
-    def opt_ask_bid_index_pair_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
-                                        mm1_market_fee: float, mm2_market_fee: float,
-                                        max_ob_index_num: int, max_coin_trading_unit: float):
+    def optimized_tradable_spread_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
+                                           mm1_market_fee: float, mm2_market_fee: float,
+                                           max_ob_index_num: int, max_coin_trading_unit: float=None):
         mm1_asks_dict_sorted, mm1_bids_dict_sorted = \
             Analyzer.get_price_amount_dict_sorted(mm1_orderbook, max_ob_index_num)
 
@@ -161,14 +166,14 @@ class Analyzer:
          opt_new_trading_qty, new_spread_in_unit) = \
             Analyzer.get_optimized_spread_infos(mm1_asks_dict_sorted, mm1_market_fee,
                                                 mm2_bids_dict_sorted, mm2_market_fee,
-                                                max_coin_trading_unit, max_ob_index_num)
+                                                max_ob_index_num, max_coin_trading_unit)
 
         # rev => buy in mm2, sell in mm1
         (opt_rev_spread, opt_rev_mm2_buy_price, opt_rev_mm2_buy_index, opt_rev_mm1_sell_price, opt_rev_mm1_sell_index,
          opt_rev_trading_qty, rev_spread_in_unit) = \
             Analyzer.get_optimized_spread_infos(mm2_asks_dict_sorted, mm2_market_fee,
                                                 mm1_bids_dict_sorted, mm1_market_fee,
-                                                max_coin_trading_unit, max_ob_index_num)
+                                                max_ob_index_num, max_coin_trading_unit)
 
         return (new_spread_in_unit, rev_spread_in_unit, opt_new_spread, opt_rev_spread,
                 opt_new_mm1_buy_price, opt_new_mm1_buy_index,
