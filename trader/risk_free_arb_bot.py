@@ -82,6 +82,9 @@ class RiskFreeArbBot1(BaseArbBot):
         if not self.is_backtesting:
             mm1_data = self.mm1.get_orderbook(self.mm1_currency)
             mm2_data = self.mm2.get_orderbook(self.mm2_currency)
+        else:
+            self.mm1.apply_history_to_orderbook(mm1_data)
+            self.mm2.apply_history_to_orderbook(mm2_data)
 
         # get current spread
         new_spread, rev_spread, \
@@ -296,17 +299,17 @@ class RiskFreeArbBot2(BaseArbBot):
                     self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, rev_trading_amount * self.REV_FACTOR)
             ):
-                    logging.warning("[EXECUTE] Reverse ->"
-                                    "Trading INFOS: Spread = %.2f, BUY_index = %d, "
-                                    "SELL_index = %d, Traded Spread = %.2f, Traded QTY = %.5f"
-                                    % (rev_spread_in_unit, rev_buy_idx, rev_sell_idx,
-                                       opt_rev_spread, rev_trading_amount))
-                    buy_order = self.mm2.order_buy(self.mm2_currency,
-                                                   rev_buy_price, rev_trading_amount / (1 - self.mm2.market_fee))
-                    sell_order = self.mm1.order_sell(self.mm1_currency,
-                                                     rev_sell_price, rev_trading_amount)
-                    self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
-                    self.trade_manager.add_trade(self.cur_trade)
+                logging.warning("[EXECUTE] Reverse ->"
+                                "Trading INFOS: Spread = %.2f, BUY_index = %d, "
+                                "SELL_index = %d, Traded Spread = %.2f, Traded QTY = %.5f"
+                                % (rev_spread_in_unit, rev_buy_idx, rev_sell_idx,
+                                   opt_rev_spread, rev_trading_amount))
+                buy_order = self.mm2.order_buy(self.mm2_currency,
+                                               rev_buy_price, rev_trading_amount / (1 - self.mm2.market_fee))
+                sell_order = self.mm1.order_sell(self.mm1_currency,
+                                                 rev_sell_price, rev_trading_amount)
+                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
+                self.trade_manager.add_trade(self.cur_trade)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
                               "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"

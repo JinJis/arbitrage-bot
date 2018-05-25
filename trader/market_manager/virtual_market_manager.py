@@ -30,12 +30,19 @@ class VirtualMarketManager(MarketManager):
         self.order_id_count = 0
         super().__init__(market_tag, market_fee, target_api)
 
+        self.history = dict()
+
     def order_buy(self, currency: Currency, price: int, amount: float):
         if not self.has_enough_coin("krw", amount * price):
             raise Exception("[%s] Could not order_buy" % self.market_tag)
 
         self.vt_balance[currency.name.lower()] += amount * (1 - self.market_fee)
         self.vt_balance["krw"] -= amount * price
+        try:
+            self.history[price] -= amount
+        except KeyError:
+            self.history[price] = 0
+            self.history[price] -= amount
         return Order(self.market_tag, currency, OrderType.LIMIT_BUY, self.generate_buy_order_id(), price, amount)
 
     def order_sell(self, currency: Currency, price: int, amount: float):
@@ -44,6 +51,11 @@ class VirtualMarketManager(MarketManager):
 
         self.vt_balance[currency.name.lower()] -= amount
         self.vt_balance["krw"] += price * amount * (1 - self.market_fee)
+        try:
+            self.history[price] += amount
+        except KeyError:
+            self.history[price] = 0
+            self.history[price] += amount
         return Order(self.market_tag, currency, OrderType.LIMIT_SELL, self.generate_sell_order_id(), price, amount)
 
     def update_balance(self):
@@ -77,3 +89,19 @@ class VirtualMarketManager(MarketManager):
 
     def generate_sell_order_id(self):
         return self._generate_order_id("sell")
+
+    def apply_history_to_orderbook(self, orderbook: dict):
+        history_keys = self.history.keys()
+        for order in orderbook["asks"]:
+            price = order["price"]
+            if price in history_keys:
+                order["amount"] += self.history[price]
+                if order["amount"] < 0:
+                    order["amount"] = 0
+        for order in orderbook["bids"]:
+            price = order["price"]
+            if price in history_keys:
+                order["amount"] -= self.history[price]
+                if order["amount"] < 0:
+                    order["amount"] = 0
+        return orderbook
