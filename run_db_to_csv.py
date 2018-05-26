@@ -2,8 +2,8 @@ from config.global_conf import Global
 from collector.db_to_csv import DbToCsv
 
 db_to_csv = DbToCsv(False)
-start_time = Global.convert_local_datetime_to_epoch("2018.05.18 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.05.19 09:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.05.21 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.05.22 09:00:00", timezone="kr")
 
 """Get Orderbook"""
 # db_to_csv.save_processed_info("coinone", "eth", start_time, end_time)
