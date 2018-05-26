@@ -44,9 +44,11 @@ class Analyzer:
 
         opt_buy_price = int(buy_dict["price"][opt_buy_index].to_decimal())
         opt_sell_price = int(sell_dict["price"][opt_sell_index].to_decimal())
+        avail_buy_amount = float(buy_dict["amount"][opt_buy_index].to_decimal())
+        avail_sell_amount = float((sell_dict["amount"][opt_sell_index].to_decimal()))
 
         return (opt_spread, opt_buy_price, opt_buy_index,
-                opt_sell_price, opt_sell_index, opt_trading_qty, spread_in_unit)
+                opt_sell_price, opt_sell_index, opt_trading_qty, spread_in_unit, avail_buy_amount, avail_sell_amount)
 
     @staticmethod
     def get_max_pair_infos(spread_set: list):
@@ -163,14 +165,14 @@ class Analyzer:
 
         # new => buy in mm1, sell in mm2
         (opt_new_spread, opt_new_mm1_buy_price, opt_new_mm1_buy_index, opt_new_mm2_sell_price, opt_new_mm2_sell_index,
-         opt_new_trading_qty, new_spread_in_unit) = \
+         opt_new_trading_qty, new_spread_in_unit, new_avail_mm1_qty, new_avail_mm2_qty) = \
             Analyzer.get_optimized_spread_infos(mm1_asks_dict_sorted, mm1_market_fee,
                                                 mm2_bids_dict_sorted, mm2_market_fee,
                                                 max_ob_index_num, max_coin_trading_unit)
 
         # rev => buy in mm2, sell in mm1
         (opt_rev_spread, opt_rev_mm2_buy_price, opt_rev_mm2_buy_index, opt_rev_mm1_sell_price, opt_rev_mm1_sell_index,
-         opt_rev_trading_qty, rev_spread_in_unit) = \
+         opt_rev_trading_qty, rev_spread_in_unit, rev_avail_mm1_qty, rev_avail_mm2_qty) = \
             Analyzer.get_optimized_spread_infos(mm2_asks_dict_sorted, mm2_market_fee,
                                                 mm1_bids_dict_sorted, mm1_market_fee,
                                                 max_ob_index_num, max_coin_trading_unit)
@@ -179,7 +181,8 @@ class Analyzer:
                 opt_new_mm1_buy_price, opt_new_mm1_buy_index,
                 opt_new_mm2_sell_price, opt_new_mm2_sell_index, opt_new_trading_qty,
                 opt_rev_mm2_buy_price, opt_rev_mm2_buy_index,
-                opt_rev_mm1_sell_price, opt_rev_mm1_sell_index, opt_rev_trading_qty)
+                opt_rev_mm1_sell_price, opt_rev_mm1_sell_index, opt_rev_trading_qty,
+                new_avail_mm1_qty, new_avail_mm2_qty, rev_avail_mm1_qty, rev_avail_mm2_qty)
 
     @staticmethod
     def get_ticker_log_spread(mm1_ticker: dict, mm2_ticker: dict):
