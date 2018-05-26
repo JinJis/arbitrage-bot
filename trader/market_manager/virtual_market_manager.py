@@ -5,6 +5,8 @@ from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
 from api.gopax_api import GopaxAPI
 from trader.market.order import Order, OrderType
+from decimal import Decimal
+from bson import Decimal128
 
 
 class VirtualMarketManager(MarketManager):
@@ -95,13 +97,13 @@ class VirtualMarketManager(MarketManager):
         for order in orderbook["asks"]:
             price = order["price"]
             if price in history_keys:
-                order["amount"] += self.history[price]
-                if order["amount"] < 0:
-                    order["amount"] = 0
+                order["amount"] = Decimal128(order["amount"].to_decimal() + Decimal(self.history[price]))
+                if order["amount"].to_decimal() < 0:
+                    order["amount"] = Decimal128("0")
         for order in orderbook["bids"]:
             price = order["price"]
             if price in history_keys:
-                order["amount"] -= self.history[price]
-                if order["amount"] < 0:
-                    order["amount"] = 0
+                order["amount"] = Decimal128(order["amount"].to_decimal() - Decimal(self.history[price]))
+                if order["amount"].to_decimal() < 0:
+                    order["amount"] = Decimal128("0")
         return orderbook
