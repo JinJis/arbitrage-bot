@@ -1,6 +1,6 @@
 from .market_manager import MarketManager
 from api.currency import GopaxCurrency
-from api.gopax_api import GopaxAPI
+from api.gopax_api import GopaxApi
 from trader.market.market import Market
 
 
@@ -9,7 +9,7 @@ class GopaxMarketManager(MarketManager):
     MARKET_FEE = 0.00075
 
     def __init__(self):
-        super().__init__(self.MARKET_TAG, self.MARKET_FEE, GopaxAPI.instance())
+        super().__init__(self.MARKET_TAG, self.MARKET_FEE, GopaxApi.instance())
 
     @staticmethod
     def get_market_currency(target_currency: str) -> "GopaxCurrency":

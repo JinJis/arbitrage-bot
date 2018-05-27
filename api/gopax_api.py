@@ -15,7 +15,7 @@ import time
 import hmac
 
 
-class GopaxAPI(MarketApi):
+class GopaxApi(MarketApi):
     BASE_URL = "https://api.gopax.co.kr"
 
     def __init__(self, is_public_access_only=False):
@@ -103,7 +103,7 @@ class GopaxAPI(MarketApi):
 
         result = dict()
         for asset_item in res_json:
-            coin_name = asset_item["asset"]
+            coin_name = str(asset_item["asset"]).lower()
             available = float(asset_item["avail"])
             trade_in_use = float(asset_item["hold"])
             result[coin_name] = {

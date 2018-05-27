@@ -7,6 +7,8 @@ from config.shared_mongo_client import SharedMongoClient
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 from trader.trade_manager.order_watcher_stats import OrderWatcherStats
+from trader.market_manager.coinone_market_manager import CoinoneMarketManager
+from trader.market_manager.gopax_market_manager import GopaxMarketManager
 
 """
 !!! IMPORTANT NOTE !!!
@@ -119,7 +121,7 @@ class RiskFreeArbBot1(BaseArbBot):
                                     % (new_spread, mm1_buy_amount, mm2_sell_amount))
                     buy_order = self.mm1.order_buy(self.mm1_currency, mm1_buy_price, self.mm1_buy_coin_trading_unit)
                     sell_order = self.mm2.order_sell(self.mm2_currency, mm2_sell_price, self.COIN_TRADING_UNIT)
-                    self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta(None))
+                    self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta({}))
                     self.trade_manager.add_trade(self.cur_trade)
                 else:
                     logging.error("[EXECUTE] New -> failed "
@@ -145,7 +147,7 @@ class RiskFreeArbBot1(BaseArbBot):
                                                    self.mm2_buy_coin_trading_unit * self.REV_FACTOR)
                     sell_order = self.mm1.order_sell(self.mm1_currency, mm1_sell_price,
                                                      self.COIN_TRADING_UNIT * self.REV_FACTOR)
-                    self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
+                    self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta({}))
                     self.trade_manager.add_trade(self.cur_trade)
                 else:
                     logging.error("[EXECUTE] Reverse -> failed "
@@ -197,19 +199,31 @@ class RiskFreeArbBot2(BaseArbBot):
                  is_backtesting: bool = False,
                  start_time: int = None, end_time: int = None):
 
-        # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
+        if not is_backtesting:
+            mm1 = CoinoneMarketManager()
+            mm2 = GopaxMarketManager()
+        else:
+            mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
+            mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
 
-        super().__init__(v_mm1, v_mm2, target_currency, target_interval_in_sec, should_db_logging,
+        super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, start_time, end_time)
 
+<<<<<<< HEAD
         self.MAX_COIN_TRADING_UNIT = 0.7
         self.MIN_COIN_TRADING_UNIT = 0.00001
         self.MAX_OB_INDEX_NUM = 3
         self.NEW_SPREAD_THRESHOLD = 800
         self.REV_SPREAD_THRESHOLD = 30
         self.REV_FACTOR = 1
+=======
+        self.MAX_COIN_TRADING_UNIT = 0.005
+        self.MIN_COIN_TRADING_UNIT = 0
+        self.MAX_OB_INDEX_NUM = 2
+        self.NEW_SPREAD_THRESHOLD = 0
+        self.REV_SPREAD_THRESHOLD = 0
+        self.REV_FACTOR = 1.5
+>>>>>>> master
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
@@ -286,10 +300,10 @@ class RiskFreeArbBot2(BaseArbBot):
                                 % (new_spread_in_unit, new_buy_idx, new_sell_idx,
                                    opt_new_spread, new_trading_amount, new_avail_mm1_qty, new_avail_mm2_qty))
                 buy_order = self.mm1.order_buy(self.mm1_currency,
-                                               new_buy_price, new_trading_amount / (1 - self.mm1.market_fee))
+                                               new_buy_price, round((new_trading_amount / (1 - self.mm1.market_fee)), 4))
                 sell_order = self.mm2.order_sell(self.mm2_currency,
-                                                 new_sell_price, new_trading_amount)
-                self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta(None))
+                                                 new_sell_price, round(new_trading_amount, 4))
+                self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta({}))
                 self.trade_manager.add_trade(self.cur_trade)
 
             else:
@@ -309,10 +323,10 @@ class RiskFreeArbBot2(BaseArbBot):
                                 % (rev_spread_in_unit, rev_buy_idx, rev_sell_idx,
                                    opt_rev_spread, rev_trading_amount, rev_avail_mm1_qty, rev_avail_mm2_qty))
                 buy_order = self.mm2.order_buy(self.mm2_currency,
-                                               rev_buy_price, rev_trading_amount / (1 - self.mm2.market_fee))
+                                               rev_buy_price, round((rev_trading_amount / (1 - self.mm2.market_fee)), 4))
                 sell_order = self.mm1.order_sell(self.mm1_currency,
-                                                 rev_sell_price, rev_trading_amount)
-                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta(None))
+                                                 rev_sell_price, round(rev_trading_amount, 4))
+                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta({}))
                 self.trade_manager.add_trade(self.cur_trade)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
@@ -323,6 +337,7 @@ class RiskFreeArbBot2(BaseArbBot):
             logging.info("[EXECUTE] No")
 
         # if there was any trade
+
         if self.cur_trade is not None:
             # update & log individual balance
             self.mm1.update_balance()
@@ -337,3 +352,5 @@ class RiskFreeArbBot2(BaseArbBot):
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
                              (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
+
+        self.log_order_watcher_stats()
