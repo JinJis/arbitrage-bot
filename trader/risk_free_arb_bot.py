@@ -209,21 +209,12 @@ class RiskFreeArbBot2(BaseArbBot):
         super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, start_time, end_time)
 
-<<<<<<< HEAD
-        self.MAX_COIN_TRADING_UNIT = 0.7
-        self.MIN_COIN_TRADING_UNIT = 0.00001
-        self.MAX_OB_INDEX_NUM = 3
-        self.NEW_SPREAD_THRESHOLD = 800
-        self.REV_SPREAD_THRESHOLD = 30
-        self.REV_FACTOR = 1
-=======
         self.MAX_COIN_TRADING_UNIT = 0.005
         self.MIN_COIN_TRADING_UNIT = 0
         self.MAX_OB_INDEX_NUM = 2
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
         self.REV_FACTOR = 1.5
->>>>>>> master
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
