@@ -5,7 +5,7 @@ from trader.market.market import Market
 from threading import Thread
 from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
-from api.gopax_api import GopaxAPI
+from api.gopax_api import GopaxApi
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from .order_watcher_stats import OrderWatcherStats
@@ -21,7 +21,7 @@ class OrderWatcher(Thread):
     supported_markets = {
         Market.COINONE: CoinoneApi,
         Market.KORBIT: KorbitApi,
-        Market.GOPAX: GopaxAPI
+        Market.GOPAX: GopaxApi
     }
 
     @staticmethod

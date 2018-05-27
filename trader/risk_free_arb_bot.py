@@ -7,6 +7,8 @@ from config.shared_mongo_client import SharedMongoClient
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 from trader.trade_manager.order_watcher_stats import OrderWatcherStats
+from trader.market_manager.coinone_market_manager import CoinoneMarketManager
+from trader.market_manager.gopax_market_manager import GopaxMarketManager
 
 """
 !!! IMPORTANT NOTE !!!
@@ -197,18 +199,21 @@ class RiskFreeArbBot2(BaseArbBot):
                  is_backtesting: bool = False,
                  start_time: int = None, end_time: int = None):
 
-        # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
-        v_mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
+        if not is_backtesting:
+            mm1 = CoinoneMarketManager()
+            mm2 = GopaxMarketManager()
+        else:
+            mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
+            mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
 
-        super().__init__(v_mm1, v_mm2, target_currency, target_interval_in_sec, should_db_logging,
+        super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, start_time, end_time)
 
-        self.MAX_COIN_TRADING_UNIT = 0.1
-        self.MIN_COIN_TRADING_UNIT = 0.01
-        self.MAX_OB_INDEX_NUM = 3
-        self.NEW_SPREAD_THRESHOLD = 400
-        self.REV_SPREAD_THRESHOLD = 180
+        self.MAX_COIN_TRADING_UNIT = 0.001
+        self.MIN_COIN_TRADING_UNIT = 0
+        self.MAX_OB_INDEX_NUM = 2
+        self.NEW_SPREAD_THRESHOLD = 0
+        self.REV_SPREAD_THRESHOLD = 0
         self.REV_FACTOR = 1.5
 
         # init mongo related

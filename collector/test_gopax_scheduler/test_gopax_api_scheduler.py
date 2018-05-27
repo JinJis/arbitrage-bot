@@ -2,7 +2,7 @@ from abc import abstractmethod
 from pymongo import MongoClient
 from config.global_conf import Global
 from collector.collector import Collector
-from api.gopax_api import GopaxAPI, GopaxCurrency
+from api.gopax_api import GopaxApi, GopaxCurrency
 from collector.scheduler.base_scheduler import BaseScheduler
 
 
@@ -19,7 +19,7 @@ class ApiScheduler2(BaseScheduler):
         gopax_db = db_client["gopax"]
 
         # init api
-        gopax_api = GopaxAPI.instance(True)
+        gopax_api = GopaxApi.instance(True)
 
         # init currency
         gopax_currency = GopaxCurrency[currency.upper()]

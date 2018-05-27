@@ -1,11 +1,11 @@
-from api.gopax_api import GopaxAPI
+from api.gopax_api import GopaxApi
 from api.currency import GopaxCurrency
 from trader.market.order import Order, Market, OrderType
 from config.global_conf import Global
 import logging
 
 # Global.configure_default_root_logging(logging.DEBUG)
-gopax_api = GopaxAPI.instance()
+gopax_api = GopaxApi.instance()
 # print(gopax_api.get_balance())
 # print(gopax_api.get_past_trades(GopaxCurrency.BCH))
 # print(gopax_api.get_open_orders(GopaxCurrency.BCH))
