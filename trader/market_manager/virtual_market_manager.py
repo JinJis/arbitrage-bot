@@ -95,13 +95,13 @@ class VirtualMarketManager(MarketManager):
     def apply_history_to_orderbook(self, orderbook: dict):
         history_keys = self.history.keys()
         for order in orderbook["asks"]:
-            price = order["price"]
+            price = int(order["price"].to_decimal())
             if price in history_keys:
                 order["amount"] = Decimal128(order["amount"].to_decimal() + Decimal(self.history[price]))
                 if order["amount"].to_decimal() < 0:
                     order["amount"] = Decimal128("0")
         for order in orderbook["bids"]:
-            price = order["price"]
+            price = int(order["price"].to_decimal())
             if price in history_keys:
                 order["amount"] = Decimal128(order["amount"].to_decimal() - Decimal(self.history[price]))
                 if order["amount"].to_decimal() < 0:

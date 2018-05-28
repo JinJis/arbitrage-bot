@@ -86,6 +86,7 @@ class BaseArbBot(ABC):
         trade_total = self.trade_manager.get_trade_count()
         trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
         trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
+
         try:
             logging.log(log_level, "[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
                         (trade_total, trade_new, trade_new / trade_total * 100,
@@ -100,7 +101,7 @@ class BaseArbBot(ABC):
 
         # log switch over stat
         last_switch_over = self.trade_manager.get_last_switch_over()
-        logging.log(log_level, "[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec" %
+        logging.log(log_level, "[STAT] switch over - count: %d, average: %.2f sec, last: %.2f sec \n" %
                     (self.trade_manager.get_switch_over_count(),
                      self.trade_manager.get_average_switch_over_spent_time(),
                      last_switch_over.get("spent_time") if last_switch_over is not None else 0))
@@ -115,7 +116,7 @@ class BaseArbBot(ABC):
         combined = Analyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
         for coin_name in combined.keys():
             balance = combined[coin_name]
-            logging.log(log_level, "[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
+            logging.log(log_level, "\n[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
                         (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
 
     def log_order_watcher_stats(self):

@@ -156,7 +156,7 @@ class DbToCsv:
         if mm1_count != mm2_count:
             Global.request_time_validation_on_cursor_count_diff(mm1_orderbook_cursor, mm2_orderbook_cursor)
         else:
-            print("# of 'mm1 and mm2 requestTime' matched perfectly!!")
+            print("number of 'mm1 and mm2 requestTime' matched perfectly!!")
 
         for mm1_ob, mm2_ob in zip(mm1_orderbook_cursor, mm2_orderbook_cursor):
 

@@ -255,11 +255,15 @@ class RiskFreeArbBot2(BaseArbBot):
         if not self.is_backtesting:
             mm1_data = self.mm1.get_orderbook(self.mm1_currency)
             mm2_data = self.mm2.get_orderbook(self.mm2_currency)
+        else:
+            self.mm1.apply_history_to_orderbook(mm1_data)
+            self.mm2.apply_history_to_orderbook(mm2_data)
 
         # get optimized spread infos by using OTS strategy
         (new_spread_in_unit, rev_spread_in_unit, opt_new_spread, opt_rev_spread,
          new_buy_price, new_buy_idx, new_sell_price, new_sell_idx, new_trading_amount,
-         rev_buy_price, rev_buy_idx, rev_sell_price, rev_sell_idx, rev_trading_amount) = \
+         rev_buy_price, rev_buy_idx, rev_sell_price, rev_sell_idx, rev_trading_amount,
+         new_avail_mm1_qty, new_avail_mm2_qty, rev_avail_mm1_qty, rev_avail_mm2_qty) = \
             RiskFreeArbBot2.TARGET_STRATEGY(mm1_data, mm2_data, self.mm1.market_fee, self.mm2.market_fee,
                                             self.MAX_OB_INDEX_NUM, self.MAX_COIN_TRADING_UNIT)
 
@@ -283,9 +287,9 @@ class RiskFreeArbBot2(BaseArbBot):
             ):
                 logging.warning("[EXECUTE] New ->"
                                 "Trading INFOS: Spread in unit = %.2f, BUY_index = %d, "
-                                "SELL_index = %d, Traded Spread = %.2f, Traded QTY = %.5f"
+                                "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f] "
                                 % (new_spread_in_unit, new_buy_idx, new_sell_idx,
-                                   opt_new_spread, new_trading_amount))
+                                   opt_new_spread, new_trading_amount, new_avail_mm1_qty, new_avail_mm2_qty))
                 buy_order = self.mm1.order_buy(self.mm1_currency,
                                                new_buy_price, round((new_trading_amount / (1 - self.mm1.market_fee)), 4))
                 sell_order = self.mm2.order_sell(self.mm2_currency,
@@ -306,9 +310,9 @@ class RiskFreeArbBot2(BaseArbBot):
             ):
                 logging.warning("[EXECUTE] Reverse ->"
                                 "Trading INFOS: Spread = %.2f, BUY_index = %d, "
-                                "SELL_index = %d, Traded Spread = %.2f, Traded QTY = %.5f"
+                                "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f]"
                                 % (rev_spread_in_unit, rev_buy_idx, rev_sell_idx,
-                                   opt_rev_spread, rev_trading_amount))
+                                   opt_rev_spread, rev_trading_amount, rev_avail_mm1_qty, rev_avail_mm2_qty))
                 buy_order = self.mm2.order_buy(self.mm2_currency,
                                                rev_buy_price, round((rev_trading_amount / (1 - self.mm2.market_fee)), 4))
                 sell_order = self.mm1.order_sell(self.mm1_currency,
