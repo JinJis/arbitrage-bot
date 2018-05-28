@@ -9,6 +9,7 @@ from trader.market_manager.virtual_market_manager import VirtualMarketManager
 from trader.trade_manager.order_watcher_stats import OrderWatcherStats
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
 from trader.market_manager.gopax_market_manager import GopaxMarketManager
+from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 """
 !!! IMPORTANT NOTE !!!
@@ -281,6 +282,8 @@ class RiskFreeArbBot2(BaseArbBot):
         # make decision
         if opt_new_spread >= self.NEW_SPREAD_THRESHOLD and new_trading_amount >= self.MIN_COIN_TRADING_UNIT:
             self.new_oppty_counter += 1
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
+            new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
             if (
                     self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount)
@@ -290,12 +293,14 @@ class RiskFreeArbBot2(BaseArbBot):
                                 "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f] "
                                 % (new_spread_in_unit, new_buy_idx, new_sell_idx,
                                    opt_new_spread, new_trading_amount, new_avail_mm1_qty, new_avail_mm2_qty))
-                buy_order = self.mm1.order_buy(self.mm1_currency,
-                                               new_buy_price, round((new_trading_amount / (1 - self.mm1.market_fee)), 4))
-                sell_order = self.mm2.order_sell(self.mm2_currency,
-                                                 new_sell_price, round(new_trading_amount, 4))
+                buy_order = self.mm1.order_buy(self.mm1_currency, new_buy_price, new_trading_amount)
+                sell_order = self.mm2.order_sell(self.mm2_currency, new_sell_price, new_trading_amount)
                 self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta({}))
                 self.trade_manager.add_trade(self.cur_trade)
+
+                # subtract considered fee if there was one
+                if should_fee:
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY, fee)
 
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!) ->"
@@ -304,6 +309,8 @@ class RiskFreeArbBot2(BaseArbBot):
 
         elif opt_rev_spread >= self.REV_SPREAD_THRESHOLD and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
             self.rev_oppty_counter += 1
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
+            rev_trading_amount = rev_trading_amount + fee if should_fee else rev_trading_amount
             if (
                     self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, rev_trading_amount * self.REV_FACTOR)
@@ -313,12 +320,14 @@ class RiskFreeArbBot2(BaseArbBot):
                                 "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f]"
                                 % (rev_spread_in_unit, rev_buy_idx, rev_sell_idx,
                                    opt_rev_spread, rev_trading_amount, rev_avail_mm1_qty, rev_avail_mm2_qty))
-                buy_order = self.mm2.order_buy(self.mm2_currency,
-                                               rev_buy_price, round((rev_trading_amount / (1 - self.mm2.market_fee)), 4))
-                sell_order = self.mm1.order_sell(self.mm1_currency,
-                                                 rev_sell_price, round(rev_trading_amount, 4))
+                buy_order = self.mm2.order_buy(self.mm2_currency, rev_buy_price, rev_trading_amount)
+                sell_order = self.mm1.order_sell(self.mm1_currency, rev_sell_price, rev_trading_amount)
                 self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta({}))
                 self.trade_manager.add_trade(self.cur_trade)
+
+                # subtract considered fee if there was one
+                if should_fee:
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY, fee)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
                               "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"

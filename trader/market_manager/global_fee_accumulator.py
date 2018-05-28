@@ -1,5 +1,6 @@
 import threading
 from trader.market.market import Market
+from config.global_conf import Global
 
 
 class GlobalFeeAccumulator:
@@ -8,10 +9,10 @@ class GlobalFeeAccumulator:
 
     @classmethod
     def initialize_market(cls, market: Market):
-        cls.markets[market.value] = {
-            "krw": 0,
-            "eth": 0
-        }
+        fee_tracker = dict()
+        for coin in Global.COIN_FILTER_FOR_BALANCE:
+            fee_tracker[coin] = 0
+        cls.markets[market.value] = fee_tracker
 
     @classmethod
     def add_fee_expenditure(cls, market: Market, currency: str, fee: float):
