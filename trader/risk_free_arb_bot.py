@@ -110,11 +110,11 @@ class RiskFreeArbBot1(BaseArbBot):
         if new_spread > self.NEW_SPREAD_THRESHOLD:
             self.new_oppty_counter += 1
             if (
-                        self.mm1.has_enough_coin("krw", mm1_buy_krw)
+                    self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
             ):
                 if (
-                                mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
+                        mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
                         and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
                 ):
                     logging.warning("[EXECUTE] New <---- Spread = %.2f / "
@@ -134,11 +134,11 @@ class RiskFreeArbBot1(BaseArbBot):
         elif rev_spread > self.REV_SPREAD_THRESHOLD:
             self.rev_oppty_counter += 1
             if (
-                        self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
+                    self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT * self.REV_FACTOR)
             ):
                 if (
-                                mm2_buy_amount >= self.mm2_buy_coin_trading_unit * self.REV_FACTOR + self.SLIPPAGE_HEDGE
+                        mm2_buy_amount >= self.mm2_buy_coin_trading_unit * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                         and mm1_sell_amount >= self.COIN_TRADING_UNIT * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                 ):
                     logging.warning("[EXECUTE] Reverse <---- Spread = %.2f / "
@@ -220,6 +220,8 @@ class RiskFreeArbBot2(BaseArbBot):
 
         self.mm1_data_cur = None
         self.mm2_data_cur = None
+        self.trade_new = 0
+        self.trade_rev = 0
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
@@ -262,6 +264,8 @@ class RiskFreeArbBot2(BaseArbBot):
                 self.log_common_stat(log_level=logging.CRITICAL)
             else:
                 self.get_krw_total_balance()
+                self.trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
+                self.trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         if not self.is_backtesting:
@@ -296,7 +300,7 @@ class RiskFreeArbBot2(BaseArbBot):
             fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
             new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
             if (
-                        self.mm1.has_enough_coin("krw", mm1_buy_krw)
+                    self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount)
             ):
                 logging.warning("[EXECUTE] New ->"
@@ -323,7 +327,7 @@ class RiskFreeArbBot2(BaseArbBot):
             fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
             rev_trading_amount = rev_trading_amount + fee if should_fee else rev_trading_amount
             if (
-                        self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
+                    self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, rev_trading_amount * self.REV_FACTOR)
             ):
                 logging.warning("[EXECUTE] Reverse ->"
