@@ -7,7 +7,6 @@ from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class Analyzer:
-
     @staticmethod
     def calc_spread(buy_price: int, buy_fee: float, sell_price: int, sell_fee: float):
         return (-1) * buy_price / (1 - buy_fee) + (+1) * sell_price * (1 - sell_fee)
@@ -15,7 +14,7 @@ class Analyzer:
     @staticmethod
     def get_optimized_spread_infos(buy_dict: dict, buy_fee: float,
                                    sell_dict: dict, sell_fee: float,
-                                   ob_index_num: int, max_trading_unit: float=None):
+                                   ob_index_num: int, max_trading_unit: float = None):
 
         spread_set = list()
         for i in range(0, ob_index_num):
@@ -65,8 +64,27 @@ class Analyzer:
                 continue
 
         # return opt_spread for trade, opt_buy_index, opt_sell_index, opt_trading_qty, spread in one unit
-
         return max_pair[0], max_pair[1], max_pair[2], max_pair[3], max_pair[4]
+
+    @staticmethod
+    def get_opt_initial_setting_list(result: list):
+        max_pair = None
+        same_result_list = []
+        for pair in result:
+            # 초기값 설정
+            if max_pair is None:
+                max_pair = pair
+                same_result_list.append(max_pair)
+                continue
+            # 비교
+            if pair[0] > max_pair[0]:
+                max_pair = pair
+                same_result_list.clear()
+                same_result_list.append(max_pair)
+            elif pair[0] == max_pair[0]:
+                same_result_list.append(pair)
+
+        return same_result_list
 
     @staticmethod
     def get_price_of_minask_maxbid(orderbook: dict):
@@ -84,7 +102,6 @@ class Analyzer:
                     amount=list(orderbook["asks"][i]["amount"] for i in range(0, index))), \
                dict(price=list(orderbook["bids"][i]["price"] for i in range(0, index)),
                     amount=list(orderbook["bids"][i]["amount"] for i in range(0, index)))
-
 
     ######################################################################
     # buy at minask, sell at maxbid
@@ -156,7 +173,7 @@ class Analyzer:
     @staticmethod
     def optimized_tradable_spread_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
                                            mm1_market_fee: float, mm2_market_fee: float,
-                                           max_ob_index_num: int, max_coin_trading_unit: float=None):
+                                           max_ob_index_num: int, max_coin_trading_unit: float = None):
         mm1_asks_dict_sorted, mm1_bids_dict_sorted = \
             Analyzer.get_price_amount_dict_sorted(mm1_orderbook, max_ob_index_num)
 

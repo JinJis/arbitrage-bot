@@ -17,7 +17,7 @@ class BaseArbBot(ABC):
                  mm1: MarketManager, mm2: MarketManager,
                  target_currency: str, target_interval_in_sec: int = 5,
                  should_db_logging: bool = True,
-                 is_backtesting: bool = False,
+                 is_backtesting: bool = False, is_init_setting_opt: bool = False,
                  start_time: int = None, end_time: int = None):
 
         self.TARGET_CURRENCY = target_currency
@@ -25,6 +25,7 @@ class BaseArbBot(ABC):
 
         self.should_db_logging = should_db_logging
         self.is_backtesting = is_backtesting
+        self.is_init_setting_opt = is_init_setting_opt
         self.start_time = start_time
         self.end_time = end_time
 
@@ -48,6 +49,7 @@ class BaseArbBot(ABC):
         self.new_oppty_counter = 0
         self.rev_oppty_counter = 0
         self.cur_trade = None
+        self.total_krw_bal = 0
 
     def trade_loop_start(self):
         # print trade loop seq
@@ -83,6 +85,7 @@ class BaseArbBot(ABC):
 
     def log_common_stat(self, log_level: int = logging.INFO):
         # log trade stat
+
         trade_total = self.trade_manager.get_trade_count()
         trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
         trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
@@ -118,6 +121,15 @@ class BaseArbBot(ABC):
             balance = combined[coin_name]
             logging.log(log_level, "\n[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
                         (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
+
+    def get_krw_total_balance(self):
+        # log balance
+        mm1_balance = self.mm1.get_balance()
+        mm2_balance = self.mm2.get_balance()
+
+        # log combined balance
+        combined = Analyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
+        self.total_krw_bal = combined["KRW"]["balance"]
 
     def log_order_watcher_stats(self):
         ows_stats = OrderWatcherStats.instance().get_stats()

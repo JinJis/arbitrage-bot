@@ -110,11 +110,11 @@ class RiskFreeArbBot1(BaseArbBot):
         if new_spread > self.NEW_SPREAD_THRESHOLD:
             self.new_oppty_counter += 1
             if (
-                    self.mm1.has_enough_coin("krw", mm1_buy_krw)
+                        self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
             ):
                 if (
-                        mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
+                                mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
                         and mm2_sell_amount >= self.COIN_TRADING_UNIT + self.SLIPPAGE_HEDGE
                 ):
                     logging.warning("[EXECUTE] New <---- Spread = %.2f / "
@@ -134,11 +134,11 @@ class RiskFreeArbBot1(BaseArbBot):
         elif rev_spread > self.REV_SPREAD_THRESHOLD:
             self.rev_oppty_counter += 1
             if (
-                    self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
+                        self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT * self.REV_FACTOR)
             ):
                 if (
-                        mm2_buy_amount >= self.mm2_buy_coin_trading_unit * self.REV_FACTOR + self.SLIPPAGE_HEDGE
+                                mm2_buy_amount >= self.mm2_buy_coin_trading_unit * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                         and mm1_sell_amount >= self.COIN_TRADING_UNIT * self.REV_FACTOR + self.SLIPPAGE_HEDGE
                 ):
                     logging.warning("[EXECUTE] Reverse <---- Spread = %.2f / "
@@ -193,11 +193,12 @@ class RiskFreeArbBot1(BaseArbBot):
 
 class RiskFreeArbBot2(BaseArbBot):
     TARGET_STRATEGY = Analyzer.optimized_tradable_spread_strategy
+    IS_DATA_EXIST = False
 
     def __init__(self,
                  target_currency: str, target_interval_in_sec: int = 5,
                  should_db_logging: bool = True,
-                 is_backtesting: bool = False,
+                 is_backtesting: bool = False, is_init_setting_opt: bool = False,
                  start_time: int = None, end_time: int = None):
 
         if not is_backtesting:
@@ -208,7 +209,7 @@ class RiskFreeArbBot2(BaseArbBot):
             mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
 
         super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
-                         is_backtesting, start_time, end_time)
+                         is_backtesting, is_init_setting_opt, start_time, end_time)
 
         self.MAX_COIN_TRADING_UNIT = 0.005
         self.MIN_COIN_TRADING_UNIT = 0
@@ -216,6 +217,9 @@ class RiskFreeArbBot2(BaseArbBot):
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
         self.REV_FACTOR = 1.5
+
+        self.mm1_data_cur = None
+        self.mm2_data_cur = None
 
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
@@ -240,17 +244,24 @@ class RiskFreeArbBot2(BaseArbBot):
         # if backtesting
         else:
             # collect historical data from db
-            logging.info("Collecting historical data, please wait...")
-            mm1_data_cursor, mm2_data_cursor = \
-                self.get_data_from_db(self.mm1_data_col, self.mm2_data_col,
-                                      self.start_time, self.end_time)
+            # If there is no data
+            if not RiskFreeArbBot2.IS_DATA_EXIST:
+                RiskFreeArbBot2.mm1_data_cur, RiskFreeArbBot2.mm2_data_cur = self.get_data_from_db(
+                    self.mm1_data_col, self.mm2_data_col, self.start_time, self.end_time)
+                RiskFreeArbBot2.IS_DATA_EXIST = True
+
+            self.mm1_data_cur = RiskFreeArbBot2.mm1_data_cur.clone()
+            self.mm2_data_cur = RiskFreeArbBot2.mm2_data_cur.clone()
 
             # loop through historical data
-            for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
+            for mm1_data, mm2_data in zip(self.mm1_data_cur, self.mm2_data_cur):
                 self.execute_trade_loop(mm1_data, mm2_data)
 
             # log backtesting result
-            self.log_common_stat(log_level=logging.CRITICAL)
+            if not self.is_init_setting_opt:
+                self.log_common_stat(log_level=logging.CRITICAL)
+            else:
+                self.get_krw_total_balance()
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         if not self.is_backtesting:
@@ -285,7 +296,7 @@ class RiskFreeArbBot2(BaseArbBot):
             fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
             new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
             if (
-                    self.mm1.has_enough_coin("krw", mm1_buy_krw)
+                        self.mm1.has_enough_coin("krw", mm1_buy_krw)
                     and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount)
             ):
                 logging.warning("[EXECUTE] New ->"
@@ -312,7 +323,7 @@ class RiskFreeArbBot2(BaseArbBot):
             fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
             rev_trading_amount = rev_trading_amount + fee if should_fee else rev_trading_amount
             if (
-                    self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
+                        self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
                     and self.mm1.has_enough_coin(self.TARGET_CURRENCY, rev_trading_amount * self.REV_FACTOR)
             ):
                 logging.warning("[EXECUTE] Reverse ->"
@@ -353,4 +364,5 @@ class RiskFreeArbBot2(BaseArbBot):
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
                              (coin_name, balance["available"], balance["trade_in_use"], balance["balance"]))
 
-        self.log_order_watcher_stats()
+        if not self.is_backtesting:
+            self.log_order_watcher_stats()
