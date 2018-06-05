@@ -1,7 +1,7 @@
 import logging
 from trader.market.order import Order
 from config.global_conf import Global
-from analyzer.analyzer import BasicAnalyzer
+from analyzer.analyzer import Analyzer
 from trader.market.market import Market
 from trader.base_arb_bot import BaseArbBot
 from config.shared_mongo_client import SharedMongoClient
@@ -20,7 +20,7 @@ MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 
 
 class RiskFreeArbBot(BaseArbBot):
-    TARGET_STRATEGY = BasicAnalyzer.buy_sell_strategy_1
+    TARGET_STRATEGY = Analyzer.buy_sell_strategy_1
 
     def __init__(self,
                  target_currency: str = "eth", target_interval_in_sec: int = 5,
@@ -209,8 +209,8 @@ class RiskFreeArbBot(BaseArbBot):
             ):
                 for mm1_buy_order in self.mm1_buy_orders:
                     # calc spread with current sell price
-                    profit = BasicAnalyzer.calc_spread(mm1_buy_order.price, self.mm1.market_fee,
-                                                       mm1_sell_price, self.mm1.market_fee)
+                    profit = Analyzer.calc_spread(mm1_buy_order.price, self.mm1.market_fee,
+                                                  mm1_sell_price, self.mm1.market_fee)
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
                             and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
@@ -241,8 +241,8 @@ class RiskFreeArbBot(BaseArbBot):
             ):
                 for mm1_sell_order in self.mm1_sell_orders:
                     # calc spread with current buy price
-                    profit = BasicAnalyzer.calc_spread(mm1_buy_price, self.mm1.market_fee,
-                                                       mm1_sell_order.price, self.mm1.market_fee)
+                    profit = Analyzer.calc_spread(mm1_buy_price, self.mm1.market_fee,
+                                                  mm1_sell_order.price, self.mm1.market_fee)
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
                             and self.mm1.has_enough_coin("krw", mm1_buy_krw)
@@ -277,8 +277,8 @@ class RiskFreeArbBot(BaseArbBot):
             ):
                 for mm2_buy_order in self.mm2_buy_orders:
                     # calc spread with current sell price
-                    profit = BasicAnalyzer.calc_spread(mm2_buy_order.price, self.mm2.market_fee,
-                                                       mm2_sell_price, self.mm2.market_fee)
+                    profit = Analyzer.calc_spread(mm2_buy_order.price, self.mm2.market_fee,
+                                                  mm2_sell_price, self.mm2.market_fee)
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
                             and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
@@ -307,8 +307,8 @@ class RiskFreeArbBot(BaseArbBot):
             ):
                 for mm2_sell_order in self.mm2_sell_orders:
                     # calc spread with current buy price
-                    profit = BasicAnalyzer.calc_spread(mm2_buy_price, self.mm2.market_fee,
-                                                       mm2_sell_order.price, self.mm2.market_fee)
+                    profit = Analyzer.calc_spread(mm2_buy_price, self.mm2.market_fee,
+                                                  mm2_sell_order.price, self.mm2.market_fee)
                     if (
                             profit > self.MARGIN_KRW_THRESHOLD
                             and self.mm2.has_enough_coin("krw", mm2_buy_krw)
@@ -338,8 +338,8 @@ class RiskFreeArbBot(BaseArbBot):
             logging.info(self.mm2.get_balance())
 
             # log combined balance
-            combined = BasicAnalyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
-                                                     (self.TARGET_CURRENCY, "krw"))
+            combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
+                                                (self.TARGET_CURRENCY, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

@@ -2,7 +2,7 @@ import time
 import logging
 import numpy as np
 from config.global_conf import Global
-from analyzer.analyzer import BasicAnalyzer
+from analyzer.analyzer import Analyzer
 from trader.market.market import Market
 from trader.base_arb_bot import BaseArbBot
 from config.shared_mongo_client import SharedMongoClient
@@ -13,7 +13,7 @@ from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class StatArbBot(BaseArbBot):
-    TARGET_SPREAD_FUNCTION = BasicAnalyzer.get_orderbook_mid_price_log_spread
+    TARGET_SPREAD_FUNCTION = Analyzer.get_orderbook_mid_price_log_spread
 
     def __init__(self,
                  target_currency: str = "eth", target_interval_in_sec: int = 5,
@@ -130,12 +130,12 @@ class StatArbBot(BaseArbBot):
         if cur_spread < lower:
             # NEW: long in mm1, short in mm2
             self.new_oppty_counter += 1
-            fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
-            if BasicAnalyzer.have_enough_balance_for_arb(self.mm1, self.mm2, mm1_price,
-                                                         trading_unit, self.TARGET_CURRENCY):
+            if Analyzer.have_enough_balance_for_arb(self.mm1, self.mm2, mm1_price,
+                                                    trading_unit, self.TARGET_CURRENCY):
                 logging.warning("[EXECUTE] New")
                 buy_order = self.mm1.order_buy(self.mm1_currency, mm1_price, trading_unit)
                 sell_order = self.mm2.order_sell(self.mm2_currency, mm2_price, trading_unit)
@@ -150,12 +150,12 @@ class StatArbBot(BaseArbBot):
         elif cur_spread > upper:
             # REV: long in mm2, short in mm1
             self.rev_oppty_counter += 1
-            fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
-            if BasicAnalyzer.have_enough_balance_for_arb(self.mm2, self.mm1, mm2_price,
-                                                         trading_unit, self.TARGET_CURRENCY):
+            if Analyzer.have_enough_balance_for_arb(self.mm2, self.mm1, mm2_price,
+                                                    trading_unit, self.TARGET_CURRENCY):
                 logging.warning("[EXECUTE] Reverse")
                 buy_order = self.mm2.order_buy(self.mm2_currency, mm2_price, trading_unit)
                 sell_order = self.mm1.order_sell(self.mm1_currency, mm1_price, trading_unit)

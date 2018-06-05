@@ -2,7 +2,7 @@ import time
 import logging
 from abc import ABC, abstractmethod
 from config.global_conf import Global
-from analyzer.analyzer import BasicAnalyzer
+from analyzer.analyzer import Analyzer
 from trader.market.trade import TradeTag
 from pymongo.collection import Collection
 from trader.trade_manager.trade_manager import TradeManager
@@ -116,7 +116,7 @@ class BaseArbBot(ABC):
         logging.log(log_level, mm2_balance)
 
         # log combined balance
-        combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
+        combined = Analyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
         for coin_name in combined.keys():
             balance = combined[coin_name]
             logging.log(log_level, "\n[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
@@ -128,7 +128,7 @@ class BaseArbBot(ABC):
         mm2_balance = self.mm2.get_balance()
 
         # log combined balance
-        combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
+        combined = Analyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
         self.total_krw_bal = combined["KRW"]["balance"]
 
     def log_order_watcher_stats(self):
