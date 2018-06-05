@@ -1,6 +1,7 @@
 import logging
 from config.global_conf import Global
-from analyzer.analyzer import Analyzer
+from analyzer.analyzer import BasicAnalyzer
+from analyzer.analyzer import OTSAanlyzer
 from trader.market.market import Market
 from trader.base_arb_bot import BaseArbBot
 from config.shared_mongo_client import SharedMongoClient
@@ -22,7 +23,7 @@ MODIFY config.global_conf > COIN_FILTER_FOR_BALANCE for balance creation!
 
 
 class RiskFreeArbBot1(BaseArbBot):
-    TARGET_STRATEGY = Analyzer.buy_sell_strategy_1
+    TARGET_STRATEGY = BasicAnalyzer.buy_sell_strategy_1
 
     def __init__(self,
                  target_currency: str, target_interval_in_sec: int = 5,
@@ -169,8 +170,8 @@ class RiskFreeArbBot1(BaseArbBot):
             logging.info(self.mm2.get_balance())
 
             # log combined balance
-            combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
-                                                (self.TARGET_CURRENCY, "krw"))
+            combined = BasicAnalyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
+                                                     (self.TARGET_CURRENCY, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
@@ -192,7 +193,7 @@ class RiskFreeArbBot1(BaseArbBot):
 
 
 class RiskFreeArbBot2(BaseArbBot):
-    TARGET_STRATEGY = Analyzer.optimized_tradable_spread_strategy
+    TARGET_STRATEGY = OTSAanlyzer.optimized_tradable_spread_strategy
     IS_DATA_EXIST = False
 
     def __init__(self,
@@ -299,7 +300,7 @@ class RiskFreeArbBot2(BaseArbBot):
         if opt_new_spread >= self.NEW_SPREAD_THRESHOLD and not opt_new_spread == 0 \
                 and new_trading_amount >= self.MIN_COIN_TRADING_UNIT:
             self.new_oppty_counter += 1
-            fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
+            fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
             new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
             if (
                         self.mm1.has_enough_coin("krw", mm1_buy_krw)
@@ -327,7 +328,7 @@ class RiskFreeArbBot2(BaseArbBot):
         elif opt_rev_spread >= self.REV_SPREAD_THRESHOLD and not opt_rev_spread == 0 \
                 and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
             self.rev_oppty_counter += 1
-            fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
+            fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
             rev_trading_amount = rev_trading_amount + fee if should_fee else rev_trading_amount
             if (
                         self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
@@ -364,8 +365,8 @@ class RiskFreeArbBot2(BaseArbBot):
             logging.info(self.mm2.get_balance())
 
             # log combined balance
-            combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
-                                                (self.TARGET_CURRENCY, "krw"))
+            combined = BasicAnalyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
+                                                     (self.TARGET_CURRENCY, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

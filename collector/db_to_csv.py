@@ -1,7 +1,8 @@
 from config.global_conf import Global
 from pymongo import MongoClient
 from .csv_writer import CsvWriter
-from analyzer.analyzer import Analyzer
+from analyzer.analyzer import BasicAnalyzer
+from analyzer.analyzer import OTSAanlyzer
 
 
 class DbToCsv:
@@ -59,7 +60,7 @@ class DbToCsv:
         for ticker, orderbook in zip(ticker_cursor, orderbook_cursor):
             request_time = int(ticker["requestTime"])
             last = int(ticker["last"].to_decimal())
-            mid_price, minask, maxbid = Analyzer.get_orderbook_mid_price(orderbook)
+            mid_price, minask, maxbid = BasicAnalyzer.get_orderbook_mid_price(orderbook)
             csv_writer.write_joinable((request_time, last, mid_price, minask, maxbid))
 
         csv_writer.close()
@@ -77,8 +78,8 @@ class DbToCsv:
 
         for orderbook in orderbook_cursor:
             request_time = int(orderbook["requestTime"])
-            mid_price, minask, maxbid = Analyzer.get_orderbook_mid_price(orderbook)
-            mid_vwap, ask_vwap, bid_vwap = Analyzer.get_orderbook_mid_vwap(orderbook, depth)
+            mid_price, minask, maxbid = BasicAnalyzer.get_orderbook_mid_price(orderbook)
+            mid_vwap, ask_vwap, bid_vwap = BasicAnalyzer.get_orderbook_mid_vwap(orderbook, depth)
             csv_writer.write_joinable((request_time, mid_price, mid_vwap, ask_vwap, bid_vwap, minask, maxbid))
 
         csv_writer.close()
@@ -164,7 +165,7 @@ class DbToCsv:
             (new_unit_spread, rev_unit_spread, opt_new_spread, opt_rev_spread,
              opt_new_buy_price, opt_new_buy_index, opt_new_sell_price, opt_new_sell_index, new_traded_qty,
              opt_rev_buy_price, opt_rev_buy_index, opt_rev_sell_price, opt_rev_sell_index, rev_traded_qty) = \
-                Analyzer.optimized_tradable_spread_strategy(mm1_ob, mm2_ob, mm1_fee, mm2_fee, depth)
+                OTSAanlyzer.optimized_tradable_spread_strategy(mm1_ob, mm2_ob, mm1_fee, mm2_fee, depth)
 
             result = [requesttime]
             if opt_new_spread >= 0:
