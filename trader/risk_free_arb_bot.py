@@ -212,13 +212,13 @@ class RiskFreeArbBot2(BaseArbBot):
         super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, is_init_setting_opt, start_time, end_time)
 
-        self.MAX_COIN_TRADING_UNIT = 0.03
+        self.MAX_COIN_TRADING_UNIT = 0.001
         self.MIN_COIN_TRADING_UNIT = 0
-        self.MAX_OB_INDEX_NUM = 2
+        self.MAX_OB_INDEX_NUM = 1
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
         self.NEW_FACTOR = 1
-        self.REV_FACTOR = 1.5
+        self.REV_FACTOR = 1
 
         self.mm1_data_cur = None
         self.mm2_data_cur = None

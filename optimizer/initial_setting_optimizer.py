@@ -40,11 +40,13 @@ class InitialSettingOptimizer:
             # by doing this, un-iterable REV related lists get created
             self.REV_SPREAD_THRESHOLD["end"] = self.REV_SPREAD_THRESHOLD["start"]
             self.REV_FACTOR["end"] = self.REV_FACTOR["start"]
+            self.NEW_FACTOR["end"] = self.NEW_FACTOR["start"]
             return
         if new_oppty_num == 0:
             # by doing this, un-iterable NEW related lists get created
             self.NEW_SPREAD_THRESHOLD["end"] = self.NEW_SPREAD_THRESHOLD["start"]
             self.NEW_FACTOR["end"] = self.NEW_FACTOR["start"]
+            self.REV_FACTOR["end"] = self.REV_FACTOR["start"]
             return
         if new_oppty_num > rev_oppty_num:
             self.NEW_FACTOR["end"] = self.NEW_FACTOR["start"]
