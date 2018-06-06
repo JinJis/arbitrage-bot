@@ -1,4 +1,5 @@
-import sys
 
-if __name__ == "__main__":
-    print("hello %s" % sys.argv[1])
+list2 = ["a","b","c","d","e","f"]
+
+for i, k in zip(range(2,7), list2):
+    print(i, k)

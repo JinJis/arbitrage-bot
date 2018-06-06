@@ -212,11 +212,12 @@ class RiskFreeArbBot2(BaseArbBot):
         super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, is_init_setting_opt, start_time, end_time)
 
-        self.MAX_COIN_TRADING_UNIT = 0.005
+        self.MAX_COIN_TRADING_UNIT = 0.03
         self.MIN_COIN_TRADING_UNIT = 0
         self.MAX_OB_INDEX_NUM = 2
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
+        self.NEW_FACTOR = 1
         self.REV_FACTOR = 1.5
 
         self.mm1_data_cur = None
@@ -274,8 +275,8 @@ class RiskFreeArbBot2(BaseArbBot):
             mm1_data = self.mm1.get_orderbook(self.mm1_currency)
             mm2_data = self.mm2.get_orderbook(self.mm2_currency)
         else:
-            self.mm1.apply_history_to_orderbook(mm1_data)
-            self.mm2.apply_history_to_orderbook(mm2_data)
+            mm1_data = self.mm1.apply_history_to_orderbook(mm1_data)
+            mm2_data = self.mm2.apply_history_to_orderbook(mm2_data)
 
         # get optimized spread infos by using OTS strategy
         (new_spread_in_unit, rev_spread_in_unit, opt_new_spread, opt_rev_spread,
@@ -303,8 +304,8 @@ class RiskFreeArbBot2(BaseArbBot):
             fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
             new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
             if (
-                        self.mm1.has_enough_coin("krw", mm1_buy_krw)
-                    and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount)
+                        self.mm1.has_enough_coin("krw", mm1_buy_krw * self.NEW_FACTOR)
+                    and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount * self.NEW_FACTOR)
             ):
                 logging.warning("[EXECUTE] New ->"
                                 "Trading INFOS: Spread in unit = %.2f, BUY_index = %d, "
@@ -366,7 +367,7 @@ class RiskFreeArbBot2(BaseArbBot):
 
             # log combined balance
             combined = BasicAnalyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
-                                                (self.TARGET_CURRENCY, "krw"))
+                                                     (self.TARGET_CURRENCY, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

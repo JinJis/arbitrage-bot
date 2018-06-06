@@ -268,75 +268,44 @@ class OTSAanlyzer:
 
 
 class ISOAnalyzer:
+    # FIXME: 물론 99%의 경우 여기까지 loop 돌리면 하나의 결과값만 return 되겠지만,
+    # FIXME: 낮은 가능성으로 krw, Max_coin_unit 같아도 threshold에 따라 new, rev oppty 달라질 수 있음 >> 여러개 결과 return 가능함
+    # FIXME: 일단, 여기서는 그러한 경우 가장 첫번째 list를 final result로 취하겠지만 나중에 로직 보완해야함
     @staticmethod
     def get_opt_initial_setting_list(result: list):
-        max_pair = None
+        max_krw_pair = None
         # Get list of those results that have same KRW balance
-        krw_same_result_list = []
+        same_krw_list = []
         for pair in result:
             # 초기값 설정
-            if max_pair is None:
-                max_pair = pair
-                krw_same_result_list.append(max_pair)
+            if max_krw_pair is None:
+                max_krw_pair = pair
+                same_krw_list.append(max_krw_pair)
                 continue
             # 비교
-            if pair[0] > max_pair[0]:
-                max_pair = pair
-                krw_same_result_list.clear()
-                krw_same_result_list.append(max_pair)
-            elif pair[0] == max_pair[0]:
-                krw_same_result_list.append(pair)
+            if pair[0] > max_krw_pair[0]:
+                max_krw_pair = pair
+                same_krw_list.clear()
+                same_krw_list.append(max_krw_pair)
+            elif pair[0] == max_krw_pair[0]:
+                same_krw_list.append(pair)
 
-        # Sort from krw_same_result_list and convert it into maxcoinunit_same_list
-        # 'min_pair' used b/c as small max_coin_unit as possible is better off
-        min_pair = None
-        max_coin_same_list = []
-        for pair in krw_same_result_list:
-            if min_pair is None:
-                min_pair = pair
-                max_coin_same_list.append(pair)
-                continue
-            if pair[1] < min_pair[1]:
-                min_pair = pair
-                max_coin_same_list.clear()
-                max_coin_same_list.append(min_pair)
-            elif pair[1] == min_pair[1]:
-                max_coin_same_list.append(pair)
-
-        # FIXME: 물론 99%의 경우 여기까지 loop 돌리면 하나의 결과값만 return 되겠지만,
-        # FIXME: 낮은 가능성으로 krw, Max_coin_unit 같아도 threshold에 따라 new, rev oppty 달라질 수 있음 >> 여러개 결과 return 가능함
-        # FIXME: 일단, 여기서는 그러한 경우 가장 첫번째 list를 final result로 취하겠지만 나중에 로직 보완해야함
-
-        final_result_list = max_coin_same_list[0]
-        return final_result_list  # shoudl return only one result_list
-
-        # Get zoomed in variables that are used in arange function in ISO optimizer.
-        # such variables are start, end, step --> making them smaller & scoped down so as to enhance speed.
-        # @staticmethod
-        # def get_zoomed_in_arange_setting(krw_opted_list: list):
-        #
-        #     krw_balance, max_coin_unit, \
-        #     new_threshold, rev_threshold, rev_factor, \
-        #     new_oppty_num, rev_oppty_num = map(float, krw_opted_list)
-        #
-        #     # when both NEW, REV exist
-        #     if new_oppty_num != 0 and rev_oppty_num != 0:
-        #
-        #         # make decision of now much rev settings to be set by evaluating oppty ratio
-        #         oppty_ratio = (new_oppty_num / rev_oppty_num)
-        #         if oppty_ratio > 1:
-        #
-        #         else:
-        #     # REV setting 그냥
-        #     # when only NEW exists
-        #     if new_oppty_num != 0 and rev_oppty_num == 0:
-        #
-        #     # when only REV exists
-        #     if new_oppty_num == 0 and rev_oppty_num != 0:
-        #
-        #     # when no oppty at all (ERROR)
-        #     if new_oppty_num == 0 and rev_oppty_num == 0:
-        #         raise Exception("There is no NEW and REV oppty!!")
-        #
-        #
-        #         # make judgement for new/rev traded numbers
+        if len(same_krw_list) > 1:
+            # Sort from same_krw_list and convert it into maxcoinunit_same_list
+            # 'min_pair' used b/c as small max_coin_unit as possible is better off
+            min_coin_pair = None
+            same_coin_unit_list = []
+            for pair in same_krw_list:
+                if min_coin_pair is None:
+                    min_coin_pair = pair
+                    same_coin_unit_list.append(pair)
+                    continue
+                if pair[1] < min_coin_pair[1]:
+                    min_coin_pair = pair
+                    same_coin_unit_list.clear()
+                    same_coin_unit_list.append(min_coin_pair)
+                elif pair[1] == min_coin_pair[1]:
+                    same_coin_unit_list.append(pair)
+            return same_coin_unit_list[0]
+        else:
+            return same_krw_list[0]
