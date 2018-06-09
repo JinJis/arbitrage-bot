@@ -309,3 +309,13 @@ class ISOAnalyzer:
             return same_coin_unit_list[0]
         else:
             return same_krw_list[0]
+
+    @staticmethod
+    def start_end_step_to_list(start, end, step):
+        result = []
+        stepper = start
+        while stepper <= end:
+            result.append(stepper)
+            stepper += step
+        return result
+

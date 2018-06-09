@@ -14,7 +14,7 @@ class InitialSettingOptimizer:
 
         for factor in initial_factor.keys():
             value = initial_factor[factor]
-            value["step"] = (value["start"] + value["end"]) / self.division
+            value["step"] = (value["end"] - value["start"]) / self.division
             setattr(self, factor, value)
 
         # initialize prerequisite attributes
@@ -31,7 +31,7 @@ class InitialSettingOptimizer:
         self.optimize_factor_with_new_rev_oppty(new_oppty_num, rev_oppty_num)
 
         # the main operation starts
-        print("Now conducting real optimization")
+        print("Now conducting optimization")
         return self.get_opt_factors_by_backtesting(self.depth)
 
     def optimize_factor_with_new_rev_oppty(self, new_oppty_num, rev_oppty_num):
@@ -58,14 +58,14 @@ class InitialSettingOptimizer:
 
     def get_opt_factors_by_backtesting(self, depth, optimized=None):
         if depth != 0:
-            print("<<<< Now in depth: %d >>>>" % depth)
+            print("\n<<<< Now in depth: %d >>>>" % depth)
             # make all the RFAB2 attributes of initial setting
             for factor_name in self.initial_factor.keys():
                 factor_dict = getattr(self, factor_name)
                 start = factor_dict["start"]
                 end = factor_dict["end"]
                 step = factor_dict["step"]
-                factor_dict["seq"] = np.arange(start=start, stop=end, step=step).tolist()
+                factor_dict["seq"] = ISOAnalyzer.start_end_step_to_list(start=start, end=end, step=step)
                 print("%s: %s" % (factor_name, factor_dict["seq"]))
                 if len(factor_dict["seq"]) == 0:
                     factor_dict["seq"] = [start]
@@ -85,7 +85,7 @@ class InitialSettingOptimizer:
                     if factor["start"] < 0:
                         factor["start"] = 0
                     factor["end"] = current_optimized[i] + cur_step
-                    factor["step"] = (factor["start"] + factor["end"]) / self.division
+                    factor["step"] = (factor["end"] - factor["start"]) / self.division
 
             if optimized is None:
                 optimized = current_optimized
