@@ -10,7 +10,6 @@ from bson import Decimal128
 
 
 class VirtualMarketManager(MarketManager):
-
     def __init__(self, market_tag: Market, market_fee: float, krw_balance=100000, coin_balance=0.1, coin_name="eth"):
         # create api instance according to given api_type
         if market_tag is Market.VIRTUAL_CO:
@@ -29,6 +28,7 @@ class VirtualMarketManager(MarketManager):
             "krw": krw_balance,
             coin_name: coin_balance
         }
+        self.initial_vt_balance = dict(self.vt_balance)
         self.order_id_count = 0
         super().__init__(market_tag, market_fee, target_api)
 
@@ -64,6 +64,17 @@ class VirtualMarketManager(MarketManager):
         balance_dict = dict()
         for key in self.vt_balance.keys():
             coin_bal = self.vt_balance[key]
+            balance_dict[key] = {
+                "available": coin_bal,
+                "trade_in_use": 0,
+                "balance": coin_bal
+            }
+        self.balance.update(balance_dict)
+
+    def clear_balance(self):
+        balance_dict = dict()
+        for key in self.initial_vt_balance.keys():
+            coin_bal = self.initial_vt_balance[key]
             balance_dict[key] = {
                 "available": coin_bal,
                 "trade_in_use": 0,

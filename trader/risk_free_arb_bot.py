@@ -212,7 +212,7 @@ class RiskFreeArbBot2(BaseArbBot):
         super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
                          is_backtesting, is_init_setting_opt, start_time, end_time)
 
-        self.MAX_COIN_TRADING_UNIT = 0.1
+        self.MAX_COIN_TRADING_UNIT = 0
         self.MIN_COIN_TRADING_UNIT = 0
         self.MAX_OB_INDEX_NUM = 1
         self.NEW_SPREAD_THRESHOLD = 0
@@ -247,6 +247,8 @@ class RiskFreeArbBot2(BaseArbBot):
                     raise e
         # if backtesting
         else:
+            self.mm1.clear_balance()
+            self.mm2.clear_balance()
             # collect historical data from db
             # If there is no data
             if not RiskFreeArbBot2.IS_DATA_EXIST:
@@ -264,6 +266,9 @@ class RiskFreeArbBot2(BaseArbBot):
             # log backtesting result
             if not self.is_init_setting_opt:
                 self.log_common_stat(log_level=logging.CRITICAL)
+                self.get_krw_total_balance()
+                self.trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
+                self.trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
             # when initial setting opt
             else:
                 self.get_krw_total_balance()
@@ -298,63 +303,64 @@ class RiskFreeArbBot2(BaseArbBot):
         mm2_buy_krw = rev_trading_amount / (1 - self.mm2.market_fee) * rev_buy_price
 
         # make decision
-        if opt_new_spread >= self.NEW_SPREAD_THRESHOLD and not opt_new_spread == 0 \
-                and new_trading_amount >= self.MIN_COIN_TRADING_UNIT:
+        if new_spread_in_unit > 0:
             self.new_oppty_counter += 1
-            fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
-            new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
-            if (
-                        self.mm1.has_enough_coin("krw", mm1_buy_krw * self.NEW_FACTOR)
-                    and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount * self.NEW_FACTOR)
-            ):
-                logging.warning("[EXECUTE] New ->"
-                                "Trading INFOS: Spread in unit = %.2f, BUY_index = %d, "
-                                "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f] "
-                                % (new_spread_in_unit, new_buy_idx, new_sell_idx,
-                                   opt_new_spread, new_trading_amount, new_avail_mm1_qty, new_avail_mm2_qty))
-                buy_order = self.mm1.order_buy(self.mm1_currency, new_buy_price, new_trading_amount)
-                sell_order = self.mm2.order_sell(self.mm2_currency, new_sell_price, new_trading_amount)
-                self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta({}))
-                self.trade_manager.add_trade(self.cur_trade)
+            if opt_new_spread >= self.NEW_SPREAD_THRESHOLD and not opt_new_spread == 0 \
+                    and new_trading_amount >= self.MIN_COIN_TRADING_UNIT:
+                fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
+                new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
+                if (
+                            self.mm1.has_enough_coin("krw", mm1_buy_krw * self.NEW_FACTOR)
+                        and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount * self.NEW_FACTOR)
+                ):
+                    logging.warning("[EXECUTE] New ->"
+                                    "Trading INFOS: Spread in unit = %.2f, BUY_index = %d, "
+                                    "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f] "
+                                    % (new_spread_in_unit, new_buy_idx, new_sell_idx,
+                                       opt_new_spread, new_trading_amount, new_avail_mm1_qty, new_avail_mm2_qty))
+                    buy_order = self.mm1.order_buy(self.mm1_currency, new_buy_price, new_trading_amount)
+                    sell_order = self.mm2.order_sell(self.mm2_currency, new_sell_price, new_trading_amount)
+                    self.cur_trade = Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta({}))
+                    self.trade_manager.add_trade(self.cur_trade)
 
-                # subtract considered fee if there was one
-                if should_fee:
-                    GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY, fee)
+                    # subtract considered fee if there was one
+                    if should_fee:
+                        GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY, fee)
 
-            else:
-                logging.error("[EXECUTE] New -> failed (not enough balance!) ->"
-                              "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
-                              % (new_spread_in_unit, opt_new_spread, new_trading_amount))
-
-        elif opt_rev_spread >= self.REV_SPREAD_THRESHOLD and not opt_rev_spread == 0 \
-                and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
+                else:
+                    logging.error("[EXECUTE] New -> failed (not enough balance!) ->"
+                                  "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
+                                  % (new_spread_in_unit, opt_new_spread, new_trading_amount))
+        if rev_spread_in_unit > 0:
             self.rev_oppty_counter += 1
-            fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
-            rev_trading_amount = rev_trading_amount + fee if should_fee else rev_trading_amount
-            if (
-                        self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
-                    and self.mm1.has_enough_coin(self.TARGET_CURRENCY, rev_trading_amount * self.REV_FACTOR)
-            ):
-                logging.warning("[EXECUTE] Reverse ->"
-                                "Trading INFOS: Spread = %.2f, BUY_index = %d, "
-                                "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f]"
-                                % (rev_spread_in_unit, rev_buy_idx, rev_sell_idx,
-                                   opt_rev_spread, rev_trading_amount, rev_avail_mm1_qty, rev_avail_mm2_qty))
-                buy_order = self.mm2.order_buy(self.mm2_currency, rev_buy_price, rev_trading_amount)
-                sell_order = self.mm1.order_sell(self.mm1_currency, rev_sell_price, rev_trading_amount)
-                self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta({}))
-                self.trade_manager.add_trade(self.cur_trade)
+            if opt_rev_spread >= self.REV_SPREAD_THRESHOLD and not opt_rev_spread == 0 \
+                    and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
+                fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
+                rev_trading_amount = rev_trading_amount + fee if should_fee else rev_trading_amount
+                if (
+                            self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
+                        and self.mm1.has_enough_coin(self.TARGET_CURRENCY, rev_trading_amount * self.REV_FACTOR)
+                ):
+                    logging.warning("[EXECUTE] Reverse ->"
+                                    "Trading INFOS: Spread = %.2f, BUY_index = %d, "
+                                    "SELL_index = %d, T_Spread = %.2f, T_QTY = %.5f, mkt_QTY = [mm1: %.5f, mm2: %.5f]"
+                                    % (rev_spread_in_unit, rev_buy_idx, rev_sell_idx,
+                                       opt_rev_spread, rev_trading_amount, rev_avail_mm1_qty, rev_avail_mm2_qty))
+                    buy_order = self.mm2.order_buy(self.mm2_currency, rev_buy_price, rev_trading_amount)
+                    sell_order = self.mm1.order_sell(self.mm1_currency, rev_sell_price, rev_trading_amount)
+                    self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta({}))
+                    self.trade_manager.add_trade(self.cur_trade)
 
-                # subtract considered fee if there was one
-                if should_fee:
-                    GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY, fee)
+                    # subtract considered fee if there was one
+                    if should_fee:
+                        GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY, fee)
+                else:
+                    logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
+                                  "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
+                                  % (rev_spread_in_unit, opt_rev_spread, rev_trading_amount))
+
             else:
-                logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
-                              "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
-                              % (rev_spread_in_unit, opt_rev_spread, rev_trading_amount))
-
-        else:
-            logging.info("[EXECUTE] No")
+                logging.info("[EXECUTE] No")
 
         # if there was any trade
 

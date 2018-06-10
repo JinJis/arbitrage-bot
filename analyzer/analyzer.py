@@ -211,7 +211,7 @@ class OTSAanlyzer:
     @staticmethod
     def get_optimized_spread_infos(buy_dict: dict, buy_fee: float,
                                    sell_dict: dict, sell_fee: float,
-                                   ob_index_num: int, max_trading_unit: float = None):
+                                   ob_index_num: int, max_trading_unit: float):
 
         spread_set = list()
         for i in range(0, ob_index_num):
@@ -223,11 +223,9 @@ class OTSAanlyzer:
                 # amounts and max_trading_unit
                 buy_dict_amount = float(buy_dict["amount"][i].to_decimal())
                 sell_dict_amount = float(sell_dict["amount"][k].to_decimal())
-                if max_trading_unit is None:
-                    possible_trading_qty = float(min(buy_dict_amount * (1 - buy_fee), sell_dict_amount))
-                elif max_trading_unit is not None:
-                    possible_trading_qty = \
-                        float(min(buy_dict_amount * (1 - buy_fee), sell_dict_amount, max_trading_unit))
+                possible_trading_qty = float(min(buy_dict_amount * (1 - buy_fee), sell_dict_amount, max_trading_unit))
+                if possible_trading_qty < 0:
+                    possible_trading_qty = 0
 
                 # actual spread and append to spread list
                 spread_in_unit = (-1) * buy_price / (1 - buy_fee) + (+1) * sell_price * (1 - sell_fee)
@@ -236,7 +234,7 @@ class OTSAanlyzer:
 
         # get the maximized pair for trading
         (opt_spread, opt_buy_index,
-         opt_sell_index, opt_trading_qty, spread_in_unit) = OTSAanlyzer.get_max_pair_infos(spread_set)
+         opt_sell_index, opt_trading_qty, opt_spread_in_unit) = OTSAanlyzer.get_max_pair_infos(spread_set)
 
         opt_buy_price = int(buy_dict["price"][opt_buy_index].to_decimal())
         opt_sell_price = int(sell_dict["price"][opt_sell_index].to_decimal())
@@ -244,7 +242,8 @@ class OTSAanlyzer:
         avail_sell_amount = float((sell_dict["amount"][opt_sell_index].to_decimal()))
 
         return (opt_spread, opt_buy_price, opt_buy_index,
-                opt_sell_price, opt_sell_index, opt_trading_qty, spread_in_unit, avail_buy_amount, avail_sell_amount)
+                opt_sell_price, opt_sell_index, opt_trading_qty, opt_spread_in_unit, avail_buy_amount,
+                avail_sell_amount)
 
     @staticmethod
     def get_max_pair_infos(spread_set: list):
@@ -318,4 +317,3 @@ class ISOAnalyzer:
             result.append(stepper)
             stepper += step
         return result
-

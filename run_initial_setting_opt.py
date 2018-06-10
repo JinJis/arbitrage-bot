@@ -23,7 +23,7 @@ trading_bot = RiskFreeArbBot2(target_currency="bch", should_db_logging=False, is
 
 initial_factor = {
     "MAX_COIN_TRADING_UNIT": {
-        "start": 0.0005,
+        "start": 0,
         "end": 0.05
     },
     "NEW_SPREAD_THRESHOLD": {
@@ -44,5 +44,5 @@ initial_factor = {
     }
 }
 
-optimized = InitialSettingOptimizer(trading_bot, initial_factor, division=4, depth=5).run()
+optimized = InitialSettingOptimizer(trading_bot, initial_factor, division=3, depth=3).run()
 print(optimized)
