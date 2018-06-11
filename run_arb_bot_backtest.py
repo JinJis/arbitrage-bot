@@ -7,8 +7,8 @@ from trader.risk_free_arb_bot import RiskFreeArbBot1, RiskFreeArbBot2
 
 Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.WARNING)
 SharedMongoClient.initialize(should_use_localhost_db=False)
-start_time = Global.convert_local_datetime_to_epoch("2018.06.08 10:20:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.08 11:20:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.06.11 13:20:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.06.11 14:20:00", timezone="kr")
 # StatArbBot(should_db_logging=False, is_backtesting=True, start_time=start_time, end_time=end_time).run()
 # RiskFreeArbBot1(target_currency="bch", should_db_logging=False, is_backtesting=True,
 #                 start_time=start_time, end_time=end_time).run()

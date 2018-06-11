@@ -214,7 +214,7 @@ class RiskFreeArbBot2(BaseArbBot):
 
         self.MAX_COIN_TRADING_UNIT = 0
         self.MIN_COIN_TRADING_UNIT = 0
-        self.MAX_OB_INDEX_NUM = 1
+        self.MAX_OB_INDEX_NUM = 2
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
         self.NEW_FACTOR = 1
