@@ -12,7 +12,7 @@ SharedMongoClient.COINONE_DB_NAME = "coinone"
 SharedMongoClient.GOPAX_DB_NAME = "gopax"
 
 # Fixme wheter to use 'local_host' or not
-SharedMongoClient.initialize(should_use_localhost_db=False)
+SharedMongoClient.initialize(should_use_localhost_db=True)
 
 start_time = Global.convert_local_datetime_to_epoch("2018.06.08 10:20:00", timezone="kr")
 end_time = Global.convert_local_datetime_to_epoch("2018.06.08 11:20:00", timezone="kr")
