@@ -12,9 +12,5 @@ end_time = Global.convert_local_datetime_to_epoch("2018.06.08 11:20:00", timezon
 # StatArbBot(should_db_logging=False, is_backtesting=True, start_time=start_time, end_time=end_time).run()
 # RiskFreeArbBot1(target_currency="bch", should_db_logging=False, is_backtesting=True,
 #                 start_time=start_time, end_time=end_time).run()
-bot = RiskFreeArbBot2(target_currency="bch", should_db_logging=False, is_backtesting=True,
-                      start_time=start_time, end_time=end_time)
-bot.run()
-print(bot.total_krw_bal, bot.trade_new, bot.trade_rev)
-bot.run()
-print(bot.total_krw_bal, bot.trade_new, bot.trade_rev)
+RiskFreeArbBot2(target_currency="bch", should_db_logging=False, is_backtesting=True,
+                start_time=start_time, end_time=end_time).run()
