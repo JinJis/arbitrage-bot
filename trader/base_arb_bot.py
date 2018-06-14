@@ -17,7 +17,7 @@ class BaseArbBot(ABC):
                  mm1: MarketManager, mm2: MarketManager,
                  target_currency: str, target_interval_in_sec: int = 5,
                  should_db_logging: bool = True,
-                 is_backtesting: bool = False, is_init_setting_opt: bool = False,
+                 is_backtesting: bool = False,
                  start_time: int = None, end_time: int = None):
 
         self.TARGET_CURRENCY = target_currency
@@ -25,7 +25,6 @@ class BaseArbBot(ABC):
 
         self.should_db_logging = should_db_logging
         self.is_backtesting = is_backtesting
-        self.is_init_setting_opt = is_init_setting_opt
         self.start_time = start_time
         self.end_time = end_time
 
@@ -129,7 +128,7 @@ class BaseArbBot(ABC):
 
         # log combined balance
         combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
-        self.total_krw_bal = combined["KRW"]["balance"]
+        return combined["KRW"]["balance"]
 
     def log_order_watcher_stats(self):
         ows_stats = OrderWatcherStats.instance().get_stats()
@@ -157,3 +156,7 @@ class BaseArbBot(ABC):
             Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
 
         return mm1_cursor, mm2_cursor
+
+    def clear_oppty_counter(self):
+        self.new_oppty_counter = 0
+        self.rev_oppty_counter = 0

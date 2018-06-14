@@ -15,7 +15,7 @@ SharedMongoClient.GOPAX_DB_NAME = "gopax"
 SharedMongoClient.initialize(should_use_localhost_db=True)
 
 start_time = Global.convert_local_datetime_to_epoch("2018.06.11 13:20:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.11 14:20:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.06.11 13:25:00", timezone="kr")
 
 trading_bot = RiskFreeArbBot2(target_currency="bch", should_db_logging=False, is_backtesting=True,
                               is_init_setting_opt=True,
@@ -24,15 +24,15 @@ trading_bot = RiskFreeArbBot2(target_currency="bch", should_db_logging=False, is
 initial_factor = {
     "MAX_COIN_TRADING_UNIT": {
         "start": 0,
-        "end": 1
+        "end": 0.1
     },
     "NEW_SPREAD_THRESHOLD": {
         "start": 0,
-        "end": 10000
+        "end": 1000
     },
     "REV_SPREAD_THRESHOLD": {
         "start": 0,
-        "end": 10000
+        "end": 1000
     },
     "NEW_FACTOR": {
         "start": 1,
@@ -44,5 +44,9 @@ initial_factor = {
     }
 }
 
-optimized = InitialSettingOptimizer(trading_bot, initial_factor, division=3, depth=10).run()
+try:
+    optimized = InitialSettingOptimizer(trading_bot, initial_factor, division=4, depth=10).run()
+except KeyboardInterrupt:
+    pass
 print(optimized)
+

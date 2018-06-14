@@ -54,7 +54,7 @@ class Trade:
             "trade_id": self.trade_id,
             "timestamp": self.timestamp,
             "tag": self.trade_tag.value,
-            "orders": [order.order_id for order in self.orders],
+            "orders": [order for order in self.orders],
             "meta": self.trade_meta.to_dict()
         }
 

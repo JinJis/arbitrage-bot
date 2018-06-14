@@ -117,6 +117,7 @@ class InitialSettingOptimizer:
                             setattr(self.trading_bot, "NEW_FACTOR", new_f)
                             setattr(self.trading_bot, "REV_FACTOR", rev_f)
                             self.trading_bot.run()
+
                             krw_total_balance = self.trading_bot.total_krw_bal
                             semi_result = [krw_total_balance]
                             for factor_name in self.initial_factor.keys():

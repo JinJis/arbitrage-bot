@@ -210,11 +210,11 @@ class RiskFreeArbBot2(BaseArbBot):
             mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
 
         super().__init__(mm1, mm2, target_currency, target_interval_in_sec, should_db_logging,
-                         is_backtesting, is_init_setting_opt, start_time, end_time)
+                         is_backtesting, start_time, end_time)
 
-        self.MAX_COIN_TRADING_UNIT = 0
+        self.MAX_COIN_TRADING_UNIT = 1
         self.MIN_COIN_TRADING_UNIT = 0
-        self.MAX_OB_INDEX_NUM = 2
+        self.MAX_OB_INDEX_NUM = 1
         self.NEW_SPREAD_THRESHOLD = 0
         self.REV_SPREAD_THRESHOLD = 0
         self.NEW_FACTOR = 1
@@ -228,6 +228,7 @@ class RiskFreeArbBot2(BaseArbBot):
         # init mongo related
         self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
         self.mm2_data_col = SharedMongoClient.get_gopax_db()[self.TARGET_CURRENCY + "_orderbook"]
+        self.is_init_setting_opt = is_init_setting_opt
 
     def run(self):
         # log initial balance
@@ -249,6 +250,11 @@ class RiskFreeArbBot2(BaseArbBot):
         else:
             self.mm1.clear_balance()
             self.mm2.clear_balance()
+            self.clear_oppty_counter()
+            self.trade_manager.clear_trade_count()
+
+            print(self.trade_new)
+
             # collect historical data from db
             # If there is no data
             if not RiskFreeArbBot2.IS_DATA_EXIST:
@@ -266,14 +272,19 @@ class RiskFreeArbBot2(BaseArbBot):
             # log backtesting result
             if not self.is_init_setting_opt:
                 self.log_common_stat(log_level=logging.CRITICAL)
-                self.get_krw_total_balance()
-                self.trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
-                self.trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
             # when initial setting opt
             else:
-                self.get_krw_total_balance()
+                self.log_common_stat(log_level=logging.CRITICAL)
+                self.total_krw_bal = self.get_krw_total_balance()
                 self.trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
                 self.trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
+                # last_trade = self.trade_manager.get_last_trade()
+                # if last_trade:
+                #     last_trade_dict = last_trade.to_dict()
+                #     print("last trade")
+                #     buy_order = last_trade_dict["orders"][0]
+                #     sell_order = last_trade_dict["orders"][1]
+                #     print((sell_order.price - buy_order.price) * buy_order.order_amount)
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         if not self.is_backtesting:
@@ -284,6 +295,7 @@ class RiskFreeArbBot2(BaseArbBot):
             mm2_data = self.mm2.apply_history_to_orderbook(mm2_data)
 
         # get optimized spread infos by using OTS strategy
+        # FIXME: 이쪽 부분 코드 재정리 해야함
         (new_spread_in_unit, rev_spread_in_unit, opt_new_spread, opt_rev_spread,
          new_buy_price, new_buy_idx, new_sell_price, new_sell_idx, new_trading_amount,
          rev_buy_price, rev_buy_idx, rev_sell_price, rev_sell_idx, rev_trading_amount,
@@ -381,3 +393,4 @@ class RiskFreeArbBot2(BaseArbBot):
 
         if not self.is_backtesting:
             self.log_order_watcher_stats()
+
