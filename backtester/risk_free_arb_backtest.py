@@ -1,5 +1,5 @@
-from trader.market.market import Market
 import logging
+from trader.market.market import Market
 from analyzer.analyzer import BasicAnalyzer
 from analyzer.analyzer import ATSAnalyzer, SpreadInfo
 from config.shared_mongo_client import SharedMongoClient
