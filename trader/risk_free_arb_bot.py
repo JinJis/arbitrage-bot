@@ -1,7 +1,6 @@
 import logging
 from config.global_conf import Global
 from analyzer.analyzer import BasicAnalyzer
-from analyzer.analyzer import OTSAanlyzer
 from trader.market.market import Market
 from trader.base_arb_bot import BaseArbBot
 from config.shared_mongo_client import SharedMongoClient
@@ -278,13 +277,13 @@ class RiskFreeArbBot2(BaseArbBot):
                 self.total_krw_bal = self.get_krw_total_balance()
                 self.trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
                 self.trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
-                # last_trade = self.trade_manager.get_last_trade()
-                # if last_trade:
-                #     last_trade_dict = last_trade.to_dict()
-                #     print("last trade")
-                #     buy_order = last_trade_dict["orders"][0]
-                #     sell_order = last_trade_dict["orders"][1]
-                #     print((sell_order.price - buy_order.price) * buy_order.order_amount)
+                last_trade = self.trade_manager.get_last_trade()
+                if last_trade:
+                    last_trade_dict = last_trade.to_dict()
+                    print("last trade")
+                    buy_order = last_trade_dict["orders"][0]
+                    sell_order = last_trade_dict["orders"][1]
+                    print((sell_order.price - buy_order.price) * buy_order.order_amount)
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
         if not self.is_backtesting:
@@ -370,9 +369,8 @@ class RiskFreeArbBot2(BaseArbBot):
                     logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
                                   "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
                                   % (rev_spread_in_unit, opt_rev_spread, rev_trading_amount))
-
-            else:
-                logging.info("[EXECUTE] No")
+        else:
+            logging.info("[EXECUTE] No")
 
         # if there was any trade
 
