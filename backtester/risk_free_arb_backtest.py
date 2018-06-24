@@ -87,8 +87,8 @@ class RfabBacktester:
             self.rev_oppty_counter += 1
             # decide whether to trade
             buy_order, sell_order = self.trade_logic(rev_spread_info, self.mm2, self.mm1, self.target_currency,
-                                                     self.mm2_currency,
-                                                     self.mm1_currency, self.init_setting_dict, trade_tag="rev")
+                                                     self.mm2_currency, self.mm1_currency, self.init_setting_dict,
+                                                     trade_tag="rev")
             # if there was any execution, add trade
             if buy_order and sell_order:
                 self.cur_trade = Trade(TradeTag.REV, [buy_order, sell_order], TradeMeta({}))
@@ -119,30 +119,39 @@ class RfabBacktester:
             trading_amount = spread_info.tradable_qty + fee if should_fee else spread_info.tradable_qty
 
             # balance check
-            has_enough_krw = buying_mkt.has_enough_coin("krw", spread_info.buy_price * init_setting_dict[trade_tag][
-                "factor"])
-            has_enough_coin = selling_mkt.has_enough_coin(target_currency,
-                                                          trading_amount * init_setting_dict[trade_tag]["factor"])
-
+            has_enough_krw = RfabBacktester.has_enough_coin_checker(buying_mkt, "krw",
+                                                                    spread_info.buy_price *
+                                                                    init_setting_dict[trade_tag]["factor"])
+            has_enough_coin = RfabBacktester.has_enough_coin_checker(selling_mkt, target_currency,
+                                                                     trading_amount *
+                                                                     init_setting_dict[trade_tag]["factor"])
+            # if enough krw & coin balance
             if has_enough_krw and has_enough_coin:
+                # make buy & sell order
+                buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_price, trading_amount)
+                sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_price, trading_amount)
                 # subtract considered fee if there was one
                 if should_fee:
                     GlobalFeeAccumulator.sub_fee_consideration(buying_mkt.get_market_tag(), target_currency, fee)
-
+                # log executed trade info
                 if not is_init_setting_opt:
-                    # log executed trade info
                     TradeInfoLogger.execute_trade_log_info(trade_tag, spread_info, trading_amount)
-
-                # excute trade
-                buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_price, trading_amount)
-                sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_price, trading_amount)
                 return buy_order, sell_order
+            # if not enough balance
             else:
                 if not is_init_setting_opt:
                     # log failed trade (not enough mkt amount)
-                    TradeInfoLogger.not_enough_mkt_qty_log_info(trade_tag, spread_info)
+                    TradeInfoLogger.not_enough_balance_log_info(trade_tag, spread_info)
                 return None, None
         return None, None
+
+    @staticmethod
+    def has_enough_coin_checker(market, coin_type: str, needed_amount: float):
+        available_amount = market.balance.get_available_coin(coin_type.lower())
+        if available_amount < needed_amount:
+            return False
+        else:
+            return True
 
     @staticmethod
     def initialize_mongo(mm_dict: dict, target_currency: str):
@@ -168,7 +177,6 @@ class TradeInfoLogger:
         trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
 
         try:
-            logging.info("\n")
             logging.info("[STAT] total trades: %d, new trades: %d(%.2f%%), rev trades: %d(%.2f%%)" %
                          (trade_total, trade_new, trade_new / trade_total * 100,
                           trade_rev, trade_rev / trade_total * 100))
@@ -197,8 +205,8 @@ class TradeInfoLogger:
                            trading_amount))
 
     @staticmethod
-    def not_enough_mkt_qty_log_info(trade_tag, spread_info):
-        logging.error("[EXECUTE] %s -> failed (not enough balance!) ->"
+    def not_enough_balance_log_info(trade_tag, spread_info):
+        logging.error("[EXECUTE] %s -> failed (not enough balance!) -> "
                       "Trading INFOS: Spread in unit = %.2f, Tradable Spread = %.2f, Tradable QTY= %.5f"
                       % (trade_tag.upper(), spread_info.spread_in_unit, spread_info.tradable_spread,
                          spread_info.tradable_qty))

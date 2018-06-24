@@ -4,10 +4,10 @@ from trader.market.order import Market
 from backtester.risk_free_arb_backtest import RfabBacktester
 
 Global.configure_default_root_logging(should_log_to_file=True)
-SharedMongoClient.initialize(should_use_localhost_db=True)
+SharedMongoClient.initialize(should_use_localhost_db=False)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.06.21 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.22 09:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.06.24 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.06.24 16:45:00", timezone="kr")
 
 target_currency = "bch"
 
@@ -28,7 +28,6 @@ mm2_balance_dict = {
 initial_setting_dict = {
     "max_trading_coin": 0.01,
     "min_trading_coin": 0,
-    "max_ob_index_num": 1,
     "new": {
         "threshold": 50,
         "factor": 1

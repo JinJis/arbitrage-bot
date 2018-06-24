@@ -3,7 +3,7 @@ from trader.market.order import Market
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
-from backtester.rfab_backtest import RfabBacktester
+from backtester.risk_free_arb_backtest import RfabBacktester
 
 Global.configure_default_root_logging(log_level=logging.CRITICAL, should_log_to_file=False)
 

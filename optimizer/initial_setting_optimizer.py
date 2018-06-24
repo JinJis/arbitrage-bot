@@ -1,4 +1,4 @@
-from backtester.rfab_backtest import RfabBacktester
+from backtester.risk_free_arb_backtest import RfabBacktester
 
 
 class InitialSettingOptimizer:
