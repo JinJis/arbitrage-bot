@@ -11,13 +11,12 @@ from trader.market_manager.virtual_market_manager import VirtualMarketManager
 class RfabBacktester:
     TARGET_STRATEGY = ATSAnalyzer.actual_tradable_spread_strategy
 
-    def __init__(self, mm1: VirtualMarketManager, mm2: VirtualMarketManager, target_currency: str,
-                 initial_setting_dict: dict, is_init_setting_opt: bool = False):
+    def __init__(self, mm1: VirtualMarketManager, mm2: VirtualMarketManager, target_currency: str):
         self.mm1 = mm1
         self.mm2 = mm2
         self.target_currency = target_currency
-        self.init_setting_dict = initial_setting_dict
-        self.is_init_setting_opt = is_init_setting_opt
+        self.init_setting_dict = None
+        self.is_init_setting_opt = None
 
         self.mm1_currency = self.mm1.get_market_currency(self.target_currency)
         self.mm2_currency = self.mm2.get_market_currency(self.target_currency)
@@ -25,16 +24,30 @@ class RfabBacktester:
         self.trade_manager = TradeManager(should_db_logging=True, is_backtesting=True)
         self.trade_logger = TradeInfoLogger(self.trade_manager, self.target_currency)
 
-    def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor):
+        # attributes for InitialSettingOptimizer
+        self.total_krw_bal = 0
+        self.trade_new = 0
+        self.trade_rev = 0
+
+    def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor,
+            init_setting_dict: dict, is_init_setting_opt: bool = False):
+
+        # init settings
+        self.init_setting_dict = init_setting_dict
+        self.is_init_setting_opt = is_init_setting_opt
+
         # loop through history data
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
             self.actual_trade_loop(mm1_data, mm2_data)
-
         # log backtesting result
         if not self.is_init_setting_opt:
             self.trade_logger.log_trade_info()
             self.trade_logger.log_oppty_info()
             self.trade_logger.log_combined_balance(self.mm1.balance, self.mm2.balance)
+        else:
+            self.total_krw_bal = self.get_krw_total_balance()
+            self.trade_new = self.trade_manager.get_trade_count(TradeTag.NEW)
+            self.trade_rev = self.trade_manager.get_trade_count(TradeTag.REV)
 
     def add_trade(self, trade: Trade, spread_info: SpreadInfo):
         if not trade:
@@ -129,6 +142,14 @@ class RfabBacktester:
             return False
         else:
             return True
+
+    def get_krw_total_balance(self):
+        # log balance
+        mm1_balance = self.mm1.get_balance()
+        mm2_balance = self.mm2.get_balance()
+
+        combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.target_currency, "krw"))
+        return combined["KRW"]["balance"]
 
 
 class TradeInfoLogger:

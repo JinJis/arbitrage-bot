@@ -71,7 +71,7 @@ class InitialSettingOptimizer:
 
             # now can loop through RFAB2 to get optimized result
             result = self.looper()
-            current_optimized = ISOAnalyzer.get_opt_initial_setting_list(result)
+            current_optimized = ISOAnalyzer.get_opt_initial_setting(result)
 
             # adjust start, end, step according to the recent optimized intial setting values
             for index, factor_name in enumerate(self.initial_factor.keys()):

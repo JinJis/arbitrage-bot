@@ -1,71 +1,75 @@
-import logging
-from trader.market.order import Market
+from trader.market.market import Market
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
-from optimizer.initial_setting_optimizer import InitialSettingOptimizer
+from trader.base_arb_bot import BaseArbBot
 from backtester.risk_free_arb_backtest import RfabBacktester
+from optimizer.initial_setting_optimizer import InitialSettingOptimizer
+from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
-Global.configure_default_root_logging(log_level=logging.CRITICAL, should_log_to_file=False)
 
-# choose which Coin Exchanger to use
-# SharedMongoClient.KORBIT_DB_NAME = "korbit"
-SharedMongoClient.COINONE_DB_NAME = "coinone"
-SharedMongoClient.GOPAX_DB_NAME = "gopax"
-SharedMongoClient.initialize(should_use_localhost_db=True)
+def get_target_col(market_tag: Market, target_currency: str):
+    method_name = {
+        Market.VIRTUAL_CO: "get_coinone_db",
+        Market.VIRTUAL_KB: "get_korbit_db",
+        Market.VIRTUAL_GP: "get_gopax_db"
+    }[market_tag]
+    return getattr(SharedMongoClient, method_name)()[target_currency + "_orderbook"]
 
-start_time = Global.convert_local_datetime_to_epoch("2018.06.11 13:20:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.11 13:25:00", timezone="kr")
 
-target_currency = "bch"
+def create_trading_bot(init_setting_dict: dict):
+    Global.configure_default_root_logging(should_log_to_file=False)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
-mm1_dict = {
-    "mkt_tag": Market.VIRTUAL_CO,
-    "market_fee": 0.001,
-    "krw_balance": 5000000,
-    "coin_balance": 0.5
-}
+    start_time = Global.convert_local_datetime_to_epoch("2018.06.24 16:45:00", timezone="kr")
+    end_time = Global.convert_local_datetime_to_epoch("2018.06.25 09:45:00", timezone="kr")
 
-mm2_dict = {
-    "mkt_tag": Market.VIRTUAL_GP,
-    "market_fee": 0.00075,
-    "krw_balance": 500000,
-    "coin_balance": 5
-}
+    target_currency = "bch"
+    mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
+    mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
+    mm1_col = get_target_col(Market.VIRTUAL_CO, target_currency)
+    mm2_col = get_target_col(Market.VIRTUAL_GP, target_currency)
 
-initial_setting_dict = {
-    "max_trading_coin": 0.01,
-    "min_trading_coin": 0,
-    "max_ob_index_num": 1,
-    "new_threshold": 50,
-    "rev_threshold": 50,
-    "new_factor": 1,
-    "rev_factor": 1
-}
+    mm1_data_cursor, mm2_data_cursor = BaseArbBot.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
+    RfabBacktester(mm1, mm2, target_currency, init_setting_dict, False).run(mm1_data_cursor, mm2_data_cursor)
 
-trading_bot = RfabBacktester(mm1_dict, mm2_dict, initial_setting_dict, start_time, end_time, is_init_setting_opt=True)
 
-initial_factor = {
-    "MAX_COIN_TRADING_UNIT": {
+setting_factor_dict = {
+    "max_trading_coin": {
         "start": 0,
-        "end": 0.1
+        "end": 0.1,
+        "step_limit": 0.0001
     },
-    "NEW_SPREAD_THRESHOLD": {
+    "min_trading_coin": {
         "start": 0,
-        "end": 1000
+        "end": 0,
+        "step_limit": 0.0001
     },
-    "REV_SPREAD_THRESHOLD": {
-        "start": 0,
-        "end": 1000
+    "new": {
+        "threshold": {
+            "start": 0,
+            "end": 1000,
+            "step_limit": 1
+
+        },
+        "factor": {
+            "start": 1,
+            "end": 3,
+            "step_limit": 0.01
+        }
     },
-    "NEW_FACTOR": {
-        "start": 1,
-        "end": 3
-    },
-    "REV_FACTOR": {
-        "start": 1,
-        "end": 3
+    "rev": {
+        "threshold": {
+            "start": 0,
+            "end": 1000,
+            "step_limit": 1
+        },
+        "factor": {
+            "start": 1,
+            "end": 3,
+            "step_limit": 0.01
+        }
     }
 }
 
-optimized = InitialSettingOptimizer(trading_bot, initial_factor, division=4, depth=10).run()
-print(optimized)
+trading_bot = create_trading_bot(initial_setting_dict)
+InitialSettingOptimizer(trading_bot, initial_setting_dict, division=4, depth=10).run()

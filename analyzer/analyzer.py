@@ -186,11 +186,8 @@ class ATSAnalyzer:
 
 
 class ISOAnalyzer:
-    # FIXME: 물론 99%의 경우 여기까지 loop 돌리면 하나의 결과값만 return 되겠지만,
-    # FIXME: 낮은 가능성으로 krw, Max_coin_unit 같아도 threshold에 따라 new, rev oppty 달라질 수 있음 >> 여러개 결과 return 가능함
-    # FIXME: 일단, 여기서는 그러한 경우 가장 첫번째 list를 final result로 취하겠지만 나중에 로직 보완해야함
     @staticmethod
-    def get_opt_initial_setting_list(result: list):
+    def get_opt_initial_setting(result: list):
         max_krw_pair = None
         # Get list of those results that have same KRW balance
         same_krw_list = []
@@ -218,21 +215,12 @@ class ISOAnalyzer:
                     min_coin_pair = pair
                     same_coin_unit_list.append(pair)
                     continue
-                if pair[1] < min_coin_pair[1]:
+                if pair[1]["max_trading_coin"] < min_coin_pair[1]["max_trading_coin"]:
                     min_coin_pair = pair
                     same_coin_unit_list.clear()
                     same_coin_unit_list.append(min_coin_pair)
-                elif pair[1] == min_coin_pair[1]:
+                elif pair[1]["max_trading_coin"] == min_coin_pair[1]:
                     same_coin_unit_list.append(pair)
             return same_coin_unit_list[0]
         else:
             return same_krw_list[0]
-
-    @staticmethod
-    def start_end_step_to_list(start, end, step):
-        result = []
-        stepper = start
-        while stepper <= end:
-            result.append(stepper)
-            stepper += step
-        return result
