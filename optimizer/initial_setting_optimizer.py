@@ -1,8 +1,8 @@
 import logging
-from analyzer.analyzer import ISOAnalyzer
-from backtester.risk_free_arb_backtest import RfabBacktester
 from config.global_conf import Global
+from analyzer.analyzer import ISOAnalyzer
 from config.shared_mongo_client import SharedMongoClient
+from backtester.risk_free_arb_backtester import RfabBacktester
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 
@@ -20,30 +20,18 @@ class InitialSettingOptimizer:
         }
     }
 
-    @staticmethod
-    def get_history_data(settings: dict):
-        target_currency = settings["target_currency"]
-        start_time = Global.convert_local_datetime_to_epoch(settings["start_time"], timezone="kr")
-        end_time = Global.convert_local_datetime_to_epoch(settings["end_time"], timezone="kr")
-        mm1_col = SharedMongoClient.get_target_db(settings["mm1"]["market_tag"])[target_currency + "_orderbook"]
-        mm2_col = SharedMongoClient.get_target_db(settings["mm2"]["market_tag"])[target_currency + "_orderbook"]
-        return SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
-
-    @staticmethod
-    def create_market(market_settings: dict, target_currency: str):
-        return VirtualMarketManager(
-            market_settings["market_tag"],
-            market_settings["fee_rate"],
-            market_settings["krw_balance"],
-            market_settings["coin_balance"],
-            target_currency
-        )
-
     @classmethod
-    def create_bot(cls, mm1_settings: dict, mm2_settings: dict, target_currency: str):
-        mm1 = cls.create_market(mm1_settings, target_currency)
-        mm2 = cls.create_market(mm2_settings, target_currency)
-        return RfabBacktester(mm1, mm2, target_currency)
+    def run(cls, settings: dict, factor_settings: dict):
+        # intial dry run
+        factor_settings = cls.opt_factor_settings_by_oppty(settings, factor_settings)
+
+        # set initial step
+        flattened_items = cls.flatten_factor_settings_items(factor_settings)
+        for item in flattened_items:
+            item["step"] = cls.calc_steps_under_limit(item, settings["division"])
+
+        # run recursive
+        return cls.opt_by_factor_settings_recursive(settings, factor_settings, settings["depth"])
 
     # reduce as many cacluation odds as possible when operating for the first time
     # count NEW & REV oppty numbers
@@ -92,48 +80,6 @@ class InitialSettingOptimizer:
         target_dict["end"] = target_dict["start"]
 
     @classmethod
-    def run(cls, settings: dict, factor_settings: dict):
-        # intial dry run
-        factor_settings = cls.opt_factor_settings_by_oppty(settings, factor_settings)
-
-        # set initial step
-        flattened_items = cls.flatten_factor_settings_items(factor_settings)
-        for item in flattened_items:
-            item["step"] = cls.calc_steps_under_limit(item, settings["division"])
-
-        # run recursive
-        return cls.opt_by_factor_settings_recursive(settings, factor_settings, settings["depth"])
-
-    @staticmethod
-    def flatten_factor_settings_items(factor_settings: dict):
-        result = []
-        for key in factor_settings.keys():
-            item = factor_settings[key]
-            # 2 depth items
-            if key in ["new", "rev"]:
-                for sub_item in item.values():
-                    result.append(sub_item)
-            # 1 depth items
-            else:
-                result.append(item)
-        return result
-
-    @staticmethod
-    def calc_steps_under_limit(item: dict, division: int):
-        step = (item["end"] - item["start"]) / division
-        return max([step, item["step_limit"]])
-
-    @staticmethod
-    def generate_seq(start, end, step):
-        result = []
-        stepper = start
-        while stepper < end:
-            result.append(stepper)
-            stepper += step
-        result.append(end)
-        return result
-
-    @classmethod
     def opt_by_factor_settings_recursive(cls, settings: dict, factor_settings: dict,
                                          depth: int, optimized: list = None):
         if depth == 0:
@@ -162,6 +108,59 @@ class InitialSettingOptimizer:
 
         depth -= 1
         return cls.opt_by_factor_settings_recursive(settings, factor_settings, depth, optimized)
+
+    @staticmethod
+    def calc_steps_under_limit(item: dict, division: int):
+        step = (item["end"] - item["start"]) / division
+        return max([step, item["step_limit"]])
+
+    @staticmethod
+    def flatten_factor_settings_items(factor_settings: dict):
+        result = []
+        for key in factor_settings.keys():
+            item = factor_settings[key]
+            # 2 depth items
+            if key in ["new", "rev"]:
+                for sub_item in item.values():
+                    result.append(sub_item)
+            # 1 depth items
+            else:
+                result.append(item)
+        return result
+
+    @staticmethod
+    def generate_seq(start, end, step):
+        result = []
+        stepper = start
+        while stepper < end:
+            result.append(stepper)
+            stepper += step
+        result.append(end)
+        return result
+
+    @classmethod
+    def test_trade_result_in_seq(cls, settings: dict, factor_settings: dict):
+        result = []
+
+        # calculate total odds
+        total_odds = 1
+        flattened_items = cls.flatten_factor_settings_items(factor_settings)
+        for item in flattened_items:
+            total_odds *= len(item["seq"])
+
+        # create initial settings
+        batch = cls.create_batch_initial_settings(factor_settings)
+
+        # query data
+        mm1_cursor, mm2_cursor = cls.get_history_data(settings)
+
+        for index, item in enumerate(batch):
+            logging.info("Now conducting %d out of %d" % (index + 1, total_odds))
+            bot = cls.create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
+            bot.run(mm1_cursor.clone(), mm2_cursor.clone(), item, True)
+            result.append([bot.total_krw_bal, item, bot.trade_new, bot.trade_rev])
+
+        return result
 
     @classmethod
     def get_new_factor_settings(cls, opt_inital_settings: dict, factor_settings: dict, division: int):
@@ -194,8 +193,6 @@ class InitialSettingOptimizer:
             clone["start"] = 0
         clone["end"] = current_opt + prev_step
         clone["step"] = (clone["end"] - clone["start"]) / division
-        # TODO
-        print(clone["step"])
         return clone
 
     @staticmethod
@@ -221,26 +218,27 @@ class InitialSettingOptimizer:
                                 })
         return result
 
+    @staticmethod
+    def get_history_data(settings: dict):
+        target_currency = settings["target_currency"]
+        start_time = Global.convert_local_datetime_to_epoch(settings["start_time"], timezone="kr")
+        end_time = Global.convert_local_datetime_to_epoch(settings["end_time"], timezone="kr")
+        mm1_col = SharedMongoClient.get_target_db(settings["mm1"]["market_tag"])[target_currency + "_orderbook"]
+        mm2_col = SharedMongoClient.get_target_db(settings["mm2"]["market_tag"])[target_currency + "_orderbook"]
+        return SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
+
+    @staticmethod
+    def create_market(market_settings: dict, target_currency: str):
+        return VirtualMarketManager(
+            market_settings["market_tag"],
+            market_settings["fee_rate"],
+            market_settings["krw_balance"],
+            market_settings["coin_balance"],
+            target_currency
+        )
+
     @classmethod
-    def test_trade_result_in_seq(cls, settings: dict, factor_settings: dict):
-        result = []
-
-        # calculate total odds
-        total_odds = 1
-        flattened_items = cls.flatten_factor_settings_items(factor_settings)
-        for item in flattened_items:
-            total_odds *= len(item["seq"])
-
-        # create initial settings
-        batch = cls.create_batch_initial_settings(factor_settings)
-
-        # query data
-        mm1_cursor, mm2_cursor = cls.get_history_data(settings)
-
-        for index, item in enumerate(batch):
-            logging.info("Now conducting %d out of %d" % (index + 1, total_odds))
-            bot = cls.create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
-            bot.run(mm1_cursor.clone(), mm2_cursor.clone(), cls.default_init_setting_dict, True)
-            result.append([bot.total_krw_bal, item, bot.trade_new, bot.trade_rev])
-
-        return result
+    def create_bot(cls, mm1_settings: dict, mm2_settings: dict, target_currency: str):
+        mm1 = cls.create_market(mm1_settings, target_currency)
+        mm2 = cls.create_market(mm2_settings, target_currency)
+        return RfabBacktester(mm1, mm2, target_currency)

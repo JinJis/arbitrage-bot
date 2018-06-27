@@ -2,7 +2,7 @@ from trader.market.market import Market
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from trader.base_arb_bot import BaseArbBot
-from backtester.risk_free_arb_backtest import RfabBacktester
+from backtester.risk_free_arb_backtester import RfabBacktester
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 

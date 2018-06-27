@@ -36,6 +36,11 @@ class RfabBacktester:
         self.init_setting_dict = init_setting_dict
         self.is_init_setting_opt = is_init_setting_opt
 
+        # clear balances & trade counter
+        self.mm1.clear_balance()
+        self.mm2.clear_balance()
+        self.trade_manager.clear_trade_count()
+
         # loop through history data
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
             self.actual_trade_loop(mm1_data, mm2_data)

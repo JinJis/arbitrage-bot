@@ -1,53 +1,67 @@
-import logging
-
 from config.global_conf import Global
+from trader.market.market import Market
 from config.shared_mongo_client import SharedMongoClient
-from temp.arbbot_ideas.initial_setting_optimizer import InitialSettingOptimizer
-from trader.risk_free_arb_bot import RiskFreeArbBot2
+from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 
-Global.configure_default_root_logging(log_level=logging.CRITICAL, should_log_to_file=False)
-
-# choose which Coin Exchanger to use
-# SharedMongoClient.KORBIT_DB_NAME = "korbit"
-SharedMongoClient.COINONE_DB_NAME = "coinone"
-SharedMongoClient.GOPAX_DB_NAME = "gopax"
-
-# Fixme whether to use 'local_host' or not
+Global.configure_default_root_logging(should_log_to_file=True)
 SharedMongoClient.initialize(should_use_localhost_db=True)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.06.11 13:20:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.11 13:25:00", timezone="kr")
+factor_settings = {
+    "max_trading_coin": {
+        "start": 0,
+        "end": 0.5,
+        "step_limit": 0.0001
+    },
+    "min_trading_coin": {
+        "start": 0,
+        "end": 0,
+        "step_limit": 0
+    },
+    "new": {
+        "threshold": {
+            "start": 0,
+            "end": 5000,
+            "step_limit": 1
 
-trading_bot = RiskFreeArbBot2(target_currency="bch", should_db_logging=False, is_backtesting=True,
-                              is_init_setting_opt=True,
-                              start_time=start_time, end_time=end_time)
-
-initial_factor = {
-    "MAX_COIN_TRADING_UNIT": {
-        "start": 0,
-        "end": 0.1
+        },
+        "factor": {
+            "start": 1,
+            "end": 3,
+            "step_limit": 0.01
+        }
     },
-    "NEW_SPREAD_THRESHOLD": {
-        "start": 0,
-        "end": 1000
-    },
-    "REV_SPREAD_THRESHOLD": {
-        "start": 0,
-        "end": 1000
-    },
-    "NEW_FACTOR": {
-        "start": 1,
-        "end": 3
-    },
-    "REV_FACTOR": {
-        "start": 1,
-        "end": 3
+    "rev": {
+        "threshold": {
+            "start": 0,
+            "end": 5000,
+            "step_limit": 1
+        },
+        "factor": {
+            "start": 1,
+            "end": 3,
+            "step_limit": 0.01
+        }
     }
 }
 
-try:
-    optimized = InitialSettingOptimizer(trading_bot, initial_factor, division=4, depth=10).run()
-except KeyboardInterrupt:
-    pass
-print(optimized)
+opt = InitialSettingOptimizer().run({
+    "target_currency": "bch",
+    "mm1": {
+        "market_tag": Market.VIRTUAL_CO,
+        "fee_rate": 0.001,
+        "krw_balance": 5000000,
+        "coin_balance": 0.5
+    },
+    "mm2": {
+        "market_tag": Market.VIRTUAL_GP,
+        "fee_rate": 0.00075,
+        "krw_balance": 500000,
+        "coin_balance": 5
 
+    },
+    "division": 5,
+    "depth": 5,
+    "start_time": "2018.06.24 12:30:00",
+    "end_time": "2018.06.24 12:50:00"
+}, factor_settings)
+print(opt)
