@@ -19,14 +19,14 @@ def main():
     Global.configure_default_root_logging(should_log_to_file=True)
     SharedMongoClient.initialize(should_use_localhost_db=False)
 
-    start_time = Global.convert_local_datetime_to_epoch("2018.06.24 12:25:00", timezone="kr")
-    end_time = Global.convert_local_datetime_to_epoch("2018.06.24 12:35:00", timezone="kr")
+    start_time = Global.convert_local_datetime_to_epoch("2018.06.27 12:30:00", timezone="kr")
+    end_time = Global.convert_local_datetime_to_epoch("2018.06.27 12:50:00", timezone="kr")
 
     initial_setting_dict = {
-        "max_trading_coin": 0.025,
+        "max_trading_coin": 0.06624,
         "min_trading_coin": 0,
         "new": {
-            "threshold": 500,
+            "threshold": 0,
             "factor": 1
         },
         "rev": {

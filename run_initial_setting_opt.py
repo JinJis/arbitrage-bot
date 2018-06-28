@@ -4,12 +4,12 @@ from config.shared_mongo_client import SharedMongoClient
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 
 Global.configure_default_root_logging(should_log_to_file=True)
-SharedMongoClient.initialize(should_use_localhost_db=True)
+SharedMongoClient.initialize(should_use_localhost_db=False)
 
 factor_settings = {
     "max_trading_coin": {
         "start": 0,
-        "end": 0.5,
+        "end": 0.05,
         "step_limit": 0.0001
     },
     "min_trading_coin": {
@@ -20,7 +20,7 @@ factor_settings = {
     "new": {
         "threshold": {
             "start": 0,
-            "end": 5000,
+            "end": 1000,
             "step_limit": 1
 
         },
@@ -33,7 +33,7 @@ factor_settings = {
     "rev": {
         "threshold": {
             "start": 0,
-            "end": 5000,
+            "end": 1000,
             "step_limit": 1
         },
         "factor": {
@@ -61,7 +61,7 @@ opt = InitialSettingOptimizer().run({
     },
     "division": 5,
     "depth": 5,
-    "start_time": "2018.06.24 12:30:00",
-    "end_time": "2018.06.24 12:50:00"
+    "start_time": "2018.06.27 14:30:00",
+    "end_time": "2018.06.27 14:50:00"
 }, factor_settings)
 print(opt)

@@ -1,5 +1,3 @@
-from analyzer.analyzer import BasicAnalyzer
-
 """OTS Strategy analyzer"""
 
 
