@@ -6,15 +6,6 @@ from backtester.risk_free_arb_backtester import RfabBacktester
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 
-def get_target_col(market_tag: Market, target_currency: str):
-    method_name = {
-        Market.VIRTUAL_CO: "get_coinone_db",
-        Market.VIRTUAL_KB: "get_korbit_db",
-        Market.VIRTUAL_GP: "get_gopax_db"
-    }[market_tag]
-    return getattr(SharedMongoClient, method_name)()[target_currency + "_orderbook"]
-
-
 def main():
     Global.configure_default_root_logging(should_log_to_file=True)
     SharedMongoClient.initialize(should_use_localhost_db=False)
@@ -38,8 +29,8 @@ def main():
     target_currency = "bch"
     mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
     mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
-    mm1_col = get_target_col(Market.VIRTUAL_CO, target_currency)
-    mm2_col = get_target_col(Market.VIRTUAL_GP, target_currency)
+    mm1_col = SharedMongoClient.get_target_col(Market.VIRTUAL_CO, target_currency)
+    mm2_col = SharedMongoClient.get_target_col(Market.VIRTUAL_GP, target_currency)
 
     mm1_data_cursor, mm2_data_cursor = BaseArbBot.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
     RfabBacktester(mm1, mm2, "bch").run(mm1_data_cursor, mm2_data_cursor, initial_setting_dict, False)

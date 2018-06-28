@@ -11,17 +11,26 @@ class OpptyRequestTimeCollector:
         self.target_currency = target_currency
         self.mm1 = mm1
         self.mm2 = mm2
-        self.result = dict(new=[], rev=[])
+        self.raw_rq_time_dict = dict(new=[], rev=[])
 
-    def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor):
+    def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor, interval_depth: int = 1):
 
         # loop through history data
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
-            self.check_oppty_by_unit_spread(mm1_data, mm2_data)
+            self.add_oppty_requesttime_to_list(mm1_data, mm2_data)
 
-        print(self.result)
+        print(self.raw_rq_time_dict["new"])
+        print(self.raw_rq_time_dict["rev"])
 
-    def check_oppty_by_unit_spread(self, mm1_data: dict, mm2_data: dict):
+        # sort raw rq time into duration
+        sorted_new_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["new"],
+                                                                              5 * interval_depth)
+        sorted_rev_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["rev"],
+                                                                              5 * interval_depth)
+        print(sorted_new_duration)
+        print(sorted_rev_duration)
+
+    def add_oppty_requesttime_to_list(self, mm1_data: dict, mm2_data: dict):
         # adjust orderbook for realistic backtesting
         self.mm1.apply_history_to_orderbook(mm1_data)
         self.mm2.apply_history_to_orderbook(mm2_data)
@@ -29,17 +38,13 @@ class OpptyRequestTimeCollector:
         new_unit_spread, rev_unit_spread = self.get_spread_info(mm1_data, mm2_data,
                                                                 self.mm1.market_fee, self.mm2.market_fee)
 
-        # NEW
+        # collect requestTime when NEW
         if new_unit_spread > 0:
-            self.result["new"].append(mm1_data["requestTime"])
-            if not mm1_data["requestTime"] == mm2_data["requestTime"]:
-                print("mm1: %s & mm2: %s reqeustTime not matched" % (mm1_data["requestTime"], mm2_data["requestTime"]))
+            self.raw_rq_time_dict["new"].append(mm1_data["requestTime"])
 
-        # REVERSE
+        # collect requestTime when NEW
         if rev_unit_spread > 0:
-            self.result["rev"].append(mm1_data["requestTime"])
-            if not mm1_data["requestTime"] == mm2_data["requestTime"]:
-                print("mm1: %s & mm2: %s reqeustTime not matched" % (mm1_data["requestTime"], mm2_data["requestTime"]))
+            self.raw_rq_time_dict["rev"].append(mm1_data["requestTime"])
 
     @classmethod
     def get_spread_info(cls, mm1_orderbook: dict, mm2_orderbook: dict, mm1_market_fee: float, mm2_market_fee: float):
@@ -60,3 +65,29 @@ class OpptyRequestTimeCollector:
     def get_unit_spread_info(buy_unit_price: int, buy_fee: float, sell_unit_price: int, sell_fee: float):
         unit_spread = (-1) * buy_unit_price / (1 - buy_fee) + (+1) * sell_unit_price * (1 - sell_fee)
         return unit_spread
+
+    @staticmethod
+    def sort_by_time_duration(rq_time_list: list, time_interval: int):
+        was_in_oppty = False
+        temp_time_set = list()
+        result = list()
+        for index, item in enumerate(rq_time_list[1:]):
+            now = rq_time_list[index + 1]
+            before = rq_time_list[index]
+            # when in oppty
+            if now - before <= time_interval:
+                if not was_in_oppty:
+                    was_in_oppty = True
+                    temp_time_set.append(before)
+            # when not in oppty
+            else:
+                if was_in_oppty:
+                    was_in_oppty = False
+                    temp_time_set.append(before)
+                    result.append([i for i in temp_time_set])
+                    temp_time_set.clear()
+        if was_in_oppty:
+            temp_time_set.append(rq_time_list[-1])
+            result.append([i for i in temp_time_set])
+            temp_time_set.clear()
+        return result

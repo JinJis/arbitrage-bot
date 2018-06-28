@@ -108,3 +108,12 @@ class SharedMongoClient:
             Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
 
         return mm1_cursor, mm2_cursor
+
+    @staticmethod
+    def get_target_col(market_tag: Market, target_coin: str):
+        method_name = {
+            Market.VIRTUAL_CO: "get_coinone_db",
+            Market.VIRTUAL_KB: "get_korbit_db",
+            Market.VIRTUAL_GP: "get_gopax_db"
+        }[market_tag]
+        return getattr(SharedMongoClient, method_name)()[target_coin + "_orderbook"]

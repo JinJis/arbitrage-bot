@@ -1,31 +1,30 @@
-from trader.market.market import Market
-from config.global_conf import Global
-from config.shared_mongo_client import SharedMongoClient
-from trader.market_manager.virtual_market_manager import VirtualMarketManager
-from trader.risk_free_arb_bot import BaseArbBot
-from collector.oppty_time_collector import OpptyRequestTimeCollector
+rq_time_result = [4, 5, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 30, 55, 57, 59, 60, 61, 62, 63, 64, 65, 70, 75, 76]
+time_interval = 1
+
+was_in_oppty = False
+rq_time_set = list()
+final_result = list()
+
+for index, item in enumerate(rq_time_result[1:]):
+    now = rq_time_result[index + 1]
+    before = rq_time_result[index]
+    # when in oppty
+    if now - before == time_interval:
+        if not was_in_oppty:
+            was_in_oppty = True
+            rq_time_set.append(before)
+    else:
+        if was_in_oppty:
+            was_in_oppty = False
+            rq_time_set.append(before)
+            final_result.append([i for i in rq_time_set])
+            rq_time_set.clear()
+
+if was_in_oppty:
+    rq_time_set.append(rq_time_result[-1])
+    final_result.append([i for i in rq_time_set])
+    rq_time_set.clear()
 
 
-def get_target_col(market_tag: Market, target_coin: str):
-    method_name = {
-        Market.VIRTUAL_CO: "get_coinone_db",
-        Market.VIRTUAL_KB: "get_korbit_db",
-        Market.VIRTUAL_GP: "get_gopax_db"
-    }[market_tag]
-    return getattr(SharedMongoClient, method_name)()[target_coin + "_orderbook"]
+print(final_result)
 
-
-Global.configure_default_root_logging(should_log_to_file=False)
-SharedMongoClient.initialize(should_use_localhost_db=False)
-
-start_time = Global.convert_local_datetime_to_epoch("2018.06.26 12:30:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.27 12:50:00", timezone="kr")
-
-target_currency = "bch"
-mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 5000000, 0.5, target_currency)
-mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 500000, 5, target_currency)
-mm1_col = get_target_col(Market.VIRTUAL_CO, target_currency)
-mm2_col = get_target_col(Market.VIRTUAL_GP, target_currency)
-mm1_data_cursor, mm2_data_cursor = BaseArbBot.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
-
-OpptyRequestTimeCollector(mm1, mm2, target_currency).run(mm1_data_cursor, mm2_data_cursor)
