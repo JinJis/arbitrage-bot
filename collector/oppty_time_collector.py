@@ -19,16 +19,12 @@ class OpptyRequestTimeCollector:
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
             self.add_oppty_requesttime_to_list(mm1_data, mm2_data)
 
-        print(self.raw_rq_time_dict["new"])
-        print(self.raw_rq_time_dict["rev"])
-
         # sort raw rq time into duration
         sorted_new_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["new"],
                                                                               5 * interval_depth)
         sorted_rev_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["rev"],
                                                                               5 * interval_depth)
-        print(sorted_new_duration)
-        print(sorted_rev_duration)
+        return dict(new=sorted_new_duration, rev=sorted_rev_duration)
 
     def add_oppty_requesttime_to_list(self, mm1_data: dict, mm2_data: dict):
         # adjust orderbook for realistic backtesting
@@ -66,8 +62,8 @@ class OpptyRequestTimeCollector:
         unit_spread = (-1) * buy_unit_price / (1 - buy_fee) + (+1) * sell_unit_price * (1 - sell_fee)
         return unit_spread
 
-    @staticmethod
-    def sort_by_time_duration(rq_time_list: list, time_interval: int):
+    @classmethod
+    def sort_by_time_duration(cls, rq_time_list: list, time_interval: int):
         was_in_oppty = False
         temp_time_set = list()
         result = list()
