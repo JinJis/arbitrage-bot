@@ -9,10 +9,12 @@ class TickerOrderbookScheduler(ApiScheduler):
     @BaseScheduler.interval_waiter(5)
     def _actual_run_in_loop(self):
         request_time = int(time.time())
-        Global.run_threaded(self.co_collector.collect_ticker, [request_time])
+        # Global.run_threaded(self.co_collector.collect_ticker, [request_time])
         Global.run_threaded(self.co_collector.collect_orderbook, [request_time])
-        Global.run_threaded(self.kb_collector.collect_ticker, [request_time])
+        # Global.run_threaded(self.kb_collector.collect_ticker, [request_time])
         Global.run_threaded(self.kb_collector.collect_orderbook, [request_time])
+        # Global.run_threaded(self.go_collector.collect_ticker, [request_time])
+        Global.run_threaded(self.go_collector.collect_orderbook, [request_time])
 
 
 if __name__ == "__main__":

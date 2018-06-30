@@ -4,6 +4,7 @@ from config.global_conf import Global
 from collector.collector import Collector
 from api.korbit_api import KorbitApi, KorbitCurrency
 from api.coinone_api import CoinoneApi, CoinoneCurrency
+from api.gopax_api import GopaxApi, GopaxCurrency
 from collector.scheduler.base_scheduler import BaseScheduler
 
 
@@ -19,14 +20,17 @@ class ApiScheduler(BaseScheduler):
         db_client = MongoClient(mongodb_uri)
         coinone_db = db_client["coinone"]
         korbit_db = db_client["korbit"]
+        gopax_db = db_client["gopax"]
 
         # init api
         coinone_api = CoinoneApi.instance(True)
         korbit_api = KorbitApi.instance(True)
+        gopax_api = GopaxApi.instance(True)
 
         # init currency
         coinone_currency = CoinoneCurrency[currency.upper()]
         korbit_currency = KorbitCurrency[currency.upper()]
+        goapx_currency = GopaxCurrency[currency.upper()]
 
         # init collector
         self.kb_collector = Collector(
@@ -34,6 +38,9 @@ class ApiScheduler(BaseScheduler):
         )
         self.co_collector = Collector(
             coinone_api, coinone_currency, coinone_db
+        )
+        self.go_collector = Collector(
+            gopax_api, goapx_currency, gopax_db
         )
 
     @abstractmethod
