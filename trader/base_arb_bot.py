@@ -137,26 +137,6 @@ class BaseArbBot(ABC):
         if delayed_count > self.DELAYED_ORDER_COUNT_THRESHOLD:
             logging.warning("[Warning] delayed orders: %s" % OrderWatcherStats.instance().get_current_delayed())
 
-    @staticmethod
-    def get_data_from_db(mm1_data_col: Collection, mm2_data_col: Collection, start_time: int, end_time: int):
-        mm1_cursor = mm1_data_col.find({"requestTime": {
-            "$gte": start_time,
-            "$lte": end_time
-        }}).sort([("requestTime", 1)])
-        mm2_cursor = mm2_data_col.find({"requestTime": {
-            "$gte": start_time,
-            "$lte": end_time
-        }}).sort([("requestTime", 1)])
-
-        mm1_count = mm1_cursor.count()
-        mm2_count = mm2_cursor.count()
-        if mm1_count != mm2_count:
-            logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
-            logging.info("Now validating data...")
-            Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
-
-        return mm1_cursor, mm2_cursor
-
     def clear_oppty_counter(self):
         self.new_oppty_counter = 0
         self.rev_oppty_counter = 0
