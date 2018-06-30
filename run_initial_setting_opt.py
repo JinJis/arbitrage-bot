@@ -61,7 +61,7 @@ opt = InitialSettingOptimizer().run({
     },
     "division": 5,
     "depth": 5,
-    "start_time": "2018.06.27 14:30:00",
-    "end_time": "2018.06.27 14:50:00"
+    "start_time": Global.convert_local_datetime_to_epoch("2018.06.30 09:00:00", timezone="kr"),
+    "end_time": Global.convert_local_datetime_to_epoch("2018.06.30 09:00:00", timezone="kr")
 }, factor_settings)
 print(opt)

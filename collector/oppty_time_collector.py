@@ -6,6 +6,7 @@ from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 class OpptyRequestTimeCollector:
     TARGET_STRATEGY = ATSAnalyzer.actual_tradable_spread_strategy
+    INTERVAL = 5
 
     def __init__(self, mm1: VirtualMarketManager, mm2: VirtualMarketManager, target_currency: str):
         self.target_currency = target_currency
@@ -13,27 +14,20 @@ class OpptyRequestTimeCollector:
         self.mm2 = mm2
         self.raw_rq_time_dict = dict(new=[], rev=[])
 
-    def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor, interval_depth: int = 1):
+    def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor):
 
         # loop through history data
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
             self.add_oppty_requesttime_to_list(mm1_data, mm2_data)
 
         # sort raw rq time into duration
-        sorted_new_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["new"],
-                                                                              5 * interval_depth)
-        sorted_rev_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["rev"],
-                                                                              5 * interval_depth)
-        return dict(new=sorted_new_duration, rev=sorted_rev_duration)
+        new_oppty_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["new"])
+        rev_oppty_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["rev"])
+        return dict(new=new_oppty_duration, rev=rev_oppty_duration)
 
     def add_oppty_requesttime_to_list(self, mm1_data: dict, mm2_data: dict):
-        # adjust orderbook for realistic backtesting
-        self.mm1.apply_history_to_orderbook(mm1_data)
-        self.mm2.apply_history_to_orderbook(mm2_data)
-
         new_unit_spread, rev_unit_spread = self.get_spread_info(mm1_data, mm2_data,
                                                                 self.mm1.market_fee, self.mm2.market_fee)
-
         # collect requestTime when NEW
         if new_unit_spread > 0:
             self.raw_rq_time_dict["new"].append(mm1_data["requestTime"])
@@ -63,7 +57,7 @@ class OpptyRequestTimeCollector:
         return unit_spread
 
     @classmethod
-    def sort_by_time_duration(cls, rq_time_list: list, time_interval: int):
+    def sort_by_time_duration(cls, rq_time_list: list):
         was_in_oppty = False
         temp_time_set = list()
         result = list()
@@ -71,7 +65,7 @@ class OpptyRequestTimeCollector:
             now = rq_time_list[index + 1]
             before = rq_time_list[index]
             # when in oppty
-            if now - before <= time_interval:
+            if now - before == cls.INTERVAL:
                 if not was_in_oppty:
                     was_in_oppty = True
                     temp_time_set.append(before)
@@ -82,8 +76,18 @@ class OpptyRequestTimeCollector:
                     temp_time_set.append(before)
                     result.append([i for i in temp_time_set])
                     temp_time_set.clear()
+        # when the last item is under oppty
         if was_in_oppty:
             temp_time_set.append(rq_time_list[-1])
             result.append([i for i in temp_time_set])
             temp_time_set.clear()
         return result
+
+    @staticmethod
+    def get_total_duration_time(result_dict: dict):
+        total_duration = dict(new=0, rev=0)
+        for key in result_dict.keys():
+            for time in result_dict[key]:
+                diff = time[1] - time[0]
+                total_duration[key] += diff
+        return total_duration

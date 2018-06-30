@@ -221,11 +221,9 @@ class InitialSettingOptimizer:
     @staticmethod
     def get_history_data(settings: dict):
         target_currency = settings["target_currency"]
-        start_time = Global.convert_local_datetime_to_epoch(settings["start_time"], timezone="kr")
-        end_time = Global.convert_local_datetime_to_epoch(settings["end_time"], timezone="kr")
         mm1_col = SharedMongoClient.get_target_db(settings["mm1"]["market_tag"])[target_currency + "_orderbook"]
         mm2_col = SharedMongoClient.get_target_db(settings["mm2"]["market_tag"])[target_currency + "_orderbook"]
-        return SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
+        return SharedMongoClient.get_data_from_db(mm1_col, mm2_col, settings["start_time"], settings["end_time"])
 
     @staticmethod
     def create_market(market_settings: dict, target_currency: str):
