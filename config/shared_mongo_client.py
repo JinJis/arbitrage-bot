@@ -1,4 +1,6 @@
+import logging
 from .global_conf import Global
+from trader.market.market import Market
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
@@ -77,3 +79,41 @@ class SharedMongoClient:
             {"order_id": order["order_id"]},
             {"$set": order}
         )
+
+    @classmethod
+    def get_target_db(cls, market_tag: Market):
+        method_name = {
+            Market.VIRTUAL_CO: "get_coinone_db",
+            Market.VIRTUAL_KB: "get_korbit_db",
+            Market.VIRTUAL_GP: "get_gopax_db"
+        }[market_tag]
+        return getattr(cls, method_name)()
+
+    @staticmethod
+    def get_data_from_db(mm1_data_col: Collection, mm2_data_col: Collection, start_time: int, end_time: int):
+        mm1_cursor = mm1_data_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+        mm2_cursor = mm2_data_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        mm1_count = mm1_cursor.count()
+        mm2_count = mm2_cursor.count()
+        if mm1_count != mm2_count:
+            logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
+            logging.info("Now validating data...")
+            Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
+
+        return mm1_cursor, mm2_cursor
+
+    @staticmethod
+    def get_target_col(market_tag: Market, target_coin: str):
+        method_name = {
+            Market.VIRTUAL_CO: "get_coinone_db",
+            Market.VIRTUAL_KB: "get_korbit_db",
+            Market.VIRTUAL_GP: "get_gopax_db"
+        }[market_tag]
+        return getattr(SharedMongoClient, method_name)()[target_coin + "_orderbook"]

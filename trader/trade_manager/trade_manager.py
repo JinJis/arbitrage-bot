@@ -59,6 +59,9 @@ class TradeManager:
         else:
             return sum(1 for trade in self._trade_list if trade.trade_tag is target_trade_tag)
 
+    def clear_trade_count(self):
+        self._trade_list.clear()
+
     def get_last_trade(self):
         return self._trade_list[-1] if len(self._trade_list) > 0 else None
 
