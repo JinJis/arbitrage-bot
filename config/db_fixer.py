@@ -5,6 +5,43 @@ from config.shared_mongo_client import SharedMongoClient
 
 class DbFixer:
     @staticmethod
+    def update_rq_diff_by_control_db(con_db: str, con_col: str, tar_db: str, tar_col: str,
+                                     start_time: int, end_time: int):
+        db_client = SharedMongoClient.instance()
+        control_col = db_client[con_db][con_col]
+        target_col = db_client[tar_db][tar_col]
+
+        con_cursor = control_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+        tar_cursor = target_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        con_count = con_cursor.count()
+        tar_count = tar_cursor.count()
+
+        logging.info("Cursor count: a %d, b %d" % (con_count, tar_count))
+
+        is_first_occur = False
+
+        for con_item, tar_item in zip_longest(con_cursor, tar_cursor):
+            con_rt = con_item["requestTime"]
+            tar_rt = tar_item["requestTime"]
+            if con_rt != tar_rt:
+                logging.info("Diff: control_rt %d, target_rt %d " % (con_rt, tar_rt))
+                if not is_first_occur:
+                    raise Exception("At least the first occurrence should be a valid pair!")
+                rq_diff = con_rt - tar_rt
+                adjusted_rq = tar_rt + rq_diff
+                logging.info("Adding %d item in target_col..." % tar_rt)
+                target_col.update_one({"_id": tar_item["_id"]}, {"$set": {"requestTime": adjusted_rq}})
+            else:
+                is_first_occur = True
+
+    @staticmethod
     def add_missing_item_with_plain_copy_prev(a_db: str, a_col: str, b_db: str, b_col: str,
                                               start_time: int, end_time: int):
         db_client = SharedMongoClient.instance()
