@@ -224,3 +224,59 @@ class ISOAnalyzer:
             return same_coin_unit_list[0]
         else:
             return same_krw_list[0]
+
+
+class IBOAnalyzer:
+    @classmethod
+    def get_opt_yield_balance_setting(cls, result: list):
+        highest_yield_pair = None
+        same_yield_list = []
+        for pair in result:
+            # first setup
+            if highest_yield_pair is None:
+                highest_yield_pair = pair
+                same_yield_list.append(highest_yield_pair)
+                continue
+
+            cur_highest = cls.calc_krw_yield_in_percent(highest_yield_pair)
+            to_compare = cls.calc_krw_yield_in_percent(pair)
+
+            # compare
+            if cur_highest < to_compare:
+                highest_yield_pair = pair
+                same_yield_list.clear()
+                same_yield_list.append(highest_yield_pair)
+            elif cur_highest == to_compare:
+                same_yield_list.append(pair)
+
+        # get the best pair within same_yield_list
+        if len(same_yield_list) > 1:
+            min_invested_krw_pair = None
+            same_invested_krw = []
+            for pair in same_yield_list:
+                if min_invested_krw_pair is None:
+                    min_invested_krw_pair = pair
+                    same_invested_krw.append(pair)
+                    continue
+                cur_min_invested = cls.get_total_invested_krw_in_pair(min_invested_krw_pair)
+                to_compare = cls.get_total_invested_krw_in_pair(pair)
+                if to_compare < cur_min_invested:
+                    min_invested_krw_pair = pair
+                    same_invested_krw.clear()
+                    same_invested_krw.append(pair)
+                elif to_compare == cur_min_invested:
+                    same_invested_krw.append(pair)
+            return same_invested_krw[0]
+        else:
+            return same_yield_list[0]
+
+    @staticmethod
+    def calc_krw_yield_in_percent(pair: list):
+        # pair = [krw_bal_after, factor_Settings, new # , rev #, balance_setting]
+        total_invested_krw = IBOAnalyzer.get_total_invested_krw_in_pair(pair)
+        krw_bal_after = pair[0]
+        return (krw_bal_after - total_invested_krw) / total_invested_krw * 100
+
+    @staticmethod
+    def get_total_invested_krw_in_pair(pair: list):
+        return pair[4]["mm1"]["krw_balance"] + pair[4]["mm2"]["krw_balance"]

@@ -1,5 +1,4 @@
 import logging
-from config.global_conf import Global
 from analyzer.analyzer import ISOAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from backtester.risk_free_arb_backtester import RfabBacktester
@@ -85,7 +84,7 @@ class InitialSettingOptimizer:
         if depth == 0:
             return optimized
 
-        logging.info("\n<<<< Now in depth: %d >>>>" % depth)
+        logging.info("\n<<<< Now in [ISO] depth: %d >>>>" % depth)
 
         # init seq
         flattened_items = cls.flatten_factor_settings_items(factor_settings)
@@ -155,7 +154,7 @@ class InitialSettingOptimizer:
         mm1_cursor, mm2_cursor = cls.get_history_data(settings)
 
         for index, item in enumerate(batch):
-            logging.info("Now conducting %d out of %d" % (index + 1, total_odds))
+            logging.info("Now conducting [ISO] %d out of %d" % (index + 1, total_odds))
             bot = cls.create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
             bot.run(mm1_cursor.clone(), mm2_cursor.clone(), item, True)
             result.append([bot.total_krw_bal, item, bot.trade_new, bot.trade_rev])
