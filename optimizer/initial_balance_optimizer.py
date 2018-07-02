@@ -8,11 +8,11 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         "max_trading_coin": {"start": 0, "end": 0.1, "step_limit": 0.0001},
         "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
         "new": {
-            "threshold": {"start": 0, "end": 1500, "step_limit": 1},
+            "threshold": {"start": 0, "end": 2000, "step_limit": 1},
             "factor": {"start": 1, "end": 3, "step_limit": 0.01}
         },
         "rev": {
-            "threshold": {"start": 0, "end": 1500, "step_limit": 1},
+            "threshold": {"start": 0, "end": 2000, "step_limit": 1},
             "factor": {"start": 1, "end": 3, "step_limit": 0.01}
         }
     }
@@ -94,7 +94,8 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
 
         elif cur_optimized_yield > IBOAnalyzer.calc_krw_yield_in_percent(optimized):
             optimized = cur_optimized
-            logging.info("Opitmized:", optimized[4])
+
+        logging.info("[IBO Depth:%d] Current Opted Yield: %s" % (depth, optimized[4]))
 
         # reset start, end, step
         division = settings["division"]
@@ -130,7 +131,6 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
             synced_settings = cls.sync_batch_with_setting(settings, item)
 
             # opt_factor = [krw_bal_after, factor_Settings, new # , rev #]
-            logging.critical("Current balance settings: %s" % synced_settings)
             optimized_factor = InitialSettingOptimizer().run(synced_settings, cls.factor_settings)
             optimized_factor.append(item)
 
