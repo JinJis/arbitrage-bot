@@ -46,6 +46,10 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         rev_oppty_count = bot.trade_logger.rev_oppty_counter
         logging.info("[Result] NEW: %d, REV: %d" % (new_oppty_count, rev_oppty_count))
 
+        # if there is no oppty, stop bot
+        if not (new_oppty_count and rev_oppty_count):
+            raise Exception("No Oppty found. Please adjust time duration to get optimized!!")
+
         # classify the kind of strategies and renew bal_factor_settings accordingly
         clone = dict(bal_factor_settings)
         mm1_krw_dict = clone["mm1"]["krw_balance"]
@@ -118,10 +122,9 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
             index += 1
             logging.info("Now conducting [IBO] %d out of %d" % (index, total_odds))
 
-            # if total invested krw is 0, skip
+            # if total invested krw is 0, skip (no trade anyway)
             if (item["mm1"]["krw_balance"] + item["mm2"]["krw_balance"]) == 0:
                 logging.info("ISO skipped becase total invested KRW is 0!")
-                # fixme: 이 경우에는 빈 리스트 반환하는데 어케함 --> ISOAnalyzer의 get_opt_initial_setting 에러남
                 continue
 
             # sync batch with settings to loop over
