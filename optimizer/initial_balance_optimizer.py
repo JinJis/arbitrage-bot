@@ -1,5 +1,4 @@
 import logging
-from analyzer.analyzer import ISOAnalyzer
 from analyzer.analyzer import IBOAnalyzer
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 
@@ -124,7 +123,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
 
             # if total invested krw is 0, skip (no trade anyway)
             if (item["mm1"]["krw_balance"] + item["mm2"]["krw_balance"]) == 0:
-                logging.info("ISO skipped becase total invested KRW is 0!")
+                logging.info("ISO skipped because total invested KRW is 0!")
                 continue
 
             # sync batch with settings to loop over
@@ -171,9 +170,9 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         return clone
 
     @staticmethod
-    def sync_batch_with_setting(settings: dict, batch: list):
+    def sync_batch_with_setting(settings: dict, batch: dict):
         clone = dict(settings.copy())
-        for market in batch:
+        for market in batch.keys():
             for item in batch[market]:
                 clone[market][item] = batch[market][item]
         return clone
