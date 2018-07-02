@@ -188,6 +188,9 @@ class ATSAnalyzer:
 class ISOAnalyzer:
     @staticmethod
     def get_opt_initial_setting(result: list):
+        # in case where
+        if len(result) == 0:
+            return None
         max_krw_pair = None
         # Get list of those results that have same KRW balance
         same_krw_list = []

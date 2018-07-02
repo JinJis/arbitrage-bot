@@ -179,14 +179,14 @@ class InitialSettingOptimizer:
         return clone
 
     @staticmethod
-    def get_new_factor_settings_item(current_opt, factor_settings_item: dict, division: int) -> dict:
-        prev_start = factor_settings_item["start"]
-        prev_end = factor_settings_item["end"]
+    def get_new_factor_settings_item(current_opt, factor_item: dict, division: int) -> dict:
+        prev_start = factor_item["start"]
+        prev_end = factor_item["end"]
         if prev_start >= prev_end:
-            return factor_settings_item
+            return factor_item
 
-        prev_step = factor_settings_item["step"]
-        clone = dict(factor_settings_item)
+        prev_step = factor_item["step"]
+        clone = dict(factor_item)
         clone["start"] = current_opt - prev_step
         if clone["start"] < 0:
             clone["start"] = 0

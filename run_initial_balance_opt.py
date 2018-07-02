@@ -27,7 +27,7 @@ settings = {
     "end_time": Global.convert_local_datetime_to_epoch("2018.06.30 08:15:00", timezone="kr")
 }
 
-balance_settings = {
+bal_factor_settings = {
     "mm1": {
         "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000
                         },
@@ -42,5 +42,5 @@ balance_settings = {
     }
 }
 
-result = InitialBalanceOptimizer.run(settings, balance_settings)
+result = InitialBalanceOptimizer.run(settings, bal_factor_settings)
 print(result)
