@@ -46,7 +46,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         logging.info("[Result] NEW: %d, REV: %d" % (new_oppty_count, rev_oppty_count))
 
         # if there is no oppty, stop bot
-        if not (new_oppty_count and rev_oppty_count):
+        if not new_oppty_count and not rev_oppty_count:
             raise Exception("No Oppty found. Please adjust time duration to get optimized!!")
 
         # classify the kind of strategies and renew bal_factor_settings accordingly
@@ -130,6 +130,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
             synced_settings = cls.sync_batch_with_setting(settings, item)
 
             # opt_factor = [krw_bal_after, factor_Settings, new # , rev #]
+            logging.critical("Current balance settings: %s" % synced_settings)
             optimized_factor = InitialSettingOptimizer().run(synced_settings, cls.factor_settings)
             optimized_factor.append(item)
 

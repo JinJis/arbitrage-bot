@@ -23,7 +23,7 @@ settings = {
     },
     "division": 3,
     "depth": 4,
-    "start_time": Global.convert_local_datetime_to_epoch("2018.06.30 08:10:00", timezone="kr"),
+    "start_time": Global.convert_local_datetime_to_epoch("2018.06.30 08:05:00", timezone="kr"),
     "end_time": Global.convert_local_datetime_to_epoch("2018.06.30 08:15:00", timezone="kr")
 }
 
