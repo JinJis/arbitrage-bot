@@ -91,7 +91,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
 
         elif cur_optimized_yield > IBOAnalyzer.calc_krw_yield_in_percent(optimized):
             optimized = cur_optimized
-            logging.info(optimized[4])
+            logging.info("Opitmized:", optimized[4])
 
         # reset start, end, step
         division = settings["division"]

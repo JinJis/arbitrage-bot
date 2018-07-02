@@ -277,8 +277,8 @@ class IBOAnalyzer:
     def calc_krw_yield_in_percent(pair: list):
         # pair = [krw_bal_after, factor_Settings, new # , rev #, balance_setting]
         total_invested_krw = IBOAnalyzer.get_total_invested_krw_in_pair(pair)
-        krw_bal_after = pair[0]
-        return (krw_bal_after - total_invested_krw) / total_invested_krw * 100
+        krw_earned = pair[0]
+        return (krw_earned / total_invested_krw) * 100
 
     @staticmethod
     def get_total_invested_krw_in_pair(pair: list):

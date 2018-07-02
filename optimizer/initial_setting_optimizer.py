@@ -157,7 +157,8 @@ class InitialSettingOptimizer:
             logging.info("Now conducting [ISO] %d out of %d" % (index + 1, total_odds))
             bot = cls.create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
             bot.run(mm1_cursor.clone(), mm2_cursor.clone(), item, True)
-            result.append([bot.total_krw_bal, item, bot.trade_new, bot.trade_rev])
+            krw_earned = bot.total_krw_bal - (settings["mm1"]["krw_balance"] + settings["mm2"]["krw_balance"])
+            result.append([krw_earned, item, bot.trade_new, bot.trade_rev])
 
         return result
 
