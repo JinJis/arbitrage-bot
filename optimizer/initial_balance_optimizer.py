@@ -21,7 +21,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
     def run(cls, settings: dict, bal_factor_settings: dict):
 
         # intial dry run
-        logging.info("Now optimizing balance settings by oppty!!")
+        logging.warning("Now optimizing balance settings by oppty!!")
         bal_factor_settings = cls.opt_balance_settings_by_oppty(settings, bal_factor_settings)
 
         # set initial step for balance settings
@@ -43,7 +43,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         # get oppty count and log
         new_oppty_count = bot.trade_logger.new_oppty_counter
         rev_oppty_count = bot.trade_logger.rev_oppty_counter
-        logging.info("[Result] NEW: %d, REV: %d" % (new_oppty_count, rev_oppty_count))
+        logging.warning("[Result] NEW: %d, REV: %d" % (new_oppty_count, rev_oppty_count))
 
         # if there is no oppty, stop bot
         if not new_oppty_count and not rev_oppty_count:
@@ -70,6 +70,10 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
     def opt_by_balance_settings_recursive(cls, settings: dict, bal_factor_settings: dict, depth: int,
                                           optimized: list = None):
         if depth == 0:
+            final_opt_yield = IBOAnalyzer.calc_krw_yield_in_percent(optimized)
+            logging.critical("\n[IBO Final Opt Result]"
+                             "\n>>>Final Opted Yield: %.4f%%"
+                             "\n>>>Final Optimized Info: %s" % (final_opt_yield,  optimized))
             return optimized
 
         logging.critical("\n<<<< Now in [IBO] depth: %d >>>>" % depth)
@@ -95,7 +99,8 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         elif cur_optimized_yield > IBOAnalyzer.calc_krw_yield_in_percent(optimized):
             optimized = cur_optimized
 
-        logging.info("[IBO Depth:%d] Current Opted Yield: %s" % (depth, optimized[4]))
+        current_opt_yield = IBOAnalyzer.calc_krw_yield_in_percent(optimized)
+        logging.critical("[IBO Depth:%d] Current Opted Yield: %.4f%%" % (depth, current_opt_yield))
 
         # reset start, end, step
         division = settings["division"]
@@ -120,11 +125,11 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         index = 0
         for item in bal_setting_batch:
             index += 1
-            logging.info("Now conducting [IBO] %d out of %d" % (index, total_odds))
+            logging.warning("Now conducting [IBO] %d out of %d" % (index, total_odds))
 
             # if total invested krw is 0, skip (no trade anyway)
             if (item["mm1"]["krw_balance"] + item["mm2"]["krw_balance"]) == 0:
-                logging.info("ISO skipped because total invested KRW is 0!")
+                logging.warning("ISO skipped because total invested KRW is 0!")
                 continue
 
             # sync batch with settings to loop over

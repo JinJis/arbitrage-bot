@@ -7,11 +7,11 @@ from collector.oppty_time_collector import OpptyTimeCollector
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
 
-Global.configure_default_root_logging(should_log_to_file=False)
+Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
 SharedMongoClient.initialize(should_use_localhost_db=True)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.06.29 12:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.29 15:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.06.29 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.06.30 09:00:00", timezone="kr")
 
 target_currency = "bch"
 mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 100000, 1, target_currency)
@@ -48,8 +48,8 @@ for trade_type in result_dict.keys():
                 "coin_balance": 5
 
             },
-            "division": 5,
-            "depth": 5,
+            "division": 4,
+            "depth": 4,
             "start_time": time[0],
             "end_time": time[1]
         }
@@ -90,5 +90,5 @@ for trade_type in result_dict.keys():
         """"RUN IBO (Initial Balance Optimizer)"""
         ibo_opt = InitialBalanceOptimizer.run(settings, bal_factor_settings)  # <-- Fix default Factor setting in Class
         ibo_opt_yield = ibo_opt[0] / (ibo_opt[4]["mm1"]["krw_balance"] + ibo_opt[4]["mm2"]["krw_balance"]) * 100
-        logging.critical("[IBO] Opted Result: %s" % ibo_opt)
-        logging.critical("[IBO] Opted KRW Yield: %.4f" % ibo_opt_yield)
+        logging.critical("[IBO] Opted Result: %s " % "" % ibo_opt)
+        logging.critical("[IBO] Opted KRW Yield: %.4f%%" % ibo_opt_yield)
