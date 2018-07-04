@@ -4,6 +4,31 @@ from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 
 
 class InitialBalanceOptimizer(InitialSettingOptimizer):
+    """
+    <Algorithm Structure>
+    A. run
+        1. opt_balance_settings_by_oppty
+            : check oppty and reset balance settings (ig. if only new, then no krw in mm2)
+
+        2. set initial step for balance settings
+
+        3. opt_by_balance_settings_recursive
+            a. make sequence from bal_factors injected
+            b. test_trade_result_in_seq     <-- 3.a returned result
+                1) create batch (all the possible odds from sequences)
+                2) run ISO by looping through batch     <-- b.1) returned result
+                    - opted_factor, bal_settings, krw_earned, yield calculated
+                    - gather all results from each one of loop to one list
+                    - combine_factor_balance_settings_in_dict
+                        : to unify with preset dictionary format for convinience and explicity
+                        --> return
+            c. IBOAnalyzer.get_opt_yield_balance_setting    <-- b.2) returned result
+                - get the highest (or most attractive) yield item --> cur_optimized for that IBO depth
+                - append cur_opt to temp_result
+            D. opt_by_balance_settings_recursive
+                1) finally, return whole depthed ootimized info dict
+
+    """
     factor_settings = {
         "max_trading_coin": {"start": 0, "end": 0.1, "step_limit": 0.0001},
         "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
@@ -68,12 +93,12 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
 
     @classmethod
     def opt_by_balance_settings_recursive(cls, settings: dict, bal_factor_settings: dict, depth: int,
-                                          optimized: list = None):
+                                          optimized: dict = None):
         if depth == 0:
-            final_opt_yield = IBOAnalyzer.calc_krw_yield_in_percent(optimized)
+            final_opt_yield = optimized["yield"]
             logging.critical("\n[IBO Final Opt Result]"
                              "\n>>>Final Opted Yield: %.4f%%"
-                             "\n>>>Final Optimized Info: %s" % (final_opt_yield,  optimized))
+                             "\n>>>Final Optimized Info: %s" % (final_opt_yield, optimized))
             return optimized
 
         logging.critical("\n<<<< Now in [IBO] depth: %d >>>>" % depth)
@@ -87,24 +112,34 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         # execute tests with seq
         result = cls.test_trade_result_in_seq(settings, bal_factor_settings)
 
+        """
+        <data structure>
+        1)  result = [combined_dict, combined_dict, combined_dict, ... ]
+        2)  combined_dict or cur_optimized = {
+            "krw_earned": float,
+            "total_krw_invested: float,
+            "yield" : float,
+            "factor_settings": dict, 
+            "new_num": int, 
+            "rev_num": int, 
+            "balance_setting": dict}
+        """
+
         # get opt
-        # result = [krw_bal_after, factor_Settings, new # , rev #, bal_factor_settings]
         # optimize in terms of yield
         cur_optimized = IBOAnalyzer.get_opt_yield_balance_setting(result)
-        cur_optimized_yield = IBOAnalyzer.calc_krw_yield_in_percent(cur_optimized)
 
         if optimized is None:
             optimized = cur_optimized
-
-        elif cur_optimized_yield > IBOAnalyzer.calc_krw_yield_in_percent(optimized):
+        elif cur_optimized["yield"] > optimized["yield"]:
             optimized = cur_optimized
 
-        current_opt_yield = IBOAnalyzer.calc_krw_yield_in_percent(optimized)
-        logging.critical("[IBO Depth:%d] Current Opted Yield: %.4f%%" % (depth, current_opt_yield))
+        # log current optimizied yield
+        logging.critical("[IBO Depth:%d] Current Opted Yield: %.4f%%" % (depth, cur_optimized["yield"]))
 
         # reset start, end, step
         division = settings["division"]
-        bal_factor_settings = cls.get_new_balance_settings(optimized[4], bal_factor_settings, division)
+        bal_factor_settings = cls.get_new_balance_settings(optimized["balance_setting"], bal_factor_settings, division)
 
         depth -= 1
         return cls.opt_by_balance_settings_recursive(settings, bal_factor_settings, depth, optimized)
@@ -120,10 +155,11 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
                 total_odds *= len(target_dict["seq"])
 
         # create balance settings batch
-        bal_setting_batch = cls.create_balance_batch_with_seq(bal_factor_settings)
+        bal_setting_batch = cls.create_balance_batch_from_seq(bal_factor_settings)
 
         index = 0
         for item in bal_setting_batch:
+
             index += 1
             logging.warning("Now conducting [IBO] %d out of %d" % (index, total_odds))
 
@@ -137,15 +173,26 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
 
             # opt_factor = [krw_bal_after, factor_Settings, new # , rev #]
             optimized_factor = InitialSettingOptimizer().run(synced_settings, cls.factor_settings)
-            optimized_factor.append(item)
-
-            # result = [krw_bal_after, factor_Settings, new # , rev #, bal_factor_settings]
-            result.append(optimized_factor)
+            # combine opted_factor_settings returned and bal_settings into dict
+            combined_dict = cls.combine_factor_balance_settings_in_dict(optimized_factor, item)
+            result.append(combined_dict)
 
         return result
 
     @classmethod
-    def create_balance_batch_with_seq(cls, bal_factor_settings: dict):
+    def get_new_balance_settings(cls, opt_balance_settings: dict, bal_factor_settings: dict, division: int):
+        opt = opt_balance_settings
+        pre = bal_factor_settings
+        clone = dict(bal_factor_settings)
+
+        for market in bal_factor_settings.keys():
+            for key in bal_factor_settings[market]:
+                clone[market][key] = super().get_new_factor_settings_item(opt[market][key], pre[market][key], division)
+
+        return clone
+
+    @classmethod
+    def create_balance_batch_from_seq(cls, bal_factor_settings: dict):
         result = []
         for mm1_krw in bal_factor_settings["mm1"]["krw_balance"]["seq"]:
             for mm1_coin in bal_factor_settings["mm1"]["coin_balance"]["seq"]:
@@ -163,18 +210,6 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
                         })
         return result
 
-    @classmethod
-    def get_new_balance_settings(cls, opt_balance_settings: dict, bal_factor_settings: dict, division: int):
-        opt = opt_balance_settings
-        pre = bal_factor_settings
-        clone = dict(bal_factor_settings)
-
-        for market in bal_factor_settings.keys():
-            for key in bal_factor_settings[market]:
-                clone[market][key] = super().get_new_factor_settings_item(opt[market][key], pre[market][key], division)
-
-        return clone
-
     @staticmethod
     def sync_batch_with_setting(settings: dict, batch: dict):
         clone = dict(settings.copy())
@@ -182,3 +217,15 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
             for item in batch[market]:
                 clone[market][item] = batch[market][item]
         return clone
+
+    @classmethod
+    def combine_factor_balance_settings_in_dict(cls, optimized_factor: dict, bal_settings: dict):
+        combined_dict = dict()
+        combined_dict["krw_earned"] = optimized_factor[0]
+        combined_dict["total_krw_invested"] = bal_settings["mm1"]["krw_balance"] + bal_settings["mm2"]["krw_balance"]
+        combined_dict["yield"] = combined_dict["krw_earned"] / combined_dict["total_krw_invested"] * 100
+        combined_dict["factor_settings"] = optimized_factor[1]  # dict
+        combined_dict["new_num"] = optimized_factor[2]
+        combined_dict["rev_num"] = optimized_factor[3]
+        combined_dict["balance_setting"] = bal_settings  # dict
+        return combined_dict
