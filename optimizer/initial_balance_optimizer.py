@@ -1,5 +1,6 @@
 import logging
-from analyzer.analyzer import IBOAnalyzer
+from config.shared_mongo_client import SharedMongoClient
+from analyzer.analyzer import BasicAnalyzer, IBOAnalyzer
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 
 
@@ -14,16 +15,19 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
 
         3. opt_by_balance_settings_recursive
             a. make sequence from bal_factors injected
-            b. test_trade_result_in_seq     <-- 3.a returned result
+
+            b. test_trade_result_in_seq     <-- returned result of 3.a
                 1) create batch (all the possible odds from sequences)
-                2) run ISO by looping through batch     <-- b.1) returned result
+
+                2) run ISO by looping through batch     <-- returned result of b.1)
                     - opted_factor, bal_settings, krw_earned, yield calculated
                     - gather all results from each one of loop to one list
                     - combine_factor_balance_settings_in_dict
                         : to unify with preset dictionary format for convinience and explicity
                         --> return
-            c. IBOAnalyzer.get_opt_yield_balance_setting    <-- b.2) returned result
-                - get the highest (or most attractive) yield item --> cur_optimized for that IBO depth
+
+            c. IBOAnalyzer.get_opt_yield_balance_setting    <-- returned result of b.2)
+                - get the highest (or most attractive) yield item
                 - append cur_opt to temp_result
             D. opt_by_balance_settings_recursive
                 1) finally, return whole depthed ootimized info dict
@@ -48,6 +52,9 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         # intial dry run
         logging.warning("Now optimizing balance settings by oppty!!")
         bal_factor_settings = cls.opt_balance_settings_by_oppty(settings, bal_factor_settings)
+
+        # create coin_balance that is proportionate to krw_balance size
+        bal_factor_settings = cls.create_coin_bal_from_krw_bal_by_exchange_rate(settings, bal_factor_settings)
 
         # set initial step for balance settings
         for market in bal_factor_settings.keys():
@@ -77,19 +84,42 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         # classify the kind of strategies and renew bal_factor_settings accordingly
         clone = dict(bal_factor_settings)
         mm1_krw_dict = clone["mm1"]["krw_balance"]
-        mm1_coin_dict = clone["mm1"]["coin_balance"]
         mm2_krw_dict = clone["mm2"]["krw_balance"]
-        mm2_coin_dict = clone["mm2"]["coin_balance"]
 
         if rev_oppty_count == 0:
-            super().tie_end_start(mm1_coin_dict)
             super().tie_end_start(mm2_krw_dict)
 
         if new_oppty_count == 0:
             super().tie_end_start(mm1_krw_dict)
-            super().tie_end_start(mm2_coin_dict)
 
         return clone
+
+    @classmethod
+    def create_coin_bal_from_krw_bal_by_exchange_rate(cls, settings: dict, bal_factor_settings: dict):
+        # get coin-krw exchange rate
+        exchange_rate = cls.calc_krw_coin_exchange_ratio_during_oppty_dur(settings)  # (krw / 1 coin)
+
+        clone = bal_factor_settings.copy()
+        for item in ["start", "end", "step_limit"]:
+            clone["mm1"]["coin_balance"][item] = round(clone["mm2"]["krw_balance"][item] / exchange_rate, 5)
+            clone["mm2"]["coin_balance"][item] = round(clone["mm1"]["krw_balance"][item] / exchange_rate, 5)
+        return clone
+
+    @staticmethod
+    def calc_krw_coin_exchange_ratio_during_oppty_dur(settings: dict):
+        mm1_col = SharedMongoClient.get_target_col(settings["mm1"]["market_tag"], settings["target_currency"])
+        mm2_col = SharedMongoClient.get_target_col(settings["mm2"]["market_tag"], settings["target_currency"])
+        mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col,
+                                                                    settings["start_time"], settings["end_time"])
+
+        # get average mid exchange krw price in terms of unit coin during designated time_dur
+        mid_price_list = []
+        for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):
+            mm1_mid_price, _, _, = BasicAnalyzer.get_orderbook_mid_price(mm1_data)
+            mm2_mid_price, _, _, = BasicAnalyzer.get_orderbook_mid_price(mm2_data)
+            combined_mid_price = (mm1_mid_price + mm2_mid_price) / 2
+            mid_price_list.append(combined_mid_price)
+        return sum(mid_price_list) / len(mid_price_list)
 
     @classmethod
     def opt_by_balance_settings_recursive(cls, settings: dict, bal_factor_settings: dict, depth: int,
@@ -194,20 +224,23 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
     @classmethod
     def create_balance_batch_from_seq(cls, bal_factor_settings: dict):
         result = []
-        for mm1_krw in bal_factor_settings["mm1"]["krw_balance"]["seq"]:
-            for mm1_coin in bal_factor_settings["mm1"]["coin_balance"]["seq"]:
-                for mm2_krw in bal_factor_settings["mm2"]["krw_balance"]["seq"]:
-                    for mm2_coin in bal_factor_settings["mm2"]["coin_balance"]["seq"]:
-                        result.append({
-                            "mm1": {
-                                "krw_balance": mm1_krw,
-                                "coin_balance": mm1_coin
-                            },
-                            "mm2": {
-                                "krw_balance": mm2_krw,
-                                "coin_balance": mm2_coin
-                            }
-                        })
+
+        # since mm1_krw - mm2_coin & mm1_coin - mm2_krw go together, use enumerate
+        # By doing this, can enhance speed of calc and reduce odds significantly
+        for mm1_krw, mm2_coin in zip(bal_factor_settings["mm1"]["krw_balance"]["seq"],
+                                     bal_factor_settings["mm2"]["coin_balance"]["seq"]):
+            for mm2_krw, mm1_coin in zip(bal_factor_settings["mm2"]["krw_balance"]["seq"],
+                                         bal_factor_settings["mm1"]["coin_balance"]["seq"]):
+                result.append({
+                    "mm1": {
+                        "krw_balance": mm1_krw,
+                        "coin_balance": mm1_coin
+                    },
+                    "mm2": {
+                        "krw_balance": mm2_krw,
+                        "coin_balance": mm2_coin
+                    }
+                })
         return result
 
     @staticmethod

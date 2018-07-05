@@ -9,18 +9,20 @@ from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
 
 """" 
 [ISO log level] 
+: when you want to log both ISO and IBO execution status
 Trading Execution -> INFO
 Result Return -> CRITICAL
 
-[IBO log level]
+[IBO log level] 
+: when you want to log IBO execution status only
 Trading Execution -> WARNING
 Result Return -> CRITICAL
 """
 Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
 SharedMongoClient.initialize(should_use_localhost_db=True)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.07.04 05:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.07.04 20:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.07.05 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.07.05 20:00:00", timezone="kr")
 
 target_currency = "bch"
 mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 100000, 1, target_currency)
@@ -64,31 +66,30 @@ for trade_type in result_dict.keys():
             "end_time": time[1]
         }
 
-        factor_settings = {
-            "max_trading_coin": {"start": 0, "end": 0.05, "step_limit": 0.0001},
-            "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
-            "new": {
-                "threshold": {"start": 0, "end": 1000, "step_limit": 1},
-                "factor": {"start": 1, "end": 3, "step_limit": 0.01}
-            },
-            "rev": {
-                "threshold": {"start": 0, "end": 1000, "step_limit": 1},
-                "factor": {"start": 1, "end": 3, "step_limit": 0.01}
-            }
-        }
+        # factor_settings = {
+        #     "max_trading_coin": {"start": 0, "end": 0.05, "step_limit": 0.0001},
+        #     "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
+        #     "new": {
+        #         "threshold": {"start": 0, "end": 1000, "step_limit": 1},
+        #         "factor": {"start": 1, "end": 3, "step_limit": 0.01}
+        #     },
+        #     "rev": {
+        #         "threshold": {"start": 0, "end": 1000, "step_limit": 1},
+        #         "factor": {"start": 1, "end": 3, "step_limit": 0.01}
+        #     }
+        # }
 
-        # FIXME: krw와 coin 상대 가격 현시세로 맞춰서 돌리기 !!!
         bal_factor_settings = {
             "mm1": {
                 "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000
                                 },
-                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.1
+                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.01
                                  }
             },
             "mm2": {
                 "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000
                                 },
-                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.1
+                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.01
                                  }
             }
         }
@@ -98,7 +99,7 @@ for trade_type in result_dict.keys():
         # InitialSettingOptimizer().run(settings, factor_settings)
 
         """"RUN [IBO-ISO] Total Solution (Initial Balance Optimizer)"""
-        opt_ibo_info = InitialBalanceOptimizer.run(settings, bal_factor_settings)  # <-- Fix Factor setting in Class
+        opt_ibo_info = InitialBalanceOptimizer.run(settings, bal_factor_settings)  # adjust factor_settings in bot
         opt_ibo_info["oppty_time"] = time
         """
             opt_ibo_info = {
