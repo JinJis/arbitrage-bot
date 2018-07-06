@@ -23,14 +23,14 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
                     - opted_factor, bal_settings, krw_earned, yield calculated
                     - gather all results from each one of loop to one list
                     - combine_factor_balance_settings_in_dict
-                        : to unify with preset dictionary format for convinience and explicity
+                        : to unify with preset dictionary format for convenience and explicitness
                         --> return
 
             c. IBOAnalyzer.get_opt_yield_balance_setting    <-- returned result of b.2)
                 - get the highest (or most attractive) yield item
                 - append cur_opt to temp_result
             D. opt_by_balance_settings_recursive
-                1) finally, return whole depthed ootimized info dict
+                1) finally, return whole depthed optimized info dict
 
     """
     factor_settings = {
@@ -49,7 +49,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
     @classmethod
     def run(cls, settings: dict, bal_factor_settings: dict):
 
-        # intial dry run
+        # initial dry run
         logging.warning("Now optimizing balance settings by oppty!!")
         bal_factor_settings = cls.opt_balance_settings_by_oppty(settings, bal_factor_settings)
 
@@ -164,7 +164,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         elif cur_optimized["yield"] > optimized["yield"]:
             optimized = cur_optimized
 
-        # log current optimizied yield
+        # log current optimized yield
         logging.critical("[IBO Depth:%d] Current Opted Yield: %.4f%%" % (depth, cur_optimized["yield"]))
 
         # reset start, end, step
@@ -180,9 +180,8 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         # calc total odds
         total_odds = 1
         for market in bal_factor_settings.keys():
-            for item in bal_factor_settings[market]:
-                target_dict = bal_factor_settings[market][item]
-                total_odds *= len(target_dict["seq"])
+            sequence = bal_factor_settings[market]["krw_balance"]["seq"]
+            total_odds *= len(sequence)
 
         # create balance settings batch
         bal_setting_batch = cls.create_balance_batch_from_seq(bal_factor_settings)

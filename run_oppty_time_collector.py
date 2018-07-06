@@ -21,8 +21,8 @@ Result Return -> CRITICAL
 Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
 SharedMongoClient.initialize(should_use_localhost_db=True)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.07.05 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.07.05 20:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.07.03 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.07.04 09:00:00", timezone="kr")
 
 target_currency = "bch"
 mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 100000, 1, target_currency)
@@ -38,7 +38,7 @@ logging.critical("Oppty time result: %s" % result_dict)
 # get total duration time for each trade
 total_dur_dict = OpptyTimeCollector.get_total_duration_time(result_dict)
 for key in total_dur_dict.keys():
-    logging.info("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_dict[key] / 60 / 60)))
+    logging.warning("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_dict[key] / 60 / 60)))
 
 # loop through oppty times
 db_result = []
