@@ -21,8 +21,8 @@ Result Return -> CRITICAL
 Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
 SharedMongoClient.initialize(should_use_localhost_db=True)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.07.03 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.07.04 09:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.06.25 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.06.2 09:00:00", timezone="kr")
 
 target_currency = "bch"
 mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 100000, 1, target_currency)
@@ -61,7 +61,7 @@ for trade_type in result_dict.keys():
 
             },
             "division": 3,
-            "depth": 3,
+            "depth": 4,
             "start_time": time[0],
             "end_time": time[1]
         }
@@ -81,16 +81,12 @@ for trade_type in result_dict.keys():
 
         bal_factor_settings = {
             "mm1": {
-                "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000
-                                },
-                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.01
-                                 }
+                "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000},
+                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.01}
             },
             "mm2": {
-                "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000
-                                },
-                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.01
-                                 }
+                "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000},
+                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.01}
             }
         }
         logging.critical("Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
@@ -109,8 +105,9 @@ for trade_type in result_dict.keys():
                 "factor_settings": dict, 
                 "new_num": int, 
                 "rev_num": int, 
-                "balance_setting": dict}
+                "balance_setting": dict,
                 "oppty_time": list(start_time, end_time)
+            }
         """
         db_result.append(opt_ibo_info)
 
