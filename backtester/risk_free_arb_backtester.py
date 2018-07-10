@@ -84,7 +84,7 @@ class RfabBacktester:
         # REVERSE
         if rev_spread_info.spread_in_unit > 0:
             self.trade_logger.acc_oppty_counter("rev")
-            rev_trade = self.execute_trade(new_spread_info, "rev")
+            rev_trade = self.execute_trade(rev_spread_info, "rev")
             self.add_trade(rev_trade, rev_spread_info)
 
         # if there was any trade
