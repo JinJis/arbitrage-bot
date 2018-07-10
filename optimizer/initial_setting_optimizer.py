@@ -1,3 +1,4 @@
+import copy
 import logging
 from analyzer.analyzer import ISOAnalyzer
 from config.shared_mongo_client import SharedMongoClient
@@ -48,7 +49,7 @@ class InitialSettingOptimizer:
                      % (new_oppty_count, rev_oppty_count))
 
         # classify the kind of strategies and renew factor_settings accordingly
-        clone = dict(factor_settings)
+        clone = copy.deepcopy(factor_settings)
         new_factor_dict = clone["new"]["factor"]
         rev_factor_dict = clone["rev"]["factor"]
         new_threshold_dict = clone["new"]["threshold"]
@@ -166,7 +167,7 @@ class InitialSettingOptimizer:
     def get_new_factor_settings(cls, opt_inital_settings: dict, factor_settings: dict, division: int):
         opt = opt_inital_settings
         pre = factor_settings
-        clone = dict(factor_settings)
+        clone = copy.deepcopy(factor_settings)
 
         for key in ["max_trading_coin", "min_trading_coin"]:
             clone[key] = cls.get_new_factor_settings_item(opt[key], pre[key], division)
@@ -187,7 +188,7 @@ class InitialSettingOptimizer:
             return factor_item
 
         prev_step = factor_item["step"]
-        clone = dict(factor_item)
+        clone = copy.deepcopy(factor_item)
         clone["start"] = current_opt - prev_step
         if clone["start"] < 0:
             clone["start"] = 0

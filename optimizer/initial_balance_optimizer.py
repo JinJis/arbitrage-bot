@@ -1,3 +1,4 @@
+import copy
 import logging
 from config.shared_mongo_client import SharedMongoClient
 from analyzer.analyzer import BasicAnalyzer, IBOAnalyzer
@@ -82,7 +83,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
             raise Exception("No Oppty found. Please adjust time duration to get optimized!!")
 
         # classify the kind of strategies and renew bal_factor_settings accordingly
-        clone = dict(bal_factor_settings)
+        clone = copy.deepcopy(bal_factor_settings)
         mm1_krw_dict = clone["mm1"]["krw_balance"]
         mm2_krw_dict = clone["mm2"]["krw_balance"]
 
@@ -99,7 +100,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
         # get coin-krw exchange rate
         exchange_rate = cls.calc_krw_coin_exchange_ratio_during_oppty_dur(settings)  # (krw / 1 coin)
 
-        clone = bal_factor_settings.copy()
+        clone = copy.deepcopy(bal_factor_settings)
         for item in ["start", "end", "step_limit"]:
             clone["mm1"]["coin_balance"][item] = round(clone["mm2"]["krw_balance"][item] / exchange_rate, 5)
             clone["mm2"]["coin_balance"][item] = round(clone["mm1"]["krw_balance"][item] / exchange_rate, 5)
@@ -212,7 +213,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
     def get_new_balance_settings(cls, opt_balance_settings: dict, bal_factor_settings: dict, division: int):
         opt = opt_balance_settings
         pre = bal_factor_settings
-        clone = dict(bal_factor_settings)
+        clone = copy.deepcopy(bal_factor_settings)
 
         for market in bal_factor_settings.keys():
             for key in bal_factor_settings[market]:
@@ -244,7 +245,7 @@ class InitialBalanceOptimizer(InitialSettingOptimizer):
 
     @staticmethod
     def sync_batch_with_setting(settings: dict, batch: dict):
-        clone = dict(settings.copy())
+        clone = copy.deepcopy(settings)
         for market in batch.keys():
             for item in batch[market]:
                 clone[market][item] = batch[market][item]
