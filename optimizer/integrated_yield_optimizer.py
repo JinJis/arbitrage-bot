@@ -1,9 +1,39 @@
-import copy
 import logging
-from config.shared_mongo_client import SharedMongoClient
-from analyzer.analyzer import BasicAnalyzer, IBOAnalyzer
-from optimizer.base_optimizer import BaseOptimizer
-from backtester.risk_free_arb_backtester import RfabBacktester
+from pymongo.cursor import Cursor
+from trader.market.market import Market
+from collector.oppty_time_collector import OpptyTimeCollector
+from optimizer.initial_setting_optimizer import InitialSettingOptimizer
+from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
+
+OTC = OpptyTimeCollector
+ISO = InitialSettingOptimizer
+IBO = InitialBalanceOptimizer
+
+
+class IntegratedYieldOptimizer:
+
+    @classmethod
+    def run(cls, time_dur_result: dict, settings: dict, factor_settings: dict, bal_factor_settings: dict):
+
+        # get total duration time for each trade
+        total_dur_dict = OTC.get_total_duration_time(time_dur_result)
+        for key in total_dur_dict.keys():
+            logging.warning("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_dict[key] / 60 / 60)))
+
+        # loop through oppty times
+        db_result = []
+        for trade_type in time_dur_result.keys():
+            for time in time_dur_result[trade_type]:
+                # apply each oppty duration
+                settings["start_time"] = time[0]
+                settings["end_time"] = time[1]
+
+                logging.critical("Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
+
+
+# IBO 짜놓은거
+
+ISO = InitialSettingOptimizer
 
 
 class InitialBalanceOptimizer(BaseOptimizer):
@@ -36,7 +66,7 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
     """
 
-    # default variables
+    # class variables
     default_initial_setting_dict = {
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,
@@ -55,8 +85,7 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
         # initial dry run
         logging.warning("Now optimizing balance settings by oppty!!")
-        bal_factor_settings = super().opt_balance_settings_by_oppty(settings, bal_factor_settings,
-                                                                    cls.default_initial_setting_dict)
+        bal_factor_settings = super().opt_balance_settings_by_oppty(settings, bal_factor_settings)
 
         # create coin_balance that is proportionate to krw_balance size
         bal_factor_settings = cls.create_coin_bal_from_krw_bal_by_exchange_rate(settings, bal_factor_settings)
@@ -117,16 +146,19 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
         # execute tests with seq
         result = cls.test_trade_result_in_seq(settings, bal_factor_settings)
+
+        # Fixme: IYO 짤때 참고하기
         """
-            <data structure>
-            1)  result = [combined_dict, combined_dict, combined_dict, ... ]
-            2)  combined_dict or cur_optimized = {
-                "total_krw_invested: float,
-                "krw_earned": float,                
-                "yield" : float,
-                "new_num": int, 
-                "rev_num": int, 
-                "balance_setting": dict}
+        <data structure>
+        1)  result = [combined_dict, combined_dict, combined_dict, ... ]
+        2)  combined_dict or cur_optimized = {
+            "krw_earned": float,
+            "total_krw_invested: float,
+            "yield" : float,
+            "factor_settings": dict, 
+            "new_num": int, 
+            "rev_num": int, 
+            "balance_setting": dict}
         """
 
         # get opt
@@ -181,9 +213,13 @@ class InitialBalanceOptimizer(BaseOptimizer):
             bot = super().create_bot(synced_settings["mm1"], synced_settings["mm2"], synced_settings["target_currency"])
             # in IBO, init_factor_setting is fixed and balance_setting is subject to change
             bot.run(mm1_cursor.clone(), mm2_cursor.clone(), cls.default_initial_setting_dict, True)
-            # combine opted_factor_settings returned and bal_settings into dict
-            combined_dict = cls.combine_factor_balance_settings_in_dict(item, bot)
-            result.append(combined_dict)
+            krw_earned = bot.total_krw_bal - (settings["mm1"]["krw_balance"] + settings["mm2"]["krw_balance"])
+            result.append([krw_earned, item, bot.trade_new, bot.trade_rev])
+
+            # Fixme: 이거는 IYO 짤때 참고
+            # # combine opted_factor_settings returned and bal_settings into dict
+            # combined_dict = cls.combine_factor_balance_settings_in_dict(optimized_factor, item)
+            # result.append(combined_dict)
 
         return result
 
@@ -229,12 +265,13 @@ class InitialBalanceOptimizer(BaseOptimizer):
         return clone
 
     @classmethod
-    def combine_factor_balance_settings_in_dict(cls, bal_settings: dict, bot: RfabBacktester):
+    def combine_factor_balance_settings_in_dict(cls, optimized_factor: dict, bal_settings: dict):
         combined_dict = dict()
+        combined_dict["krw_earned"] = optimized_factor[0]
         combined_dict["total_krw_invested"] = bal_settings["mm1"]["krw_balance"] + bal_settings["mm2"]["krw_balance"]
-        combined_dict["krw_earned"] = bot.total_krw_bal - combined_dict["total_krw_invested"]
         combined_dict["yield"] = combined_dict["krw_earned"] / combined_dict["total_krw_invested"] * 100
-        combined_dict["new_num"] = bot.trade_new
-        combined_dict["rev_num"] = bot.trade_rev
-        combined_dict["balance_setting"] = bal_settings
+        combined_dict["factor_settings"] = optimized_factor[1]  # dict
+        combined_dict["new_num"] = optimized_factor[2]
+        combined_dict["rev_num"] = optimized_factor[3]
+        combined_dict["balance_setting"] = bal_settings  # dict
         return combined_dict

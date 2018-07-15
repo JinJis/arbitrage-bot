@@ -21,8 +21,8 @@ Result Return -> CRITICAL
 Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
 SharedMongoClient.initialize(should_use_localhost_db=True)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.06.25 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.2 09:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.07.14 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.07.15 09:00:00", timezone="kr")
 
 target_currency = "bch"
 mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 100000, 1, target_currency)
@@ -46,15 +46,15 @@ for trade_type in result_dict.keys():
     for time in result_dict[trade_type]:
         # Settings for ISO
         settings = {
-            "target_currency": "bch",
+            "target_currency": target_currency,
             "mm1": {
-                "market_tag": Market.VIRTUAL_CO,
+                "market_tag": mm1.market_tag,
                 "fee_rate": 0.001,
                 "krw_balance": 5000000,
                 "coin_balance": 0.5
             },
             "mm2": {
-                "market_tag": Market.VIRTUAL_GP,
+                "market_tag": mm2.market_tag,
                 "fee_rate": 0.00075,
                 "krw_balance": 500000,
                 "coin_balance": 5
