@@ -1,7 +1,8 @@
 from config.global_conf import Global
 from pymongo import MongoClient
 
-target_collection = [["coinone", "bch_orderbook"], ["gopax", "bch_orderbook"]]
+target_collection = [["coinone", "btc_orderbook"], ["coinone", "eth_orderbook"], ["coinone", "bch_orderbook"],
+                     ["gopax", "btc_orderbook"], ["gopax", "eth_orderbook"], ["gopax", "bch_orderbook"]]
 
 local_mongo = MongoClient(Global.read_mongodb_uri(True))
 remote_mongo = MongoClient(Global.read_mongodb_uri(False))
