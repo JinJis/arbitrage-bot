@@ -3,11 +3,12 @@ from trader.market.market import Market
 from config.shared_mongo_client import SharedMongoClient
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
+from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 Global.configure_default_root_logging(should_log_to_file=False)
 SharedMongoClient.initialize(should_use_localhost_db=True)
-start_time = Global.convert_local_datetime_to_epoch("2018.07.13 13:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.07.13 14:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.07.13 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.07.14 09:00:00", timezone="kr")
 
 settings = {
     "target_currency": "bch",
@@ -58,8 +59,11 @@ factor_settings = {
     }
 }
 
-# IBOoptimier = InitialBalanceOptimizer.run(settings, bal_factor_settings)
-# print(IBOoptimier)
+IYO_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
+print(IYO_result)
 
-ISOptimizer = InitialSettingOptimizer().run(settings, factor_settings)
-print(ISOptimizer)
+# IBO_result = InitialBalanceOptimizer.run(settings, bal_factor_settings)
+# print(IBO_result)
+
+# ISO_result = InitialSettingOptimizer().run(settings, factor_settings)
+# print(ISO_result)

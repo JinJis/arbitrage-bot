@@ -77,21 +77,21 @@ bal_factor_settings = {
 
 optimizer = IntegratedYieldOptimizer.run(time_dur_result, settings, factor_settings, bal_factor_settings)
 
-# """"RUN [IBO-ISO] Total Solution (Initial Balance Optimizer)"""
-# opt_ibo_info = InitialBalanceOptimizer.run(settings, bal_factor_settings)  # adjust factor_settings in bot
-# opt_ibo_info["oppty_time"] = time
-# """
-#     opt_ibo_info = {
-#         "krw_earned": float,
-#         "total_krw_invested: float,
-#         "yield" : float,
-#         "factor_settings": dict,
-#         "new_num": int,
-#         "rev_num": int,
-#         "balance_setting": dict,
-#         "oppty_time": list(start_time, end_time)
-#     }
-# """
-# db_result.append(opt_ibo_info)
-#
-# logging.critical("Final result to DB: %s" % db_result)
+""""RUN [IBO-ISO] Total Solution (Initial Balance Optimizer)"""
+opt_ibo_info = InitialBalanceOptimizer.run(settings, bal_factor_settings)  # adjust factor_settings in bot
+opt_ibo_info["oppty_time"] = time
+"""
+    opt_ibo_info = {
+        "krw_earned": float,
+        "total_krw_invested: float,
+        "yield" : float,
+        "factor_settings": dict,
+        "new_num": int,
+        "rev_num": int,
+        "balance_setting": dict,
+        "oppty_time": list(start_time, end_time)
+    }
+"""
+db_result.append(opt_ibo_info)
+
+logging.critical("Final result to DB: %s" % db_result)
