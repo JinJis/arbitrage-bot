@@ -7,35 +7,6 @@ from backtester.risk_free_arb_backtester import RfabBacktester
 
 
 class InitialBalanceOptimizer(BaseOptimizer):
-    """
-    <Algorithm Structure>
-    A. run
-        1. opt_balance_settings_by_oppty
-            : check oppty and reset balance settings (ig. if only new, then no krw in mm2)
-
-        2. set initial step for balance settings
-
-        3. opt_by_balance_settings_recursive
-            a. make sequence from bal_factors injected
-
-            b. test_trade_result_in_seq     <-- returned result of 3.a
-                1) create batch (all the possible odds from sequences)
-
-                2) run ISO by looping through batch     <-- returned result of b.1)
-                    - opted_factor, bal_settings, krw_earned, yield calculated
-                    - gather all results from each one of loop to one list
-                    - combine_factor_balance_settings_in_dict
-                        : to unify with preset dictionary format for convenience and explicitness
-                        --> return
-
-            c. IBOAnalyzer.get_opt_yield_balance_setting    <-- returned result of b.2)
-                - get the highest (or most attractive) yield item
-                - append cur_opt to temp_result
-            D. opt_by_balance_settings_recursive
-                1) finally, return whole depthed optimized info dict
-
-    """
-
     # default variables
     default_initial_setting_dict = {
         "max_trading_coin": 0.1,
@@ -162,7 +133,6 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
         index = 0
         for item in bal_setting_batch:
-
             index += 1
             logging.warning("Now conducting [IBO] %d out of %d" % (index, total_odds))
 
@@ -182,7 +152,7 @@ class InitialBalanceOptimizer(BaseOptimizer):
             # in IBO, init_factor_setting is fixed and balance_setting is subject to change
             bot.run(mm1_cursor.clone(), mm2_cursor.clone(), cls.default_initial_setting_dict, True)
             # combine opted_factor_settings returned and bal_settings into dict
-            combined_dict = cls.combine_factor_balance_settings_in_dict(item, bot)
+            combined_dict = cls.combine_balance_settings_in_dict(item, bot)
             result.append(combined_dict)
 
         return result
@@ -229,7 +199,7 @@ class InitialBalanceOptimizer(BaseOptimizer):
         return clone
 
     @classmethod
-    def combine_factor_balance_settings_in_dict(cls, bal_settings: dict, bot: RfabBacktester):
+    def combine_balance_settings_in_dict(cls, bal_settings: dict, bot: RfabBacktester):
         combined_dict = dict()
         combined_dict["total_krw_invested"] = bal_settings["mm1"]["krw_balance"] + bal_settings["mm2"]["krw_balance"]
         combined_dict["krw_earned"] = bot.total_krw_bal - combined_dict["total_krw_invested"]
