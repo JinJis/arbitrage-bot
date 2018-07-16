@@ -1,6 +1,7 @@
 import copy
 import logging
 from analyzer.analyzer import ISOAnalyzer
+from backtester.risk_free_arb_backtester import RfabBacktester
 from optimizer.base_optimizer import BaseOptimizer
 
 
@@ -37,7 +38,7 @@ class InitialSettingOptimizer(BaseOptimizer):
 
     @classmethod
     def opt_by_factor_settings_recursive(cls, settings: dict, factor_settings: dict,
-                                         depth: int, optimized: list = None):
+                                         depth: int, optimized: dict = None):
         if depth == 0:
             return optimized
 
@@ -54,13 +55,13 @@ class InitialSettingOptimizer(BaseOptimizer):
         cur_optimized = ISOAnalyzer.get_opt_initial_setting(result)
 
         # compare prev optimized with cur optimized, get opt
-        if (optimized is None) or (cur_optimized[0] > optimized[0]):
+        if (optimized is None) or (cur_optimized["krw_earned"] > optimized["krw_earned"]):
             optimized = cur_optimized
         logging.info(optimized)
 
         # reset start, end, step
         division = settings["division"]
-        factor_settings = cls.get_new_factor_settings(optimized[1], factor_settings, division)
+        factor_settings = cls.get_new_factor_settings(optimized["initial_setting"], factor_settings, division)
 
         depth -= 1
         return cls.opt_by_factor_settings_recursive(settings, factor_settings, depth, optimized)
@@ -100,8 +101,8 @@ class InitialSettingOptimizer(BaseOptimizer):
             # in ISO, init_factor_setting is subject to change and balance_setting is fixed
             bot = super().create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
             bot.run(mm1_cursor.clone(), mm2_cursor.clone(), item, True)
-            krw_earned = bot.total_krw_bal - (settings["mm1"]["krw_balance"] + settings["mm2"]["krw_balance"])
-            result.append([krw_earned, item, bot.trade_new, bot.trade_rev])
+            combined_dict = cls.combine_initial_settings_in_dict(settings, item, bot)
+            result.append(combined_dict)
 
         return result
 
@@ -144,3 +145,13 @@ class InitialSettingOptimizer(BaseOptimizer):
                                     }
                                 })
         return result
+
+    @classmethod
+    def combine_initial_settings_in_dict(cls, settings: dict, inital_settings: dict, bot: RfabBacktester):
+        combined_dict = dict()
+        krw_earned = bot.total_krw_bal - (settings["mm1"]["krw_balance"] + settings["mm2"]["krw_balance"])
+        combined_dict["krw_earned"] = krw_earned
+        combined_dict["new_num"] = bot.trade_new
+        combined_dict["rev_num"] = bot.trade_rev
+        combined_dict["initial_setting"] = inital_settings
+        return combined_dict

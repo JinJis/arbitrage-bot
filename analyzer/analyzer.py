@@ -186,8 +186,20 @@ class ATSAnalyzer:
 
 
 class ISOAnalyzer:
+
     @staticmethod
     def get_opt_initial_setting(result: list):
+
+        """
+        <data structure>
+        1) result = [pair, pair, pair, ... ]
+        2) pair = {
+            "krw_earned": float,
+            "new_num": int,
+            "rev_num": int,
+            "initial_setting": dict}
+        """
+
         # in case where
         if len(result) == 0:
             return None
@@ -201,11 +213,11 @@ class ISOAnalyzer:
                 same_krw_list.append(max_krw_pair)
                 continue
             # 비교
-            if pair[0] > max_krw_pair[0]:
+            if pair["krw_earned"] > max_krw_pair["krw_earned"]:
                 max_krw_pair = pair
                 same_krw_list.clear()
                 same_krw_list.append(max_krw_pair)
-            elif pair[0] == max_krw_pair[0]:
+            elif pair["krw_earned"] == max_krw_pair["krw_earned"]:
                 same_krw_list.append(pair)
 
         if len(same_krw_list) > 1:
@@ -218,34 +230,37 @@ class ISOAnalyzer:
                     min_coin_pair = pair
                     same_coin_unit_list.append(pair)
                     continue
-                if pair[1]["max_trading_coin"] < min_coin_pair[1]["max_trading_coin"]:
+                if pair["initial_setting"]["max_trading_coin"] < min_coin_pair["initial_setting"]["max_trading_coin"]:
                     min_coin_pair = pair
                     same_coin_unit_list.clear()
                     same_coin_unit_list.append(min_coin_pair)
-                elif pair[1]["max_trading_coin"] == min_coin_pair[1]:
+                elif pair["initial_setting"]["max_trading_coin"] == min_coin_pair["initial_setting"]["max_trading_coin"]:
                     same_coin_unit_list.append(pair)
             return same_coin_unit_list[0]
         else:
             return same_krw_list[0]
 
 
-class IBOAnalyzer:
+"""Initial Balance optimizer Analyzer"""
 
-    """
-    <data structure>
-    1) result = [pair, pair, pair, ... ]
-    2) pair = {
-        "krw_earned": float,
-        "total_krw_invested: float,
-        "yield" : float,
-        "factor_settings": dict,
-        "new_num": int,
-        "rev_num": int,
-        "balance_setting": dict}
-    """
+
+class IBOAnalyzer:
 
     @classmethod
     def get_opt_yield_balance_setting(cls, result: list):
+
+        """
+        <data structure>
+        1) result = [pair, pair, pair, ... ]
+        2) pair = {
+            "krw_earned": float,
+            "total_krw_invested: float,
+            "yield" : float,
+            "new_num": int,
+            "rev_num": int,
+            "balance_setting": dict}
+        """
+
         highest_yield_pair = None
         same_yield_list = []
         for pair in result:
@@ -282,13 +297,60 @@ class IBOAnalyzer:
         else:
             return same_yield_list[0]  # pair 하나 리턴
 
-    @staticmethod
-    def calc_krw_yield_in_percent(pair: list):
-        # pair = [krw_bal_after, factor_Settings, new # , rev #, balance_setting]
-        total_invested_krw = pair[4]["mm1"]["krw_balance"] + pair[4]["mm2"]["krw_balance"]
-        krw_earned = pair[0]
-        return (krw_earned / total_invested_krw) * 100
 
-    @staticmethod
-    def get_total_invested_krw_in_pair(pair: list):
-        return pair[4]["mm1"]["krw_balance"] + pair[4]["mm2"]["krw_balance"]
+"""Integrated Yield optimizer Analyzer"""
+
+
+class IYOAnalyzer:
+
+    @classmethod
+    def get_opt_yield_balance_and_initial_setting(cls, result: list):
+
+        """
+        <data structure>
+        1) result = [pair, pair, pair, ... ]
+        2) pair = {
+            "krw_earned": float,
+            "total_krw_invested: float,
+            "yield" : float,
+            "new_num": int,
+            "rev_num": int,
+            "factor_settings": dict,
+            "balance_setting": dict}
+        """
+
+        highest_yield_pair = None
+        same_yield_list = []
+        for pair in result:
+            # first setup
+            if highest_yield_pair is None:
+                highest_yield_pair = pair
+                same_yield_list.append(highest_yield_pair)
+                continue
+
+            # compare
+            if highest_yield_pair["yield"] < pair["yield"]:
+                highest_yield_pair = pair
+                same_yield_list.clear()
+                same_yield_list.append(highest_yield_pair)
+            elif highest_yield_pair["yield"] == pair["yield"]:
+                same_yield_list.append(pair)
+
+        # get the best pair within same_yield_list
+        if len(same_yield_list) > 1:
+            min_invested_krw_pair = None
+            same_invested_krw = []
+            for pair in same_yield_list:
+                if min_invested_krw_pair is None:
+                    min_invested_krw_pair = pair
+                    same_invested_krw.append(pair)
+                    continue
+                if pair["total_krw_invested"] < min_invested_krw_pair["total_krw_invested"]:
+                    min_invested_krw_pair = pair
+                    same_invested_krw.clear()
+                    same_invested_krw.append(pair)
+                elif pair["total_krw_invested"] == min_invested_krw_pair["total_krw_invested"]:
+                    same_invested_krw.append(pair)
+            return same_invested_krw[0]
+        else:
+            return same_yield_list[0]  # pair 하나 리턴
