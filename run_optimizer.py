@@ -25,8 +25,8 @@ settings = {
         "coin_balance": 5
 
     },
-    "division": 2,
-    "depth": 3,
+    "division": 4,
+    "depth": 5,
     "start_time": start_time,
     "end_time": end_time
 }
@@ -47,14 +47,14 @@ bal_factor_settings = {
 }
 
 factor_settings = {
-    "max_trading_coin": {"start": 0, "end": 0.05, "step_limit": 0.0001},
+    "max_trading_coin": {"start": 0, "end": 0.1, "step_limit": 0.0001},
     "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
     "new": {
-        "threshold": {"start": 0, "end": 1000, "step_limit": 1},
+        "threshold": {"start": 0, "end": 2000, "step_limit": 1},
         "factor": {"start": 1, "end": 3, "step_limit": 0.01}
     },
     "rev": {
-        "threshold": {"start": 0, "end": 1000, "step_limit": 1},
+        "threshold": {"start": 0, "end": 2000, "step_limit": 1},
         "factor": {"start": 1, "end": 3, "step_limit": 0.01}
     }
 }
