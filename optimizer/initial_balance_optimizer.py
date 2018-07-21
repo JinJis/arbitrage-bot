@@ -103,7 +103,7 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
         # get opt
         # optimize in terms of yield
-        cur_optimized = IBOAnalyzer.get_opt_yield_balance_setting(result)
+        cur_optimized = IBOAnalyzer.get_opt_yield_pair(result)
 
         if optimized is None:
             optimized = cur_optimized

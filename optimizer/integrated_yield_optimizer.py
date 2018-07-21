@@ -1,5 +1,5 @@
 import logging
-from analyzer.analyzer import IYOAnalyzer
+from analyzer.analyzer import IBOAnalyzer
 from optimizer.base_optimizer import BaseOptimizer
 from collector.oppty_time_collector import OpptyTimeCollector
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
@@ -12,7 +12,6 @@ IBO = InitialBalanceOptimizer
 
 
 class IntegratedYieldOptimizer(BaseOptimizer):
-
     # default variables
     def_init_setting_dict = {
         "max_trading_coin": 0.1,
@@ -42,6 +41,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         # loop through oppty times
         db_result = []
         for trade_type in oppty_dur_dict.keys():
+            if trade_type == "new":
+                continue  # fixme
             for time in oppty_dur_dict[trade_type]:
                 # apply each oppty duration
                 settings["start_time"] = time[0]
@@ -127,7 +128,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         """
         # get opt
         # optimize in terms of yield
-        cur_optimized = IYOAnalyzer.get_opt_yield_balance_and_initial_setting(result)
+        cur_optimized = IBOAnalyzer.get_opt_yield_pair(result)
 
         if optimized is None:
             optimized = cur_optimized

@@ -231,8 +231,7 @@ class ISOAnalyzer:
                     min_coin_pair = pair
                     same_coin_unit_list.clear()
                     same_coin_unit_list.append(min_coin_pair)
-                elif pair["initial_setting"]["max_trading_coin"] == min_coin_pair["initial_setting"][
-                    "max_trading_coin"]:
+                elif pair["initial_setting"]["max_trading_coin"] == min_coin_pair["initial_setting"]["max_trading_coin"]:
                     same_coin_unit_list.append(pair)
             return same_coin_unit_list[0]
         else:
@@ -245,10 +244,10 @@ class ISOAnalyzer:
 class IBOAnalyzer:
 
     @classmethod
-    def get_opt_yield_balance_setting(cls, result: list):
+    def get_opt_yield_pair(cls, result: list):
 
         """
-        <data structure>
+        < When used in IBO >
         1) result = [pair, pair, pair, ... ]
         2) pair = {
             "krw_earned": float,
@@ -257,55 +256,8 @@ class IBOAnalyzer:
             "new_num": int,
             "rev_num": int,
             "balance_setting": dict}
-        """
 
-        highest_yield_pair = None
-        same_yield_list = []
-        for pair in result:
-            # first setup
-            if highest_yield_pair is None:
-                highest_yield_pair = pair
-                same_yield_list.append(highest_yield_pair)
-                continue
-
-            # compare
-            if highest_yield_pair["yield"] < pair["yield"]:
-                highest_yield_pair = pair
-                same_yield_list.clear()
-                same_yield_list.append(highest_yield_pair)
-            elif highest_yield_pair["yield"] == pair["yield"]:
-                same_yield_list.append(pair)
-
-        # get the best pair within same_yield_list
-        if len(same_yield_list) > 1:
-            min_invested_krw_pair = None
-            same_invested_krw = []
-            for pair in same_yield_list:
-                if min_invested_krw_pair is None:
-                    min_invested_krw_pair = pair
-                    same_invested_krw.append(pair)
-                    continue
-                if pair["total_krw_invested"] < min_invested_krw_pair["total_krw_invested"]:
-                    min_invested_krw_pair = pair
-                    same_invested_krw.clear()
-                    same_invested_krw.append(pair)
-                elif pair["total_krw_invested"] == min_invested_krw_pair["total_krw_invested"]:
-                    same_invested_krw.append(pair)
-            return same_invested_krw[0]
-        else:
-            return same_yield_list[0]  # pair 하나 리턴
-
-
-"""Integrated Yield optimizer Analyzer"""
-
-
-class IYOAnalyzer:
-
-    @classmethod
-    def get_opt_yield_balance_and_initial_setting(cls, result: list):
-
-        """
-        <data structure>
+        < When used in IYO >
         1) result = [pair, pair, pair, ... ]
         2) pair = {
             "krw_earned": float,
@@ -335,7 +287,9 @@ class IYOAnalyzer:
                 same_yield_list.append(pair)
 
         # get the best pair within same_yield_list
-        if len(same_yield_list) > 1:
+        if len(same_yield_list) == 1:
+            return same_yield_list[0]  # pair 하나 리턴
+        elif len(same_yield_list) > 1:
             min_invested_krw_pair = None
             same_invested_krw = []
             for pair in same_yield_list:
@@ -351,4 +305,4 @@ class IYOAnalyzer:
                     same_invested_krw.append(pair)
             return same_invested_krw[0]
         else:
-            return same_yield_list[0]  # pair 하나 리턴
+            raise Exception("There is no item in same_yield_list!!! Check for solution")
