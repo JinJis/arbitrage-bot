@@ -7,6 +7,7 @@ from backtester.risk_free_arb_backtester import RfabBacktester
 
 
 class InitialBalanceOptimizer(BaseOptimizer):
+
     # default variables
     default_initial_setting_dict = {
         "max_trading_coin": 0.1,

@@ -13,14 +13,11 @@ class BasicAnalyzer:
 
     @staticmethod
     def get_price_of_minask_maxbid(orderbook: dict):
-        return int(orderbook["asks"][0]["price"].to_decimal()), \
-               int(orderbook["bids"][0]["price"].to_decimal())
+        return int(orderbook["asks"][0]["price"].to_decimal()), int(orderbook["bids"][0]["price"].to_decimal())
 
     @staticmethod
     def get_amount_of_minask_maxbid(orderbook: dict):
-        return float(orderbook["asks"][0]["amount"].to_decimal()), \
-               float(orderbook["bids"][0][
-                         "amount"].to_decimal())
+        return float(orderbook["asks"][0]["amount"].to_decimal()), float(orderbook["bids"][0]["amount"].to_decimal())
 
         ######################################################################
         # buy at minask, sell at maxbid
@@ -234,7 +231,8 @@ class ISOAnalyzer:
                     min_coin_pair = pair
                     same_coin_unit_list.clear()
                     same_coin_unit_list.append(min_coin_pair)
-                elif pair["initial_setting"]["max_trading_coin"] == min_coin_pair["initial_setting"]["max_trading_coin"]:
+                elif pair["initial_setting"]["max_trading_coin"] == min_coin_pair["initial_setting"][
+                    "max_trading_coin"]:
                     same_coin_unit_list.append(pair)
             return same_coin_unit_list[0]
         else:

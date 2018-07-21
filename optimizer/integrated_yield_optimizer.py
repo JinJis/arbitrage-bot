@@ -1,6 +1,4 @@
 import logging
-from config.shared_mongo_client import SharedMongoClient
-from trader.market_manager.virtual_market_manager import VirtualMarketManager
 from analyzer.analyzer import IYOAnalyzer
 from optimizer.base_optimizer import BaseOptimizer
 from collector.oppty_time_collector import OpptyTimeCollector
@@ -14,6 +12,7 @@ IBO = InitialBalanceOptimizer
 
 
 class IntegratedYieldOptimizer(BaseOptimizer):
+
     # default variables
     def_init_setting_dict = {
         "max_trading_coin": 0.1,
@@ -32,12 +31,13 @@ class IntegratedYieldOptimizer(BaseOptimizer):
     def run(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
 
         # get oppty_time_duration dict
-        oppty_dur_dict = cls.get_oppty_time_dur_dict_by_otc(settings)
+        oppty_dur_dict = OpptyTimeCollector.run(settings)
+        logging.warning("Total Oppty Duration Dict: %s" % oppty_dur_dict)
 
-        # get total duration time for each trade
-        total_dur_dict = OTC.get_total_duration_time(oppty_dur_dict)
-        for key in total_dur_dict.keys():
-            logging.warning("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_dict[key] / 60 / 60)))
+        # get total duration hour for each trade
+        total_dur_hour = OTC.get_total_duration_time(oppty_dur_dict)
+        for key in total_dur_hour.keys():
+            logging.warning("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_hour[key] / 60 / 60)))
 
         # loop through oppty times
         db_result = []
@@ -63,22 +63,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                                                                             factor_settings, settings["depth"])
                 db_result.append(iyo_opt_result)
         return db_result
-
-    @staticmethod
-    def get_oppty_time_dur_dict_by_otc(settings: dict):
-        target_currency = settings["target_currency"]
-        mm1 = VirtualMarketManager(settings["mm1"]["market_tag"], settings["mm1"]["fee_rate"],
-                                   settings["mm1"]["krw_balance"], settings["mm1"]["coin_balance"],
-                                   target_currency)
-        mm2 = VirtualMarketManager(settings["mm2"]["market_tag"], settings["mm2"]["fee_rate"],
-                                   settings["mm2"]["krw_balance"], settings["mm2"]["coin_balance"],
-                                   target_currency)
-        mm1_col = SharedMongoClient.get_target_col(settings["mm1"]["market_tag"], target_currency)
-        mm2_col = SharedMongoClient.get_target_col(settings["mm2"]["market_tag"], target_currency)
-        mm1_data_cursor, mm2_data_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, settings["start_time"],
-                                                                              settings["end_time"])
-        oppty_dur_dict = OpptyTimeCollector(target_currency, mm1, mm2).run(mm1_data_cursor, mm2_data_cursor)
-        return oppty_dur_dict
 
     @classmethod
     def opt_bal_init_settings_by_oppty(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):

@@ -6,7 +6,7 @@ from optimizer.base_optimizer import BaseOptimizer
 
 
 class InitialSettingOptimizer(BaseOptimizer):
-    # class variables
+    # default variables
     default_initial_setting_dict = {
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,

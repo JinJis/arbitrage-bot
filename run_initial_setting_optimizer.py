@@ -1,12 +1,12 @@
 from config.global_conf import Global
 from trader.market.market import Market
 from config.shared_mongo_client import SharedMongoClient
-from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
+from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 
 Global.configure_default_root_logging(should_log_to_file=False)
 SharedMongoClient.initialize(should_use_localhost_db=True)
-start_time = Global.convert_local_datetime_to_epoch("2018.07.10 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.07.11 09:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.07.11 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.07.12 09:00:00", timezone="kr")
 
 settings = {
     "target_currency": "bch",
@@ -25,24 +25,9 @@ settings = {
     },
     "division": 3,
     "depth": 4,
-    "consecution_time": 45,
+    "consecution_time": 30,
     "start_time": start_time,
     "end_time": end_time
-}
-
-bal_factor_settings = {
-    "mm1": {
-        "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000
-                        },
-        "coin_balance": {"start": 0, "end": 10, "step_limit": 0.1
-                         }
-    },
-    "mm2": {
-        "krw_balance": {"start": 0, "end": 10000000, "step_limit": 10000
-                        },
-        "coin_balance": {"start": 0, "end": 10, "step_limit": 0.1
-                         }
-    }
 }
 
 factor_settings = {
@@ -58,5 +43,5 @@ factor_settings = {
     }
 }
 
-IYO_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
-print(IYO_result)
+ISO_result = InitialSettingOptimizer().run(settings, factor_settings)
+print(ISO_result)
