@@ -41,8 +41,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         # loop through oppty times
         db_result = []
         for trade_type in oppty_dur_dict.keys():
-            if trade_type == "new":
-                continue  # fixme
             for time in oppty_dur_dict[trade_type]:
                 # apply each oppty duration
                 settings["start_time"] = time[0]
