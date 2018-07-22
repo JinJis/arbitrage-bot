@@ -19,7 +19,7 @@ class BaseOptimizer:
         return new_oppty_count, rev_oppty_count
 
     @classmethod
-    def opt_factor_settings_by_oppty(cls, settings: dict, factor_settings: dict,  default_init_setting_dict: dict):
+    def opt_factor_settings_by_oppty(cls, settings: dict, factor_settings: dict, default_init_setting_dict: dict):
         # init bot and run
         (new_oppty_count, rev_oppty_count) = cls.oppty_num_checker(settings, default_init_setting_dict)
         logging.info("Oppty Checked Successfully!! -- NEW oppty: %d, REV oppty: %d"
