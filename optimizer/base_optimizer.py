@@ -65,13 +65,17 @@ class BaseOptimizer:
         # classify the kind of strategies and renew bal_factor_settings accordingly
         clone = copy.deepcopy(bal_factor_settings)
         mm1_krw_dict = clone["mm1"]["krw_balance"]
+        mm1_coin_dict = clone["mm1"]["coin_balance"]
         mm2_krw_dict = clone["mm2"]["krw_balance"]
+        mm2_coin_dict = clone["mm2"]["coin_balance"]
 
         if rev_oppty_count == 0:
             cls.tie_end_start(mm2_krw_dict)
+            cls.tie_end_start(mm1_coin_dict)
 
         if new_oppty_count == 0:
             cls.tie_end_start(mm1_krw_dict)
+            cls.tie_end_start(mm2_coin_dict)
 
         return clone
 

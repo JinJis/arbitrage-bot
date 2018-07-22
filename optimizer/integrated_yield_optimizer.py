@@ -1,4 +1,5 @@
 import logging
+import copy
 from analyzer.analyzer import IBOAnalyzer
 from optimizer.base_optimizer import BaseOptimizer
 from collector.oppty_time_collector import OpptyTimeCollector
@@ -42,24 +43,30 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         db_result = []
         for trade_type in oppty_dur_dict.keys():
             for time in oppty_dur_dict[trade_type]:
+                # clone settings, balance factor settings, factor settings with original one
+                settings_clone = copy.deepcopy(settings)
+                bal_fact_set_clone = copy.deepcopy(bal_factor_settings)
+                fact_set_clone = copy.deepcopy(factor_settings)
+
                 # apply each oppty duration
-                settings["start_time"] = time[0]
-                settings["end_time"] = time[1]
+                settings_clone["start_time"] = time[0]
+                settings_clone["end_time"] = time[1]
                 logging.critical("Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
 
                 # initial dry run
-                bal_factor_settings, factor_settings = cls.opt_bal_init_settings_by_oppty(settings,
-                                                                                          bal_factor_settings,
-                                                                                          factor_settings)
+                fact_set_clone, bal_fact_set_clone = cls.opt_bal_init_settings_by_oppty(settings_clone,
+                                                                                        bal_fact_set_clone,
+                                                                                        fact_set_clone)
                 # create coin balance proportionate current exchange rate
-                bal_factor_settings = IBO.create_coin_bal_from_krw_bal_by_exchange_rate(settings, bal_factor_settings)
+                bal_fact_set_clone = IBO.create_coin_bal_from_krw_bal_by_exchange_rate(settings_clone,
+                                                                                       bal_fact_set_clone)
 
                 # create init step for balance settings and initial settings
-                cls.create_init_step_for_bal_and_init_settings(settings, bal_factor_settings, factor_settings)
+                cls.create_init_step_for_bal_and_init_settings(settings_clone, bal_fact_set_clone, fact_set_clone)
 
                 # run recursive
-                iyo_opt_result = cls.opt_by_bal_and_init_settings_recursive(settings, bal_factor_settings,
-                                                                            factor_settings, settings["depth"])
+                iyo_opt_result = cls.opt_by_bal_and_init_settings_recursive(settings_clone, bal_fact_set_clone,
+                                                                            fact_set_clone, settings_clone["depth"])
                 db_result.append(iyo_opt_result)
         return db_result
 
@@ -70,7 +77,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         # opt balance_settings by oppty
         bal_factor_settings = cls.opt_balance_settings_by_oppty(settings, bal_factor_settings,
                                                                 cls.def_init_setting_dict)
-        return bal_factor_settings, factor_settings
+        return factor_settings, bal_factor_settings
 
     @classmethod
     def create_init_step_for_bal_and_init_settings(cls, settings: dict, bal_factor_settings: dict,
