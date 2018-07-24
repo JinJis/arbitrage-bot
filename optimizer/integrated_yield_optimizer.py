@@ -186,7 +186,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                 bot.run(mm1_cursor, mm2_cursor, init_setting, is_running_in_optimizer=True)
 
                 # append formatted data
-                result.append(cls.get_combined_result(bal_setting, init_setting, {
+                result.append(cls.get_combined_result(cloned_settings, init_setting, bal_setting, {
                     "total_krw_bal": bot.total_krw_bal,
                     "trade_new": bot.trade_new,
                     "trade_rev": bot.trade_rev
@@ -210,13 +210,21 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         return ibo_total_odds * iso_total_odds
 
     @classmethod
-    def get_combined_result(cls, bal_setting: dict, init_setting: dict, exec_result: dict):
+    def get_combined_result(cls, settings: dict, init_setting: dict, bal_setting: dict, exec_result: dict):
         result = dict()
+        # encode <Market.market_tag> of settings to string in order to save into Mongo DB
+        cloned_settings = copy.deepcopy(settings)
+        for market in ["mm1", "mm2"]:
+            encoded_mkt_tag = cloned_settings[market]["market_tag"].value
+            del cloned_settings[market]["market_tag"]
+            cloned_settings[market]["market_tag"] = encoded_mkt_tag
+
+        result["settings"] = cloned_settings
+        result["initial_setting"] = init_setting
+        result["balance_setting"] = bal_setting
         result["total_krw_invested"] = bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]
         result["krw_earned"] = exec_result["total_krw_bal"] - result["total_krw_invested"]
         result["yield"] = result["krw_earned"] / result["total_krw_invested"] * 100
         result["new_num"] = exec_result["trade_new"]
         result["rev_num"] = exec_result["trade_rev"]
-        result["balance_setting"] = bal_setting
-        result["initial_setting"] = init_setting
         return result

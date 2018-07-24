@@ -59,5 +59,5 @@ factor_settings = {
 }
 
 iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
-# SharedMongoClient.instance()["db_name"]["col_name"].insert_many(iyo_result)
+SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
 print(iyo_result)
