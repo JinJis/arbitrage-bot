@@ -1,46 +1,10 @@
 import logging
 from itertools import zip_longest
+from pymongo.cursor import Cursor
 from config.shared_mongo_client import SharedMongoClient
 
 
 class DbFixer:
-    @staticmethod
-    def update_rq_diff_by_control_db(con_db: str, con_col: str, tar_db: str, tar_col: str,
-                                     start_time: int, end_time: int):
-        db_client = SharedMongoClient.instance()
-        control_col = db_client[con_db][con_col]
-        target_col = db_client[tar_db][tar_col]
-        con_cursor = control_col.find({"requestTime": {
-            "$gte": start_time,
-            "$lte": end_time
-        }}).sort([("requestTime", 1)])
-        tar_cursor = target_col.find({"requestTime": {
-            "$gte": start_time,
-            "$lte": end_time
-        }}).sort([("requestTime", 1)])
-
-        con_count = con_cursor.count()
-        tar_count = tar_cursor.count()
-
-        logging.info("Cursor count: a %d, b %d" % (con_count, tar_count))
-
-        # if con_count != tar_count:
-        #
-        #
-        # for con_item, tar_item in zip_longest(con_cursor, tar_cursor):
-        #     con_rt = con_item["requestTime"]
-        #     tar_rt = tar_item["requestTime"]
-        #     if con_rt != tar_rt:
-        #         logging.info("Diff: control_rt %d, target_rt %d " % (con_rt, tar_rt))
-        #         if not is_first_occur:
-        #             raise Exception("At least the first occurrence should be a valid pair!")
-        #         rq_diff = con_rt - tar_rt
-        #         adjusted_rq = tar_rt + rq_diff
-        #         logging.info("Adding %d item in target_col..." % tar_rt)
-        #         target_col.update_one({"_id": tar_item["_id"]}, {"$set": {"requestTime": adjusted_rq}})
-        #     else:
-        #         is_first_occur = True
-
     @staticmethod
     def add_missing_item_with_plain_copy_prev(a_db: str, a_col: str, b_db: str, b_col: str,
                                               start_time: int, end_time: int):
@@ -129,3 +93,73 @@ class DbFixer:
                         {"$set": item}
                     )
             prev_item = item
+
+    @staticmethod
+    def match_request_time_in_orderbook_entry(control_db: str, target_db: str, col_name: str,
+                                              start_time: int, end_time: int):
+        db_client = SharedMongoClient.instance()
+        control_col = db_client[control_db][col_name]
+        target_col = db_client[target_db][col_name]
+
+        ctrl_data_set = control_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        # get first nearest request time from control db
+        first_ctrl_rq = ctrl_data_set[0]["requestTime"]
+
+        # get first and second request time from target db
+        trgt_data_set = list(target_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])[:2])
+
+        # first target requestTime
+        first_trgt_rq = trgt_data_set[0]["requestTime"]
+        # second target requestTime
+        second_trgt_rq = trgt_data_set[1]["requestTime"]
+
+        # calc difference between control reqTime and target reqTimes
+        ctrl_first_trgt_first_diff = abs(first_ctrl_rq - first_trgt_rq)
+        ctrl_first_trgt_second_diff = abs(first_ctrl_rq - second_trgt_rq)
+
+        # if first in target is nearer to first in control, set first in target as starting point
+        if ctrl_first_trgt_first_diff < ctrl_first_trgt_second_diff:
+            trgt_start_rq = first_trgt_rq
+        # if second in target is nearer to first in control, set second in target as starting point
+        elif ctrl_first_trgt_first_diff > ctrl_first_trgt_second_diff:
+            trgt_start_rq = second_trgt_rq
+        else:
+            raise Exception("Difference is same, please Manually check the database and fix!!")
+
+        # get count of data from control db
+        ctrl_data_count = ctrl_data_set.count()
+
+        # get same count of data from target db with the starting point as start time and without end time
+        trgt_data_set: Cursor = target_col.find({"requestTime": {
+            "$gte": trgt_start_rq
+        }}).sort([("requestTime", 1)]).limit(ctrl_data_count)
+        trgt_data_count = trgt_data_set.count(with_limit_and_skip=True)
+
+        logging.info("ctrl count count: %d, trgt: %d" % (ctrl_data_count, trgt_data_count))
+        assert (ctrl_data_count == trgt_data_count)
+
+        last_index = ctrl_data_count - 1
+        ctrl_last_rq = ctrl_data_set[last_index]["requestTime"]
+        trgt_last_rq = trgt_data_set[last_index]["requestTime"]
+        assert (abs(ctrl_last_rq - trgt_last_rq) < 3)
+
+        # loop through both
+        # update target's request time with control's request
+        for ctrl_data, trgt_data in zip(ctrl_data_set, trgt_data_set):
+            ctrl_rq = ctrl_data["requestTime"]
+            trgt_rq = trgt_data["requestTime"]
+            logging.info("ctrl_rqt: %d, trgt_rqt: %d" % (ctrl_rq, trgt_rq))
+            if trgt_rq == ctrl_rq:
+                continue
+            SharedMongoClient._async_update(
+                target_col,
+                {"requestTime": trgt_rq},
+                {"$set": {"requestTime": ctrl_rq}}
+            )
