@@ -5,7 +5,6 @@ from optimizer.base_optimizer import BaseOptimizer
 from collector.oppty_time_collector import OpptyTimeCollector
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
 from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
-from backtester.risk_free_arb_backtester import RfabBacktester
 
 OTC = OpptyTimeCollector
 ISO = InitialSettingOptimizer
@@ -43,45 +42,43 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         db_result = []
         for trade_type in oppty_dur_dict.keys():
             for time in oppty_dur_dict[trade_type]:
-                # clone settings, balance factor settings, factor settings with original one
-                settings_clone = copy.deepcopy(settings)
-                bal_fact_set_clone = copy.deepcopy(bal_factor_settings)
-                fact_set_clone = copy.deepcopy(factor_settings)
+                try:
+                    # clone settings, balance factor settings, factor settings with original one
+                    settings_clone = copy.deepcopy(settings)
+                    bal_fact_set_clone = copy.deepcopy(bal_factor_settings)
+                    fact_set_clone = copy.deepcopy(factor_settings)
 
-                # apply each oppty duration
-                settings_clone["start_time"] = time[0]
-                settings_clone["end_time"] = time[1]
-                logging.critical("Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
+                    # apply each oppty duration
+                    settings_clone["start_time"] = time[0]
+                    settings_clone["end_time"] = time[1]
+                    logging.critical(
+                        "Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
 
-                # initial dry run
-                fact_set_clone, bal_fact_set_clone = cls.opt_bal_init_settings_by_oppty(settings_clone,
-                                                                                        bal_fact_set_clone,
-                                                                                        fact_set_clone)
-                # create coin balance proportionate current exchange rate
-                bal_fact_set_clone = IBO.create_coin_bal_from_krw_bal_by_exchange_rate(settings_clone,
-                                                                                       bal_fact_set_clone)
+                    # initial dry run
+                    # opt initial settings by oppty
+                    fact_set_clone = cls.opt_factor_settings_by_oppty(settings, fact_set_clone,
+                                                                      cls.def_init_setting_dict)
+                    # opt balance_settings by oppty
+                    bal_fact_set_clone = cls.opt_balance_settings_by_oppty(settings, bal_fact_set_clone,
+                                                                           cls.def_init_setting_dict)
 
-                # create init step for balance settings and initial settings
-                cls.create_init_step_for_bal_and_init_settings(settings_clone, bal_fact_set_clone, fact_set_clone)
+                    # create coin balance proportionate current exchange rate
+                    bal_fact_set_clone = IBO.create_coin_bal_from_krw_bal_by_exchange_rate(settings_clone,
+                                                                                           bal_fact_set_clone)
 
-                # run recursive
-                iyo_opt_result = cls.opt_by_bal_and_init_settings_recursive(settings_clone, bal_fact_set_clone,
-                                                                            fact_set_clone, settings_clone["depth"])
-                db_result.append(iyo_opt_result)
+                    # add init step for balance settings and initial settings
+                    cls.init_initial_step(settings_clone, bal_fact_set_clone, fact_set_clone)
+
+                    # run recursive
+                    iyo_opt_result = cls.opt_by_bal_and_init_settings_recursive(settings_clone, bal_fact_set_clone,
+                                                                                fact_set_clone, settings_clone["depth"])
+                    db_result.append(iyo_opt_result)
+                except Exception as e:
+                    logging.error("Something went wrong while executing IYO loop!", time, e)
         return db_result
 
-    @classmethod
-    def opt_bal_init_settings_by_oppty(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
-        # opt initial settings by oppty
-        factor_settings = cls.opt_factor_settings_by_oppty(settings, factor_settings, cls.def_init_setting_dict)
-        # opt balance_settings by oppty
-        bal_factor_settings = cls.opt_balance_settings_by_oppty(settings, bal_factor_settings,
-                                                                cls.def_init_setting_dict)
-        return factor_settings, bal_factor_settings
-
-    @classmethod
-    def create_init_step_for_bal_and_init_settings(cls, settings: dict, bal_factor_settings: dict,
-                                                   factor_settings: dict):
+    @staticmethod
+    def init_initial_step(settings: dict, bal_factor_settings: dict, factor_settings: dict):
         # set initial step for balance settings
         for market in bal_factor_settings.keys():
             for item in bal_factor_settings[market]:
@@ -123,13 +120,14 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             <data structure>
             1)  result = [combined_dict, combined_dict, combined_dict, ... ]
             2)  combined_dict or cur_optimized = {
-                "total_krw_invested: float,
-                "krw_earned": float,                
-                "yield" : float,
-                "new_num": int, 
-                "rev_num": int, 
-                "balance_setting": dict,
-                "initial_setting": dict}
+                    "total_krw_invested: float,
+                    "krw_earned": float,                
+                    "yield" : float,
+                    "new_num": int, 
+                    "rev_num": int, 
+                    "balance_setting": dict,
+                    "initial_setting": dict
+                }
         """
         # get opt
         # optimize in terms of yield
@@ -164,30 +162,35 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
         iyo_index = 0
         # loop through IBO first
-        for bal_item in bal_setting_batch:
-            for init_setting_item in initial_settings_batch:
+        for bal_setting in bal_setting_batch:
+            for init_setting in initial_settings_batch:
 
                 iyo_index += 1
                 logging.warning("Now conducting [IYO] %d out of %d" % (iyo_index, iyo_total_odds))
 
                 # if total invested krw is 0, skip ISO (no trade anyway)
-                if (bal_item["mm1"]["krw_balance"] + bal_item["mm2"]["krw_balance"]) == 0:
+                if (bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]) == 0:
                     logging.warning("Skipped [IYO] because total invested KRW was 0!")
                     continue
 
                 # If not invested krw is 0
                 # sync batch with settings to loop over
-                synced_settings = IBO.sync_batch_with_setting(settings, bal_item)
+                cloned_settings = IBO.clone_settings_with_given_bal_setting(settings, bal_setting)
 
                 # query data
-                mm1_cursor, mm2_cursor = cls.get_history_data(synced_settings)
-                bot = super().create_bot(synced_settings["mm1"], synced_settings["mm2"],
-                                         synced_settings["target_currency"])
-                bot.run(mm1_cursor.clone(), mm2_cursor.clone(), init_setting_item, True)
+                mm1_cursor, mm2_cursor = cls.get_history_data(cloned_settings)
 
-                # combine opted_inital_settings and bal_settings into formatted dict
-                combined_dict = cls.combine_balance_and_init_settings_in_dict(bal_item, init_setting_item, bot)
-                result.append(combined_dict)
+                # init & run bot
+                bot = super().create_bot(cloned_settings["mm1"], cloned_settings["mm2"],
+                                         cloned_settings["target_currency"])
+                bot.run(mm1_cursor, mm2_cursor, init_setting, is_running_in_optimizer=True)
+
+                # append formatted data
+                result.append(cls.get_combined_result(bal_setting, init_setting, {
+                    "total_krw_bal": bot.total_krw_bal,
+                    "trade_new": bot.trade_new,
+                    "trade_rev": bot.trade_rev
+                }))
 
         return result
 
@@ -207,13 +210,13 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         return ibo_total_odds * iso_total_odds
 
     @classmethod
-    def combine_balance_and_init_settings_in_dict(cls, bal_settings: dict, init_settings: dict, bot: RfabBacktester):
-        combined_dict = dict()
-        combined_dict["total_krw_invested"] = bal_settings["mm1"]["krw_balance"] + bal_settings["mm2"]["krw_balance"]
-        combined_dict["krw_earned"] = bot.total_krw_bal - combined_dict["total_krw_invested"]
-        combined_dict["yield"] = combined_dict["krw_earned"] / combined_dict["total_krw_invested"] * 100
-        combined_dict["new_num"] = bot.trade_new
-        combined_dict["rev_num"] = bot.trade_rev
-        combined_dict["balance_setting"] = bal_settings
-        combined_dict["initial_setting"] = init_settings
-        return combined_dict
+    def get_combined_result(cls, bal_setting: dict, init_setting: dict, exec_result: dict):
+        result = dict()
+        result["total_krw_invested"] = bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]
+        result["krw_earned"] = exec_result["total_krw_bal"] - result["total_krw_invested"]
+        result["yield"] = result["krw_earned"] / result["total_krw_invested"] * 100
+        result["new_num"] = exec_result["trade_new"]
+        result["rev_num"] = exec_result["trade_rev"]
+        result["balance_setting"] = bal_setting
+        result["initial_setting"] = init_setting
+        return result

@@ -1,3 +1,4 @@
+import logging
 from analyzer.analyzer import BasicAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
@@ -19,6 +20,16 @@ class OpptyTimeCollector:
         # loop through history data
         raw_rq_time_dict = dict(new=[], rev=[])
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
+            # skip if either of orderbook data is empty
+            if (not mm1_data) or (not mm1_data["asks"]) or (not mm1_data["bids"]):
+                logging.info("mm1_data is empty! Skipping current item... %s" %
+                             mm1_data["requestTime"] if mm1_data else "")
+                continue
+            if (not mm2_data) or (not mm2_data["asks"]) or (not mm2_data["bids"]):
+                logging.info("mm2_data is empty! Skipping current item... %s" %
+                             mm2_data["requestTime"] if mm2_data else "")
+                continue
+
             # get spread
             new_unit_spread, rev_unit_spread = cls.get_spread_info(mm1_data, mm2_data, mm1.market_fee, mm2.market_fee)
             # collect requestTime when NEW

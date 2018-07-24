@@ -8,7 +8,7 @@ from backtester.risk_free_arb_backtester import RfabBacktester
 class BaseOptimizer:
 
     @classmethod
-    def oppty_num_checker(cls, settings: dict, default_init_setting_dict: dict):
+    def count_oppty_num(cls, settings: dict, default_init_setting_dict: dict):
         bot = cls.create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
         mm1_cursor, mm2_cursor = cls.get_history_data(settings)
         bot.run(mm1_cursor, mm2_cursor, default_init_setting_dict, True)
@@ -21,7 +21,7 @@ class BaseOptimizer:
     @classmethod
     def opt_factor_settings_by_oppty(cls, settings: dict, factor_settings: dict, default_init_setting_dict: dict):
         # init bot and run
-        (new_oppty_count, rev_oppty_count) = cls.oppty_num_checker(settings, default_init_setting_dict)
+        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, default_init_setting_dict)
         logging.info("Oppty Checked Successfully!! -- NEW oppty: %d, REV oppty: %d"
                      % (new_oppty_count, rev_oppty_count))
 
@@ -55,7 +55,7 @@ class BaseOptimizer:
     @classmethod
     def opt_balance_settings_by_oppty(cls, settings: dict, bal_factor_settings: dict, default_init_setting_dict: dict):
         # init bot and run
-        (new_oppty_count, rev_oppty_count) = cls.oppty_num_checker(settings, default_init_setting_dict)
+        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, default_init_setting_dict)
         logging.warning("[Result] NEW: %d, REV: %d" % (new_oppty_count, rev_oppty_count))
 
         # if there is no oppty, stop bot

@@ -16,7 +16,7 @@ class RfabBacktester:
         self.mm2 = mm2
         self.target_currency = target_currency
         self.init_setting_dict = None
-        self.is_optimizer = None
+        self.is_running_in_optimizer = None
 
         self.mm1_currency = self.mm1.get_market_currency(self.target_currency)
         self.mm2_currency = self.mm2.get_market_currency(self.target_currency)
@@ -30,11 +30,11 @@ class RfabBacktester:
         self.trade_rev = 0
 
     def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor,
-            init_setting_dict: dict, is_optimizer: bool = False):
+            init_setting_dict: dict, is_running_in_optimizer: bool = False):
 
         # init settings
         self.init_setting_dict = init_setting_dict
-        self.is_optimizer = is_optimizer
+        self.is_running_in_optimizer = is_running_in_optimizer
 
         # clear balances & trade counter
         self.mm1.clear_balance()
@@ -45,7 +45,7 @@ class RfabBacktester:
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
             self.actual_trade_loop(mm1_data, mm2_data)
         # log backtesting result
-        if not self.is_optimizer:
+        if not self.is_running_in_optimizer:
             self.trade_logger.log_trade_info()
             self.trade_logger.log_oppty_info()
             self.trade_logger.log_combined_balance(self.mm1.balance, self.mm2.balance)
@@ -58,7 +58,7 @@ class RfabBacktester:
         if not trade:
             return
         self.trade_manager.add_trade(trade)
-        if not self.is_optimizer:
+        if not self.is_running_in_optimizer:
             TradeInfoLogger.execute_trade_log_info(trade, spread_info)
 
     def actual_trade_loop(self, mm1_data: dict, mm2_data: dict):
@@ -128,7 +128,7 @@ class RfabBacktester:
 
         # if enough krw & coin balance
         if not (has_enough_krw and has_enough_coin):
-            if not self.is_optimizer:
+            if not self.is_running_in_optimizer:
                 TradeInfoLogger.not_enough_balance_log_info(trade_type, spread_info)
             return None
 

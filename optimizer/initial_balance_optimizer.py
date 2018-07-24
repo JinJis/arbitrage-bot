@@ -7,7 +7,6 @@ from backtester.risk_free_arb_backtester import RfabBacktester
 
 
 class InitialBalanceOptimizer(BaseOptimizer):
-
     # default variables
     default_initial_setting_dict = {
         "max_trading_coin": 0.1,
@@ -133,27 +132,27 @@ class InitialBalanceOptimizer(BaseOptimizer):
         bal_setting_batch = cls.create_balance_batch_from_seq(bal_factor_settings)
 
         index = 0
-        for item in bal_setting_batch:
+        for bal_setting in bal_setting_batch:
             index += 1
             logging.warning("Now conducting [IBO] %d out of %d" % (index, total_odds))
 
             # if total invested krw is 0, skip (no trade anyway)
-            if (item["mm1"]["krw_balance"] + item["mm2"]["krw_balance"]) == 0:
+            if (bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]) == 0:
                 logging.warning("ISO skipped because total invested KRW is 0!")
                 continue
 
             # sync batch with settings to loop over
-            synced_settings = cls.sync_batch_with_setting(settings, item)
+            cloned_settings = cls.clone_settings_with_given_bal_setting(settings, bal_setting)
 
             # query data
-            mm1_cursor, mm2_cursor = cls.get_history_data(synced_settings)
+            mm1_cursor, mm2_cursor = cls.get_history_data(cloned_settings)
 
             # opt_factor = [krw_bal_after, factor_Settings, new # , rev #]
-            bot = super().create_bot(synced_settings["mm1"], synced_settings["mm2"], synced_settings["target_currency"])
+            bot = super().create_bot(cloned_settings["mm1"], cloned_settings["mm2"], cloned_settings["target_currency"])
             # in IBO, init_factor_setting is fixed and balance_setting is subject to change
-            bot.run(mm1_cursor.clone(), mm2_cursor.clone(), cls.default_initial_setting_dict, True)
+            bot.run(mm1_cursor, mm2_cursor, cls.default_initial_setting_dict, True)
             # combine opted_factor_settings returned and bal_settings into dict
-            combined_dict = cls.combine_balance_settings_in_dict(item, bot)
+            combined_dict = cls.combine_balance_settings_in_dict(bal_setting, bot)
             result.append(combined_dict)
 
         return result
@@ -191,14 +190,6 @@ class InitialBalanceOptimizer(BaseOptimizer):
                 })
         return result
 
-    @staticmethod
-    def sync_batch_with_setting(settings: dict, batch: dict):
-        clone = copy.deepcopy(settings)
-        for market in batch.keys():
-            for item in batch[market]:
-                clone[market][item] = batch[market][item]
-        return clone
-
     @classmethod
     def combine_balance_settings_in_dict(cls, bal_settings: dict, bot: RfabBacktester):
         combined_dict = dict()
@@ -209,3 +200,11 @@ class InitialBalanceOptimizer(BaseOptimizer):
         combined_dict["rev_num"] = bot.trade_rev
         combined_dict["balance_setting"] = bal_settings
         return combined_dict
+
+    @staticmethod
+    def clone_settings_with_given_bal_setting(settings: dict, bal_setting: dict):
+        clone = copy.deepcopy(settings)
+        for market in bal_setting.keys():
+            for bal_type in bal_setting[market]:
+                clone[market][bal_type] = bal_setting[market][bal_type]
+        return clone
