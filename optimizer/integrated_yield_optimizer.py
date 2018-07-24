@@ -30,7 +30,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
     def run(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
 
         # get oppty_time_duration dict
-        oppty_dur_dict = OpptyTimeCollector.run(settings)
+        oppty_dur_dict = OTC.run(settings)
         logging.warning("Total Oppty Duration Dict: %s" % oppty_dur_dict)
 
         # get total duration hour for each trade
@@ -56,10 +56,10 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
                     # initial dry run
                     # opt initial settings by oppty
-                    fact_set_clone = cls.opt_factor_settings_by_oppty(settings, fact_set_clone,
+                    fact_set_clone = cls.opt_factor_settings_by_oppty(settings_clone, fact_set_clone,
                                                                       cls.def_init_setting_dict)
                     # opt balance_settings by oppty
-                    bal_fact_set_clone = cls.opt_balance_settings_by_oppty(settings, bal_fact_set_clone,
+                    bal_fact_set_clone = cls.opt_balance_settings_by_oppty(settings_clone, bal_fact_set_clone,
                                                                            cls.def_init_setting_dict)
 
                     # create coin balance proportionate current exchange rate
@@ -77,8 +77,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     logging.error("Something went wrong while executing IYO loop!", time, e)
         return db_result
 
-    @staticmethod
-    def init_initial_step(settings: dict, bal_factor_settings: dict, factor_settings: dict):
+    @classmethod
+    def init_initial_step(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
         # set initial step for balance settings
         for market in bal_factor_settings.keys():
             for item in bal_factor_settings[market]:

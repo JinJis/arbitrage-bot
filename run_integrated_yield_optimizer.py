@@ -5,8 +5,8 @@ from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 Global.configure_default_root_logging(should_log_to_file=False)
 SharedMongoClient.initialize(should_use_localhost_db=True)
-start_time = Global.convert_local_datetime_to_epoch("2018.07.21 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.07.22 09:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.07.23 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.07.24 09:00:00", timezone="kr")
 
 settings = {
     "target_currency": "bch",
@@ -59,5 +59,5 @@ factor_settings = {
 }
 
 iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
-SharedMongoClient.instance()["db_name"]["col_name"].insert_many(iyo_result)
+# SharedMongoClient.instance()["db_name"]["col_name"].insert_many(iyo_result)
 print(iyo_result)
