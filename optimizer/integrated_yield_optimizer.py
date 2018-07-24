@@ -216,7 +216,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         cloned_settings = copy.deepcopy(settings)
         for market in ["mm1", "mm2"]:
             encoded_mkt_tag = cloned_settings[market]["market_tag"].value
-            del cloned_settings[market]["market_tag"]
             cloned_settings[market]["market_tag"] = encoded_mkt_tag
 
         result["settings"] = cloned_settings
