@@ -55,7 +55,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                         "Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
 
                     # initial dry run -> get new, rev oppty count
-                    (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict)
+                    new_oppty_count, rev_oppty_count = cls.count_oppty_num(settings_clone, cls.default_initial_setting_dict)
                     # opt initial settings by oppty
                     fact_set_clone = cls.opt_factor_settings_by_oppty(fact_set_clone, new_oppty_count, rev_oppty_count)
                     # opt balance_settings by oppty
@@ -123,15 +123,15 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         """
             <data structure>
             1)  result = [combined_dict, combined_dict, combined_dict, ... ]
-            2)  combined_dict or cur_optimized = {
-                    "settings": dict,
-                    "initial_setting": dict,
-                    "balance_setting": dict,                    
+            2)  combined_dict or cur_optimized = {                  
                     "total_krw_invested: float,
                     "krw_earned": float,                
                     "yield" : float,
                     "new_traded": int, 
                     "rev_traded": int,
+                    "settings": dict,
+                    "initial_setting": dict,
+                    "balance_setting": dict
                 }
         """
         # get opt
@@ -223,12 +223,12 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             encoded_mkt_tag = cloned_settings[market]["market_tag"].value
             cloned_settings[market]["market_tag"] = encoded_mkt_tag
 
-        result["settings"] = cloned_settings
-        result["initial_setting"] = init_setting
-        result["balance_setting"] = bal_setting
         result["total_krw_invested"] = bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]
         result["krw_earned"] = exec_result["total_krw_bal"] - result["total_krw_invested"]
         result["yield"] = result["krw_earned"] / result["total_krw_invested"] * 100
         result["new_traded"] = exec_result["new_traded"]
         result["rev_traded"] = exec_result["rev_traded"]
+        result["settings"] = cloned_settings
+        result["initial_setting"] = init_setting
+        result["balance_setting"] = bal_setting
         return result

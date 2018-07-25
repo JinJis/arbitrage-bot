@@ -186,17 +186,6 @@ class ISOAnalyzer:
 
     @staticmethod
     def get_opt_initial_setting(result: list):
-
-        """
-        <data structure>
-        1) result = [pair, pair, pair, ... ]
-        2) pair = {
-            "krw_earned": float,
-            "new_num": int,
-            "rev_num": int,
-            "initial_setting": dict}
-        """
-
         # in case where
         if len(result) == 0:
             return None
@@ -245,30 +234,6 @@ class IBOAnalyzer:
 
     @classmethod
     def get_opt_yield_pair(cls, result: list):
-
-        """
-        < When used in IBO >
-        1) result = [pair, pair, pair, ... ]
-        2) pair = {
-            "krw_earned": float,
-            "total_krw_invested: float,
-            "yield" : float,
-            "new_num": int,
-            "rev_num": int,
-            "balance_setting": dict}
-
-        < When used in IYO >
-        1) result = [pair, pair, pair, ... ]
-        2) pair = {
-            "krw_earned": float,
-            "total_krw_invested: float,
-            "yield" : float,
-            "new_num": int,
-            "rev_num": int,
-            "factor_settings": dict,
-            "balance_setting": dict}
-        """
-
         highest_yield_pair = None
         same_yield_list = []
         for pair in result:

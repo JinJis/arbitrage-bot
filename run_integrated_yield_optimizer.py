@@ -1,12 +1,13 @@
+import logging
 from config.global_conf import Global
 from trader.market.market import Market
 from config.shared_mongo_client import SharedMongoClient
 from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
-Global.configure_default_root_logging(should_log_to_file=False)
-SharedMongoClient.initialize(should_use_localhost_db=True)
-start_time = Global.convert_local_datetime_to_epoch("2018.06.23 09:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.06.24 09:00:00", timezone="kr")
+Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
+SharedMongoClient.initialize(should_use_localhost_db=False)
+start_time = Global.convert_local_datetime_to_epoch("2018.07.24 09:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.07.25 09:00:00", timezone="kr")
 
 settings = {
     "target_currency": "bch",
@@ -63,19 +64,18 @@ iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_
     <data in IYO_result structure>
     1)  result = [combined_dict, combined_dict, combined_dict, ... ]
     2)  combined_dict or cur_optimized = {
-            "settings": dict,
-            "initial_setting": dict,
-            "balance_setting": dict,                    
             "total_krw_invested: float,
             "krw_earned": float,                
             "yield" : float,
             "new_traded": int, 
             "rev_traded": int,
             "new_oppty_count": int,
-            "rev_oppty_count": int
+            "rev_oppty_count": int,
+            "settings": dict,
+            "initial_setting": dict,
+            "balance_setting": dict
         }
 """
 # stat analysis and append to db result
-
-SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
+# SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
 print(iyo_result)

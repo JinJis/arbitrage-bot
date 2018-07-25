@@ -93,12 +93,13 @@ class InitialBalanceOptimizer(BaseOptimizer):
             <data structure>
             1)  result = [combined_dict, combined_dict, combined_dict, ... ]
             2)  combined_dict or cur_optimized = {
-                "total_krw_invested: float,
-                "krw_earned": float,                
-                "yield" : float,
-                "new_num": int, 
-                "rev_num": int, 
-                "balance_setting": dict}
+                    "total_krw_invested: float,
+                    "krw_earned": float,                
+                    "yield" : float,
+                    "new_num": int, 
+                    "rev_num": int, 
+                    "balance_setting": dict
+                }
         """
 
         # get opt
