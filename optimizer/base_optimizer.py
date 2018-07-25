@@ -19,9 +19,8 @@ class BaseOptimizer:
         return new_oppty_count, rev_oppty_count
 
     @classmethod
-    def opt_factor_settings_by_oppty(cls, settings: dict, factor_settings: dict, default_init_setting_dict: dict):
+    def opt_factor_settings_by_oppty(cls, factor_settings: dict, new_oppty_count: int, rev_oppty_count: int):
         # init bot and run
-        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, default_init_setting_dict)
         logging.info("Oppty Checked Successfully!! -- NEW oppty: %d, REV oppty: %d"
                      % (new_oppty_count, rev_oppty_count))
 
@@ -53,10 +52,9 @@ class BaseOptimizer:
         return clone
 
     @classmethod
-    def opt_balance_settings_by_oppty(cls, settings: dict, bal_factor_settings: dict, default_init_setting_dict: dict):
+    def opt_balance_settings_by_oppty(cls, bal_factor_settings: dict, new_oppty_count: int, rev_oppty_count: int):
         # init bot and run
-        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, default_init_setting_dict)
-        logging.warning("[Result] NEW: %d, REV: %d" % (new_oppty_count, rev_oppty_count))
+        logging.info("[Result] NEW: %d, REV: %d" % (new_oppty_count, rev_oppty_count))
 
         # if there is no oppty, stop bot
         if not new_oppty_count and not rev_oppty_count:

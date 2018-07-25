@@ -23,8 +23,8 @@ class InitialSettingOptimizer(BaseOptimizer):
     @classmethod
     def run(cls, settings: dict, factor_settings: dict):
         # intial dry run
-        factor_settings = super().opt_factor_settings_by_oppty(settings, factor_settings,
-                                                               cls.default_initial_setting_dict)
+        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict)
+        factor_settings = super().opt_factor_settings_by_oppty(factor_settings, new_oppty_count, rev_oppty_count)
         # set initial step
         flattened_items = cls.flatten_factor_settings_items(factor_settings)
         for item in flattened_items:

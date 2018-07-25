@@ -5,7 +5,7 @@ from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 Global.configure_default_root_logging(should_log_to_file=False)
 SharedMongoClient.initialize(should_use_localhost_db=True)
-start_time = Global.convert_local_datetime_to_epoch("2018.06.21 09:00:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.06.23 09:00:00", timezone="kr")
 end_time = Global.convert_local_datetime_to_epoch("2018.06.24 09:00:00", timezone="kr")
 
 settings = {
@@ -59,5 +59,23 @@ factor_settings = {
 }
 
 iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
+"""
+    <data in IYO_result structure>
+    1)  result = [combined_dict, combined_dict, combined_dict, ... ]
+    2)  combined_dict or cur_optimized = {
+            "settings": dict,
+            "initial_setting": dict,
+            "balance_setting": dict,                    
+            "total_krw_invested: float,
+            "krw_earned": float,                
+            "yield" : float,
+            "new_traded": int, 
+            "rev_traded": int,
+            "new_oppty_count": int,
+            "rev_oppty_count": int
+        }
+"""
+# stat analysis and append to db result
+
 SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
 print(iyo_result)

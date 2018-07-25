@@ -26,8 +26,9 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
         # initial dry run
         logging.warning("Now optimizing balance settings by oppty!!")
-        bal_factor_settings = super().opt_balance_settings_by_oppty(settings, bal_factor_settings,
-                                                                    cls.default_initial_setting_dict)
+        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict)
+        bal_factor_settings = super().opt_balance_settings_by_oppty(bal_factor_settings,
+                                                                    new_oppty_count, rev_oppty_count)
 
         # create coin_balance that is proportionate to krw_balance size
         bal_factor_settings = cls.create_coin_bal_from_krw_bal_by_exchange_rate(settings, bal_factor_settings)

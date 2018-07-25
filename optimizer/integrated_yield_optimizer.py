@@ -13,7 +13,7 @@ IBO = InitialBalanceOptimizer
 
 class IntegratedYieldOptimizer(BaseOptimizer):
     # default variables
-    def_init_setting_dict = {
+    default_initial_setting_dict = {
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,
         "new": {
@@ -54,13 +54,13 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     logging.critical(
                         "Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
 
-                    # initial dry run
+                    # initial dry run -> get new, rev oppty count
+                    (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict)
                     # opt initial settings by oppty
-                    fact_set_clone = cls.opt_factor_settings_by_oppty(settings_clone, fact_set_clone,
-                                                                      cls.def_init_setting_dict)
+                    fact_set_clone = cls.opt_factor_settings_by_oppty(fact_set_clone, new_oppty_count, rev_oppty_count)
                     # opt balance_settings by oppty
-                    bal_fact_set_clone = cls.opt_balance_settings_by_oppty(settings_clone, bal_fact_set_clone,
-                                                                           cls.def_init_setting_dict)
+                    bal_fact_set_clone = cls.opt_balance_settings_by_oppty(bal_fact_set_clone, new_oppty_count,
+                                                                           rev_oppty_count)
 
                     # create coin balance proportionate current exchange rate
                     bal_fact_set_clone = IBO.create_coin_bal_from_krw_bal_by_exchange_rate(settings_clone,
@@ -72,6 +72,10 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     # run recursive
                     iyo_opt_result = cls.opt_by_bal_and_init_settings_recursive(settings_clone, bal_fact_set_clone,
                                                                                 fact_set_clone, settings_clone["depth"])
+                    # add new & rev oppty count to the final result
+                    iyo_opt_result["new_oppty_count"] = new_oppty_count
+                    iyo_opt_result["rev_oppty_count"] = rev_oppty_count
+
                     db_result.append(iyo_opt_result)
                 except Exception as e:
                     logging.error("Something went wrong while executing IYO loop!", time, e)
@@ -126,8 +130,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     "total_krw_invested: float,
                     "krw_earned": float,                
                     "yield" : float,
-                    "new_num": int, 
-                    "rev_num": int,
+                    "new_traded": int, 
+                    "rev_traded": int,
                 }
         """
         # get opt
@@ -189,8 +193,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                 # append formatted data
                 result.append(cls.get_combined_result(cloned_settings, init_setting, bal_setting, {
                     "total_krw_bal": bot.total_krw_bal,
-                    "trade_new": bot.trade_new,
-                    "trade_rev": bot.trade_rev
+                    "new_traded": bot.trade_new,
+                    "rev_traded": bot.trade_rev
                 }))
 
         return result
@@ -225,6 +229,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         result["total_krw_invested"] = bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]
         result["krw_earned"] = exec_result["total_krw_bal"] - result["total_krw_invested"]
         result["yield"] = result["krw_earned"] / result["total_krw_invested"] * 100
-        result["new_num"] = exec_result["trade_new"]
-        result["rev_num"] = exec_result["trade_rev"]
+        result["new_traded"] = exec_result["new_traded"]
+        result["rev_traded"] = exec_result["rev_traded"]
         return result
