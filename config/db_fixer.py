@@ -163,3 +163,25 @@ class DbFixer:
                 {"requestTime": trgt_rq},
                 {"$set": {"requestTime": ctrl_rq}}
             )
+
+    @staticmethod
+    def check_empty_data_by_rq_time(db_name: str, col_name: str, start_time: int, end_time: int):
+        db_client = SharedMongoClient.instance()
+        target_col = db_client[db_name][col_name]
+        target_data_set = target_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        pre_data = None
+        for data in target_data_set:
+            if pre_data is None:
+                pre_data = data
+                continue
+            rq_diff = (data["requestTime"] - pre_data["requestTime"])
+            if rq_diff <= 7:
+                pre_data = data
+            else:
+                logging.info("RequestTime Difference observed! requestTime_diff: %d Current: %d, Before: %d"
+                             % (rq_diff, data["requestTime"], pre_data["requestTime"]))
+                pre_data = data
