@@ -55,7 +55,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                         "Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
 
                     # initial dry run -> get new, rev oppty count
-                    new_oppty_count, rev_oppty_count = cls.count_oppty_num(settings_clone, cls.default_initial_setting_dict)
+                    new_oppty_count, rev_oppty_count = cls.count_oppty_num(settings_clone,
+                                                                           cls.default_initial_setting_dict)
                     # opt initial settings by oppty
                     fact_set_clone = cls.opt_factor_settings_by_oppty(fact_set_clone, new_oppty_count, rev_oppty_count)
                     # opt balance_settings by oppty
