@@ -1,5 +1,5 @@
 import logging
-from analyzer.analyzer import BasicAnalyzer
+from analyzer.trade_analyzer import BasicAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 

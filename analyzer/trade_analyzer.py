@@ -38,8 +38,8 @@ class BasicAnalyzer:
         rev_spread = BasicAnalyzer.calc_spread(mm2_minask_price, mm2_market_fee,
                                                mm1_maxbid_price, mm1_market_fee)
 
-        return new_spread, rev_spread, mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price, \
-               mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount
+        return (new_spread, rev_spread, mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price,
+                mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount)
 
     ######################################################################
     # co:   buy at ma_mb_avg ±      sell at ma_mb_avg ±
@@ -220,7 +220,8 @@ class ISOAnalyzer:
                     min_coin_pair = pair
                     same_coin_unit_list.clear()
                     same_coin_unit_list.append(min_coin_pair)
-                elif pair["initial_setting"]["max_trading_coin"] == min_coin_pair["initial_setting"]["max_trading_coin"]:
+                elif pair["initial_setting"]["max_trading_coin"] \
+                        == min_coin_pair["initial_setting"]["max_trading_coin"]:
                     same_coin_unit_list.append(pair)
             return same_coin_unit_list[0]
         else:

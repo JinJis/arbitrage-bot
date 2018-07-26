@@ -1,6 +1,6 @@
 import copy
 import logging
-from analyzer.analyzer import ISOAnalyzer
+from analyzer.trade_analyzer import ISOAnalyzer
 from backtester.risk_free_arb_backtester import RfabBacktester
 from optimizer.base_optimizer import BaseOptimizer
 

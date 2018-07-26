@@ -1,7 +1,7 @@
 import logging
 from pymongo.cursor import Cursor
-from analyzer.analyzer import BasicAnalyzer
-from analyzer.analyzer import ATSAnalyzer, SpreadInfo
+from analyzer.trade_analyzer import BasicAnalyzer
+from analyzer.trade_analyzer import ATSAnalyzer, SpreadInfo
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.trade_manager.trade_manager import TradeManager
 from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
@@ -24,7 +24,7 @@ class RfabBacktester:
         self.trade_manager = TradeManager(should_db_logging=True, is_backtesting=True)
         self.trade_logger = TradeInfoLogger(self.trade_manager, self.target_currency)
 
-        # attributes for InitialSettingOptimizer
+        # attributes for ISO, IBO, IYO
         self.total_krw_bal = 0
         self.trade_new = 0
         self.trade_rev = 0
@@ -112,7 +112,7 @@ class RfabBacktester:
         min_coin_cond = spread_info.tradable_qty >= self.init_setting_dict["min_trading_coin"]
 
         # quit if conditions don't meet
-        if not (threshold_cond and min_coin_cond):
+        if (not threshold_cond) and (not min_coin_cond):
             return None
 
         # get fee

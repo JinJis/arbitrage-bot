@@ -1,6 +1,6 @@
 import logging
 import copy
-from analyzer.analyzer import IBOAnalyzer
+from analyzer.trade_analyzer import IBOAnalyzer
 from optimizer.base_optimizer import BaseOptimizer
 from collector.oppty_time_collector import OpptyTimeCollector
 from optimizer.initial_setting_optimizer import InitialSettingOptimizer
@@ -130,6 +130,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     "yield" : float,
                     "new_traded": int, 
                     "rev_traded": int,
+                    "end_balance": dict,
                     "settings": dict,
                     "initial_setting": dict,
                     "balance_setting": dict
@@ -195,7 +196,11 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                 result.append(cls.get_combined_result(cloned_settings, init_setting, bal_setting, {
                     "total_krw_bal": bot.total_krw_bal,
                     "new_traded": bot.trade_new,
-                    "rev_traded": bot.trade_rev
+                    "rev_traded": bot.trade_rev,
+                    "end_balance": {
+                        "mm1": bot.mm1.vt_balance,
+                        "mm2": bot.mm2.vt_balance
+                    }
                 }))
 
         return result
@@ -229,6 +234,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         result["yield"] = result["krw_earned"] / result["total_krw_invested"] * 100
         result["new_traded"] = exec_result["new_traded"]
         result["rev_traded"] = exec_result["rev_traded"]
+        result["end_balance"] = exec_result["end_balance"]
         result["settings"] = cloned_settings
         result["initial_setting"] = init_setting
         result["balance_setting"] = bal_setting

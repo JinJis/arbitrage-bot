@@ -13,10 +13,10 @@ def main():
     end_time = Global.convert_local_datetime_to_epoch("2018.07.11 15:37:00", timezone="kr")
 
     initial_setting_dict = {
-        "max_trading_coin": 0.16049382716049382,
+        "max_trading_coin": 0.04938271604938271 * 0.4,
         "min_trading_coin": 0,
         "new": {
-            "threshold": 395.06172839506166,
+            "threshold": 0,
             "factor": 1
         },
         "rev": {
@@ -25,8 +25,8 @@ def main():
         }
     }
     target_currency = "bch"
-    mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 1975308.6419753088, 0, target_currency)
-    mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 0, 2.2464632098765427, target_currency)
+    mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 1975308.6419753088 * 0.4, 0, target_currency)
+    mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 0, 2.2464632098765427 * 0.4, target_currency)
     mm1_col = SharedMongoClient.get_target_col(Market.VIRTUAL_CO, target_currency)
     mm2_col = SharedMongoClient.get_target_col(Market.VIRTUAL_GP, target_currency)
 

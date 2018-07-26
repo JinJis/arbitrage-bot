@@ -71,8 +71,10 @@ iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_
             "rev_traded": int,
             "new_oppty_count": int,
             "rev_oppty_count": int,
+            "end_balance": dict,
             "settings": dict,
-            "initial_setting": dict
+            "initial_setting": dict,
+            "balance_setting": dict
         }
 """
 # stat analysis and append to db result
