@@ -7,7 +7,7 @@ from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
 def main():
-    Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.ERROR)
+    Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.ERROR)
     SharedMongoClient.initialize(should_use_localhost_db=True)
 
     time_list = ["2018.04.30 00:00:00", "2018.05.02 00:00:00", "2018.05.04 00:00:00", "2018.05.06 00:00:00",
