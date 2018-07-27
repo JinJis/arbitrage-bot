@@ -14,8 +14,8 @@ class BaseOptimizer:
         bot.run(mm1_cursor, mm2_cursor, default_init_setting_dict, True)
 
         # get oppty count and log
-        new_oppty_count = bot.trade_logger.new_oppty_counter
-        rev_oppty_count = bot.trade_logger.rev_oppty_counter
+        new_oppty_count = bot.new_oppty_count
+        rev_oppty_count = bot.rev_oppty_count
         return new_oppty_count, rev_oppty_count
 
     @classmethod

@@ -7,10 +7,10 @@ from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
 def main():
-    Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.ERROR)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
+    Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
-    time_list = ["2018.04.30 00:00:00", "2018.05.02 00:00:00", "2018.05.04 00:00:00", "2018.05.06 00:00:00",
+    time_list = ["2018.04.30 00:15:00", "2018.04.30 06:00:00", "2018.05.04 00:00:00", "2018.05.06 00:00:00",
                  "2018.05.08 00:00:00", "2018.05.10 00:00:00", "2018.05.12 00:00:00", "2018.05.14 00:00:00",
                  "2018.05.16 00:00:00", "2018.05.18 00:00:00", "2018.05.20 00:00:00", "2018.05.22 00:00:00",
                  "2018.05.24 00:00:00", "2018.05.26 00:00:00", "2018.05.28 00:00:00", "2018.05.30 00:00:00",
@@ -33,14 +33,14 @@ def main():
             "mm1": {
                 "market_tag": Market.VIRTUAL_CO,
                 "fee_rate": 0.001,
-                "krw_balance": 10000,
-                "coin_balance": 0.1
+                "krw_balance": 1000000,
+                "coin_balance": 10
             },
             "mm2": {
                 "market_tag": Market.VIRTUAL_GP,
                 "fee_rate": 0.00075,
-                "krw_balance": 10000,
-                "coin_balance": 0.1
+                "krw_balance": 1000000,
+                "coin_balance": 10
 
             },
             "division": 3,
@@ -88,8 +88,6 @@ def main():
                     "yield" : float,
                     "new_traded": int,
                     "rev_traded": int,
-                    "new_oppty_count": int,
-                    "rev_oppty_count": int,
                     "end_balance": dict,
                     "settings": dict,
                     "initial_setting": dict,
@@ -97,9 +95,10 @@ def main():
                 }
         """
         # stat analysis and append to db result
-        SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
+        # SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
+        print(iyo_result)
         logging.critical("Nohup done, now conducting next time set!!")
-        prev_time = time
+        prev_time = cur_time
         time.sleep(180)
 
 

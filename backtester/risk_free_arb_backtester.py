@@ -28,6 +28,8 @@ class RfabBacktester:
         self.total_krw_bal = 0
         self.trade_new = 0
         self.trade_rev = 0
+        self.new_oppty_count = 0
+        self.rev_oppty_count = 0
 
     def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor,
             init_setting_dict: dict, is_running_in_optimizer: bool = False):
@@ -47,7 +49,7 @@ class RfabBacktester:
         # log backtesting result
         if not self.is_running_in_optimizer:
             self.trade_logger.log_trade_info()
-            self.trade_logger.log_oppty_info()
+            self.trade_logger.log_oppty_info(self.new_oppty_count, self.rev_oppty_count)
             self.trade_logger.log_combined_balance(self.mm1.balance, self.mm2.balance)
         else:
             self.total_krw_bal = self.get_krw_total_balance()
@@ -77,13 +79,13 @@ class RfabBacktester:
 
         # NEW
         if new_spread_info.spread_in_unit > 0:
-            self.trade_logger.acc_oppty_counter("new")
+            self.new_oppty_count += 1
             new_trade = self.execute_trade(new_spread_info, "new")
             self.add_trade(new_trade, new_spread_info)
 
         # REVERSE
         if rev_spread_info.spread_in_unit > 0:
-            self.trade_logger.acc_oppty_counter("rev")
+            self.rev_oppty_count += 1
             rev_trade = self.execute_trade(rev_spread_info, "rev")
             self.add_trade(rev_trade, rev_spread_info)
 
@@ -127,7 +129,7 @@ class RfabBacktester:
         has_enough_coin = RfabBacktester.has_enough_coin_checker(selling_mkt, self.target_currency, coin_needed)
 
         # if enough krw & coin balance
-        if not (has_enough_krw and has_enough_coin):
+        if (not has_enough_krw) and (not has_enough_coin):
             if not self.is_running_in_optimizer:
                 TradeInfoLogger.not_enough_balance_log_info(trade_type, spread_info)
             return None
@@ -161,13 +163,6 @@ class TradeInfoLogger:
     def __init__(self, trade_manager, target_currency):
         self.trade_manager = trade_manager
         self.target_currency = target_currency
-        self.new_oppty_counter = 0
-        self.rev_oppty_counter = 0
-
-    def acc_oppty_counter(self, trade_type: str):
-        attr_name = trade_type + "_oppty_counter"
-        oppty_count = getattr(self, attr_name)
-        setattr(self, attr_name, oppty_count + 1)
 
     def log_trade_info(self):
         trade_total = self.trade_manager.get_trade_count()
@@ -181,11 +176,12 @@ class TradeInfoLogger:
         except ZeroDivisionError:
             logging.info("[STAT] total trades: 0, new trades: 0, rev trades: 0")
 
-    def log_oppty_info(self):
+    @staticmethod
+    def log_oppty_info(new_oppty_count: int, rev_oppty_count: int):
         # log opportunity counter
         logging.info("[STAT] total oppty: %d, new oppty: %d, rev oppty: %d" %
-                     (self.new_oppty_counter + self.rev_oppty_counter,
-                      self.new_oppty_counter, self.rev_oppty_counter))
+                     (new_oppty_count + rev_oppty_count,
+                      new_oppty_count, rev_oppty_count))
 
     def log_combined_balance(self, mm1_balance, mm2_balance):
         # log combined balance
