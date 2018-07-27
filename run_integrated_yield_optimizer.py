@@ -1,4 +1,5 @@
 import logging
+import time
 from config.global_conf import Global
 from trader.market.market import Market
 from config.shared_mongo_client import SharedMongoClient
@@ -14,19 +15,16 @@ time_list = ["2018.04.30 00:00:00", "2018.05.02 00:00:00", "2018.05.04 00:00:00"
              "2018.06.01 00:00:00", "2018.06.03 00:00:00", "2018.06.05 00:00:00", "2018.06.07 00:00:00",
              "2018.06.09 00:00:00", "2018.06.11 00:00:00", "2018.06.13 00:00:00", "2018.06.15 00:00:00",
              "2018.06.17 00:00:00", "2018.06.19 00:00:00", "2018.06.21 00:00:00", "2018.06.23 00:00:00",
-             "2018.06.25 00:00:00", "2018.06.27 00:00:00", "2018.06.29 00:00:00", "2018.07.01 00:00:00",
-             "2018.07.03 00:00:00", "2018.07.05 00:00:00", "2018.07.07 00:00:00", "2018.07.09 00:00:00",
-             "2018.07.11 00:00:00", "2018.07.13 00:00:00", "2018.07.15 00:00:00"]
+             "2018.06.25 00:00:00", "2018.06.27 00:00:00", "2018.06.29 00:00:00"]
 
 prev_time = None
-for time in time_list:
+for cur_time in time_list:
     if prev_time is None:
-        prev_time = time
+        prev_time = cur_time
         continue
-
-    logging.critical("Nohup conducting -> start_time: %s, end_time: %s" % (prev_time, time))
+    logging.critical("Nohup conducting -> start_time: %s, end_time: %s" % (prev_time, cur_time))
     start_time = Global.convert_local_datetime_to_epoch(prev_time, timezone="kr")
-    end_time = Global.convert_local_datetime_to_epoch(time, timezone="kr")
+    end_time = Global.convert_local_datetime_to_epoch(cur_time, timezone="kr")
 
     settings = {
         "target_currency": "bch",
@@ -100,4 +98,5 @@ for time in time_list:
     SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
     logging.critical("Nohup done, now conducting next time set!!")
     prev_time = time
+    time.sleep(180)
 
