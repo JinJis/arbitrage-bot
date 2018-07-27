@@ -1,0 +1,46 @@
+def execute_trade(self, spread_info: SpreadInfo, trade_type: str = "new" or "rev"):
+    if trade_type == "new":
+        buying_mkt = self.mm1
+        selling_mkt = self.mm2
+        buying_currency = self.mm1_currency
+        selling_currency = self.mm2_currency
+    elif trade_type == "rev":
+        buying_mkt = self.mm2
+        selling_mkt = self.mm1
+        buying_currency = self.mm2_currency
+        selling_currency = self.mm1_currency
+    else:
+        raise Exception("Invalid trade type!")
+
+    # check condition
+    threshold_cond = spread_info.tradable_spread >= self.init_setting_dict[trade_type]["threshold"] >= 0
+    min_coin_cond = spread_info.tradable_qty >= self.init_setting_dict["min_trading_coin"]
+
+    # quit if conditions don't meet
+    if (not threshold_cond) and (not min_coin_cond):
+        return None
+
+    # get fee
+    fee, _ = BasicAnalyzer.get_fee_consideration(buying_mkt.get_market_tag(), self.target_currency)
+    # apply fee if any
+    trading_amount = spread_info.tradable_qty + fee if should_fee else spread_info.tradable_qty
+
+    # balance check
+    krw_needed = spread_info.buy_price * self.init_setting_dict[trade_type]["factor"]
+    coin_needed = trading_amount * self.init_setting_dict[trade_type]["factor"]
+    has_enough_krw = RfabBacktester.has_enough_coin_checker(buying_mkt, "krw", krw_needed)
+    has_enough_coin = RfabBacktester.has_enough_coin_checker(selling_mkt, self.target_currency, coin_needed)
+
+    # if enough krw & coin balance
+    if (not has_enough_krw) and (not has_enough_coin):
+        if not self.is_running_in_optimizer:
+            TradeInfoLogger.not_enough_balance_log_info(trade_type, spread_info)
+        return None
+
+    # make buy & sell order
+    buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_price, trading_amount)
+    sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_price, trading_amount)
+    # subtract considered fee if there was one
+    if should_fee:
+        GlobalFeeAccumulator.sub_fee_consideration(buying_mkt.get_market_tag(), self.target_currency, fee)
+    return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))
