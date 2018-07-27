@@ -58,10 +58,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     new_oppty_count, rev_oppty_count = super().count_oppty_num(settings_clone,
                                                                                cls.default_initial_setting_dict)
 
-                    # save total possible oppty count in settings
-                    settings_clone["new_oppty_count"] = new_oppty_count
-                    settings_clone["rev_oppty_count"] = rev_oppty_count
-
                     # opt initial settings by oppty
                     fact_set_clone = cls.opt_factor_settings_by_oppty(fact_set_clone, new_oppty_count, rev_oppty_count)
                     # opt balance_settings by oppty
@@ -78,10 +74,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     # run recursive
                     iyo_opt_result = cls.opt_by_bal_and_init_settings_recursive(settings_clone, bal_fact_set_clone,
                                                                                 fact_set_clone, settings_clone["depth"])
-                    print(settings_clone["new_oppty_count"])
-                    print(settings_clone["rev_oppty_count"])
-                    print(iyo_opt_result["new_traded"])
-                    print(iyo_opt_result["rev_traded"])
+                    iyo_opt_result["new_oppty_count"] = new_oppty_count
+                    iyo_opt_result["rev_oppty_count"] = rev_oppty_count
                     db_result.append(iyo_opt_result)
                 except Exception as e:
                     logging.error("Something went wrong while executing IYO loop!", time, e)

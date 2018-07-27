@@ -7,10 +7,10 @@ from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
 def main():
-    Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
+    Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.WARNING)
     SharedMongoClient.initialize(should_use_localhost_db=False)
 
-    time_list = ["2018.04.30 00:15:00", "2018.04.30 06:00:00", "2018.05.04 00:00:00", "2018.05.06 00:00:00",
+    time_list = ["2018.04.30 00:00:00", "2018.05.02 00:00:00", "2018.05.04 00:00:00", "2018.05.06 00:00:00",
                  "2018.05.08 00:00:00", "2018.05.10 00:00:00", "2018.05.12 00:00:00", "2018.05.14 00:00:00",
                  "2018.05.16 00:00:00", "2018.05.18 00:00:00", "2018.05.20 00:00:00", "2018.05.22 00:00:00",
                  "2018.05.24 00:00:00", "2018.05.26 00:00:00", "2018.05.28 00:00:00", "2018.05.30 00:00:00",
@@ -24,7 +24,7 @@ def main():
         if prev_time is None:
             prev_time = cur_time
             continue
-        logging.critical("Nohup conducting -> start_time: %s, end_time: %s" % (prev_time, cur_time))
+        logging.warning("Nohup conducting -> start_time: %s, end_time: %s" % (prev_time, cur_time))
         start_time = Global.convert_local_datetime_to_epoch(prev_time, timezone="kr")
         end_time = Global.convert_local_datetime_to_epoch(cur_time, timezone="kr")
 
@@ -91,15 +91,18 @@ def main():
                     "end_balance": dict,
                     "settings": dict,
                     "initial_setting": dict,
-                    "balance_setting": dict
+                    "balance_setting": dict,
+                    "new_oppty_count": int,
+                    "rev_oppty_count": int
                 }
         """
         # stat analysis and append to db result
-        # SharedMongoClient.instance()["statistics"]["iyo_result"].insert_many(iyo_result)
-        print(iyo_result)
-        logging.critical("Nohup done, now conducting next time set!!")
+        SharedMongoClient.instance()["statistics"]["iyo"].insert_many(iyo_result)
+        logging.warning("Nohup done, now conducting next time set!!")
         prev_time = cur_time
-        time.sleep(180)
+        time.sleep(120)
+
+    Global.send_to_slack_channel("[IYO] finished!! Check and nohup another time set!!")
 
 
 if __name__ == '__main__':
