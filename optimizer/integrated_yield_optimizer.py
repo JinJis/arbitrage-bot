@@ -74,6 +74,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     # run recursive
                     iyo_opt_result = cls.opt_by_bal_and_init_settings_recursive(settings_clone, bal_fact_set_clone,
                                                                                 fact_set_clone, settings_clone["depth"])
+
+                    # append original oppty count to final result
                     iyo_opt_result["new_oppty_count"] = new_oppty_count
                     iyo_opt_result["rev_oppty_count"] = rev_oppty_count
                     db_result.append(iyo_opt_result)

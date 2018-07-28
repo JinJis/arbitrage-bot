@@ -118,9 +118,9 @@ class RfabBacktester:
             return None
 
         # get fee
-        fee, _ = BasicAnalyzer.get_fee_consideration(buying_mkt.get_market_tag(), self.target_currency)
+        fee, should_fee = BasicAnalyzer.get_fee_consideration(buying_mkt.get_market_tag(), self.target_currency)
         # apply fee if any
-        trading_amount = spread_info.tradable_qty
+        trading_amount = spread_info.tradable_qty + fee if should_fee else spread_info.tradable_qty
 
         # balance check
         krw_needed = spread_info.buy_price * self.init_setting_dict[trade_type]["factor"]
@@ -129,7 +129,7 @@ class RfabBacktester:
         has_enough_coin = RfabBacktester.has_enough_coin_checker(selling_mkt, self.target_currency, coin_needed)
 
         # if enough krw & coin balance
-        if (not has_enough_krw) and (not has_enough_coin):
+        if (not has_enough_krw) or (not has_enough_coin):
             if not self.is_running_in_optimizer:
                 TradeInfoLogger.not_enough_balance_log_info(trade_type, spread_info)
             return None
@@ -137,6 +137,8 @@ class RfabBacktester:
         # make buy & sell order
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_price, trading_amount)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_price, trading_amount)
+        if should_fee:
+            GlobalFeeAccumulator.sub_fee_consideration(buying_mkt.get_market_tag(), self.target_currency, fee)
         return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))
 
     @staticmethod
