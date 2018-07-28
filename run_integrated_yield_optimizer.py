@@ -7,10 +7,10 @@ from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
 def main():
-    Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=False)
+    Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.INFO)
+    SharedMongoClient.initialize(should_use_localhost_db=True)
 
-    time_list = ["2018.05.01 10:20:00", "2018.05.01 11:23:50", "2018.05.04 00:00:00", "2018.05.06 00:00:00",
+    time_list = ["2018.04.30 00:00:00", "2018.05.02 00:00:00", "2018.05.04 00:00:00", "2018.05.06 00:00:00",
                  "2018.05.08 00:00:00", "2018.05.10 00:00:00", "2018.05.12 00:00:00", "2018.05.14 00:00:00",
                  "2018.05.16 00:00:00", "2018.05.18 00:00:00", "2018.05.20 00:00:00", "2018.05.22 00:00:00",
                  "2018.05.24 00:00:00", "2018.05.26 00:00:00", "2018.05.28 00:00:00", "2018.05.30 00:00:00",
@@ -44,21 +44,21 @@ def main():
 
             },
             "division": 3,
-            "depth": 4,
-            "consecution_time": 45,
+            "depth": 5,
+            "consecution_time": 30,
             "start_time": start_time,
             "end_time": end_time
         }
 
         bal_factor_settings = {
             "mm1": {
-                "krw_balance": {"start": 0, "end": 20000000, "step_limit": 10000
+                "krw_balance": {"start": 0, "end": 20000000, "step_limit": 1000
                                 },
                 "coin_balance": {"start": 0, "end": 20, "step_limit": 0.1
                                  }
             },
             "mm2": {
-                "krw_balance": {"start": 0, "end": 20000000, "step_limit": 10000
+                "krw_balance": {"start": 0, "end": 20000000, "step_limit": 1000
                                 },
                 "coin_balance": {"start": 0, "end": 20, "step_limit": 0.1
                                  }
@@ -66,15 +66,15 @@ def main():
         }
 
         factor_settings = {
-            "max_trading_coin": {"start": 0, "end": 0.5, "step_limit": 0.0001},
+            "max_trading_coin": {"start": 0, "end": 0.8, "step_limit": 0.0001},
             "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
             "new": {
-                "threshold": {"start": 0, "end": 2000, "step_limit": 1},
-                "factor": {"start": 1, "end": 3, "step_limit": 0.01}
+                "threshold": {"start": 0, "end": 2500, "step_limit": 1},
+                "factor": {"start": 1, "end": 1, "step_limit": 0.01}
             },
             "rev": {
-                "threshold": {"start": 0, "end": 2000, "step_limit": 1},
-                "factor": {"start": 1, "end": 3, "step_limit": 0.01}
+                "threshold": {"start": 0, "end": 2500, "step_limit": 1},
+                "factor": {"start": 1, "end": 1, "step_limit": 0.01}
             }
         }
 
@@ -97,8 +97,7 @@ def main():
                 }
         """
         # stat analysis and append to db result
-        print(iyo_result)
-        # SharedMongoClient.instance()["statistics"]["iyo"].insert_many(iyo_result)
+        SharedMongoClient.instance()["statistics"]["iyo"].insert_many(iyo_result)
         logging.warning("Nohup done, now conducting next time set!!")
         prev_time = cur_time
         time.sleep(120)
