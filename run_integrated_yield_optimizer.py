@@ -10,8 +10,7 @@ def main():
     Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.INFO)
     SharedMongoClient.initialize(should_use_localhost_db=True)
 
-    time_list = ["2018.07.27 00:00:00", "2018.07.29 00:00:00", "2018.07.31 00:00:00", "2018.08.02 00:00:00",
-                 "2018.08.04 00:00:00"]
+    time_list = ["2018.08.04 00:00:00", "2018.08.06 00:00:00", "2018.08.08 00:00:00"]
 
     prev_time = None
     for cur_time in time_list:
@@ -94,7 +93,7 @@ def main():
         SharedMongoClient.instance()["statistics"]["iyo_test"].insert_many(iyo_result)
         logging.warning("Nohup done, now conducting next time set!!")
         prev_time = cur_time
-        time.sleep(120)
+        time.sleep(240)
 
     # Fixme: this is for Nonhup, if not erase
     Global.send_to_slack_channel("[IYO] finished!! Check and nohup another time set!!")
