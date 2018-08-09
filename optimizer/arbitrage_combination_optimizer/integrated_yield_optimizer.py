@@ -1,10 +1,10 @@
 import logging
 import copy
 from analyzer.trade_analyzer import IBOAnalyzer
-from optimizer.base_optimizer import BaseOptimizer
+from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
 from collector.oppty_time_collector import OpptyTimeCollector
-from optimizer.initial_setting_optimizer import InitialSettingOptimizer
-from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
+from optimizer.arbitrage_combination_optimizer.initial_setting_optimizer import InitialSettingOptimizer
+from optimizer.arbitrage_combination_optimizer.initial_balance_optimizer import InitialBalanceOptimizer
 
 OTC = OpptyTimeCollector
 ISO = InitialSettingOptimizer

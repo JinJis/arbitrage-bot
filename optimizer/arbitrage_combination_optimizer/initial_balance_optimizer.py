@@ -2,7 +2,7 @@ import copy
 import logging
 from config.shared_mongo_client import SharedMongoClient
 from analyzer.trade_analyzer import BasicAnalyzer, IBOAnalyzer
-from optimizer.base_optimizer import BaseOptimizer
+from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
 from backtester.risk_free_arb_backtester import RfabBacktester
 
 

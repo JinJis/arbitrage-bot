@@ -3,7 +3,7 @@ import time
 from config.global_conf import Global
 from trader.market.market import Market
 from config.shared_mongo_client import SharedMongoClient
-from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
+from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
 def main():
@@ -90,7 +90,7 @@ def main():
                 }
         """
         # stat analysis and append to db result
-        SharedMongoClient.instance()["statistics"]["iyo_test"].insert_many(iyo_result)
+        SharedMongoClient.instance()["statistics"]["iyo"].insert_many(iyo_result)
         logging.warning("Nohup done, now conducting next time set!!")
         prev_time = cur_time
         time.sleep(240)

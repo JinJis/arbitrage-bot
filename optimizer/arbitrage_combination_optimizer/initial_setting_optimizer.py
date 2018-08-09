@@ -2,7 +2,7 @@ import copy
 import logging
 from analyzer.trade_analyzer import ISOAnalyzer
 from backtester.risk_free_arb_backtester import RfabBacktester
-from optimizer.base_optimizer import BaseOptimizer
+from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
 
 
 class InitialSettingOptimizer(BaseOptimizer):
