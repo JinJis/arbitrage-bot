@@ -3,6 +3,7 @@ import copy
 from analyzer.trade_analyzer import IBOAnalyzer
 from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
 from collector.oppty_time_collector import OpptyTimeCollector
+from analyzer.iyo_analyzer import IYOMongoDBAnalyzer
 from optimizer.arbitrage_combination_optimizer.initial_setting_optimizer import InitialSettingOptimizer
 from optimizer.arbitrage_combination_optimizer.initial_balance_optimizer import InitialBalanceOptimizer
 
@@ -105,6 +106,12 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             logging.critical("\n[IYO Final Opt Result]"
                              "\n>>>Final Opted Yield: %.4f%%"
                              "\n>>>Final Optimized Info: %s" % (final_opt_yield, optimized))
+
+            # finally run IYO MongoDB Analyzer and append to the final optimized iyo_data
+            logging.info("Now conducting IYO MongoDBAnalyzer for optimized IYO result!")
+            iyo_stat_result = IYOMongoDBAnalyzer.run(optimized)
+            optimized["stat"] = iyo_stat_result
+
             return optimized
 
         logging.critical("\n<<<< Now in [IYO] depth: %d >>>>" % depth)
