@@ -1,5 +1,6 @@
 import os
 import sys
+import pytz
 import logging
 import requests
 import threading
@@ -62,6 +63,20 @@ class Global:
             gmt = strftime("%z", gmtime())
 
         return int(datetime.strptime("%s GMT%s" % (datetime_str, gmt), "%Y.%m.%d %H:%M:%S GMT%z").timestamp())
+
+    @staticmethod
+    def convert_epoch_to_local_datetime(epoch_time: int, timezone=None):
+        # `epoch_time` should be 10 digited number, ex) "1533890277"
+
+        if timezone == "cn":
+            tz = pytz.timezone('Asia/Beijing')
+        elif timezone == "kr":
+            tz = pytz.timezone('Asia/Seoul')
+        else:
+            # default behavior is to use system timezone
+            tz = datetime.now().astimezone().tzinfo
+
+        return str(datetime.fromtimestamp(epoch_time, tz).strftime('%Y-%m-%d %H:%M:%S'))
 
     @staticmethod
     def get_z_score_for_probability(probability: float):
