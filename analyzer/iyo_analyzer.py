@@ -1,43 +1,47 @@
+import configparser
 import numpy as np
 from pymongo.cursor import Cursor
-from pymongo.collection import Collection
 from config.shared_mongo_client import SharedMongoClient
 from analyzer.trade_analyzer import BasicAnalyzer
 
 
 # This Analyzer is for analyzing and calculating statistical infos in IYO mongoDB data
 class IYOMongoDBAnalyzer:
-    """Exchange MKTs"""
-    mkt_tag = {"Virtual_CO": "coinone",
-               "Virtual_KB": "korbit",
-               "Virtual_GP": "gopax"
-               }
 
     @classmethod
     def run(cls, iyo_data: dict):
-        # get needed infos in the iyo_data
-        mm1_name: str = cls.mkt_tag[iyo_data["settings"]["mm1"]["market_tag"]]
-        mm2_name: str = cls.mkt_tag[iyo_data["settings"]["mm2"]["market_tag"]]
-        coin_name: str = iyo_data["settings"]["target_currency"]
+
+        # convert infos in IYO_data to usable format
+        mm1: str = cls.configure_market(iyo_data["settings"]["mm1"]["market_tag"])
+        mm2: str = cls.configure_market(iyo_data["settings"]["mm2"]["market_tag"])
+        coin: str = iyo_data["settings"]["target_currency"]
         start_time: int = iyo_data["settings"]["start_time"]
         end_time: int = iyo_data["settings"]["end_time"]
 
-        # get orderbook from each needed infos
-        db_client = SharedMongoClient.instance()
-        mm1_col = db_client[mm1_name][coin_name + "_orderbook"]
-        mm2_col = db_client[mm2_name][coin_name + "_orderbook"]
-        mm1_ob_cur, mm2_ob_cur = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
-
         # <Inner Oppty Duration Stats>
-        inner_stats_result = cls.get_inner_oppty_dur_stats(mm1_ob_cur, mm2_ob_cur)
-        # Additionally get exhaust rate for mm1 & mm2 balance
+        mm1_cur, mm2_cur = cls.get_orderbook_cursor(mm1, mm2, coin, start_time, end_time)
+        inner_stats_result = cls.get_inner_oppty_dur_stats(mm1_cur, mm2_cur)
         inner_stats_result["exhaus_rate"] = cls.calc_exhaust_rate(iyo_data)
 
         # <Outer Oppty Duration Stats>
-        outer_stats_result = cls.get_outer_oppty_dur_stats(mm1_col, mm2_col, start_time)
+        outer_stats_result = cls.get_outer_oppty_dur_stats(mm1, mm2, coin, start_time)
 
         # return as dict combinded with inner_stats_result and outer_stats_result
         return dict(inner_stat=inner_stats_result, outer_stat=outer_stats_result)
+
+    @staticmethod
+    def configure_market(setting_mkt: str):
+        # create configParser to convert settings market
+        config = configparser.ConfigParser()
+        config.read("optimizer/config_market.ini")
+        return str(config.get("IYO", setting_mkt))
+
+    @classmethod
+    def get_orderbook_cursor(cls, mm1: str, mm2: str, coin_name: str, start_time: int, end_time: int):
+        db_client = SharedMongoClient.instance()
+        mm1_col = db_client[mm1][coin_name + "_orderbook"]
+        mm2_col = db_client[mm2][coin_name + "_orderbook"]
+        return SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
 
     @classmethod
     def get_inner_oppty_dur_stats(cls, mm1_ob_cur: Cursor, mm2_ob_cur: Cursor):
@@ -96,16 +100,17 @@ class IYOMongoDBAnalyzer:
         return inner_stats
 
     @classmethod
-    def get_outer_oppty_dur_stats(cls, mm1_col: Collection, mm2_col: Collection, oppty_start_time: int):
+    def get_outer_oppty_dur_stats(cls, mm1: str, mm2: str, coin: str, oppty_start_time: int):
         outer_stats = {
             "5min_before": {},
             "10min_before": {},
             "30min_before": {}
         }
+
         for roll_back_time in [5, 10, 30]:
             outer_mm1_ob_cur, outer_mm2_ob_cur \
-                = SharedMongoClient.get_data_from_db(mm1_col, mm2_col,
-                                                     oppty_start_time - (roll_back_time * 60), oppty_start_time)
+                = cls.get_orderbook_cursor(mm1, mm2, coin,
+                                           oppty_start_time - (roll_back_time * 60), oppty_start_time)
 
             # RECYCLE inner_oppty_dur_stats b/c data structure is identical
             inner_stats = cls.get_inner_oppty_dur_stats(outer_mm1_ob_cur, outer_mm2_ob_cur)
