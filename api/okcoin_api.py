@@ -53,7 +53,9 @@ class OkcoinApi(MarketApi):
         # normalize asks
         _asks = res_json["asks"]
         asks = list()
-        for _ask in _asks[:30]:
+
+        # min ask positioned at the last... exceptional case only for Okcoin
+        for _ask in reversed(_asks[30:]):
             ask = {
                 "price": Decimal128(str(_ask[0])),
                 "amount": Decimal128(str(_ask[1]))

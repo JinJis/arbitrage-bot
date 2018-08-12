@@ -7,10 +7,10 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 
 
 def main():
-    Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.INFO)
+    Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
     SharedMongoClient.initialize(should_use_localhost_db=True)
 
-    time_list = ["2018.08.04 00:00:00", "2018.08.06 00:00:00", "2018.08.08 00:00:00"]
+    time_list = ["2018.08.11 03:00:00", "2018.08.12 03:00:00"]
 
     prev_time = None
     for cur_time in time_list:
@@ -24,13 +24,13 @@ def main():
         settings = {
             "target_currency": "bch",
             "mm1": {
-                "market_tag": Market.VIRTUAL_CO,
+                "market_tag": Market.VIRTUAL_GP,
                 "fee_rate": 0.001,
                 "krw_balance": 1000000,
                 "coin_balance": 10
             },
             "mm2": {
-                "market_tag": Market.VIRTUAL_GP,
+                "market_tag": Market.VIRTUAL_KB,
                 "fee_rate": 0.00075,
                 "krw_balance": 1000000,
                 "coin_balance": 10
@@ -90,13 +90,13 @@ def main():
                 }
         """
         # stat analysis and append to db result
-        SharedMongoClient.instance()["statistics"]["iyo"].insert_many(iyo_result)
+        print(iyo_result)
         logging.warning("Nohup done, now conducting next time set!!")
         prev_time = cur_time
         time.sleep(240)
 
     # Fixme: this is for Nonhup, if not erase
-    Global.send_to_slack_channel("[IYO] finished!! Check and nohup another time set!!")
+    # Global.send_to_slack_channel("[IYO] finished!! Check and nohup another time set!!")
 
 
 if __name__ == '__main__':
