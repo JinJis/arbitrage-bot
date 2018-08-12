@@ -1,23 +1,17 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 requests = "*"
 pymongo = "*"
 schedule = "*"
 numpy = "*"
 scipy = "*"
-
+pytz = "*"
 
 [dev-packages]
 
-
-
 [requires]
-
 python_version = "3.6"

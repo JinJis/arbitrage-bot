@@ -2,6 +2,7 @@ from abc import abstractmethod
 from pymongo import MongoClient
 from config.global_conf import Global
 from collector.collector import Collector
+from api.bithumb_api import BithumbApi, BithumbCurrency
 from api.korbit_api import KorbitApi, KorbitCurrency
 from api.coinone_api import CoinoneApi, CoinoneCurrency
 from api.gopax_api import GopaxApi, GopaxCurrency
@@ -20,6 +21,7 @@ class ApiScheduler(BaseScheduler):
         # init db
         mongodb_uri = Global.read_mongodb_uri(should_use_localhost_db)
         db_client = MongoClient(mongodb_uri)
+        bithumb_db = db_client["bithumb"]
         coinone_db = db_client["coinone"]
         korbit_db = db_client["korbit"]
         gopax_db = db_client["gopax"]
@@ -27,6 +29,7 @@ class ApiScheduler(BaseScheduler):
         coinnest_db = db_client["coinnest"]
 
         # init api
+        bithumb_api = BithumbApi.instance(True)
         coinone_api = CoinoneApi.instance(True)
         korbit_api = KorbitApi.instance(True)
         gopax_api = GopaxApi.instance(True)
@@ -34,6 +37,7 @@ class ApiScheduler(BaseScheduler):
         coinnest_api = CoinnestApi.instance(True)
 
         # init currency
+        bithumb_currency = BithumbCurrency[currency.upper()]
         coinone_currency = CoinoneCurrency[currency.upper()]
         korbit_currency = KorbitCurrency[currency.upper()]
         goapx_currency = GopaxCurrency[currency.upper()]
@@ -41,6 +45,9 @@ class ApiScheduler(BaseScheduler):
         coinnest_currency = CoinnestCurrency[currency.upper()]
 
         # init collector
+        self.bt_collector = Collector(
+            bithumb_api, bithumb_currency, bithumb_db
+        )
         self.kb_collector = Collector(
             korbit_api, korbit_currency, korbit_db
         )
