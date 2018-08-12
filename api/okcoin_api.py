@@ -55,7 +55,8 @@ class OkcoinApi(MarketApi):
         asks = list()
 
         # min ask positioned at the last... exceptional case only for Okcoin
-        for _ask in reversed(_asks[30:]):
+        reversed_asks = list(reversed(_asks))
+        for _ask in reversed_asks[:30]:
             ask = {
                 "price": Decimal128(str(_ask[0])),
                 "amount": Decimal128(str(_ask[1]))
