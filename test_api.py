@@ -15,7 +15,9 @@ cn_api = CoinnestApi.instance()
 
 
 print(bt_api.get_orderbook(BithumbCurrency.TRON))
+print(bt_api.get_orderbook(KorbitCurrency.TRON))
+print(bt_api.get_orderbook(GopaxCurrency.TRON))
 print(co_api.get_orderbook(CoinoneCurrency.TRON))
-print(oc_api.get_orderbook(OkcoinCurrency.TRON))
+print(oc_api.get_orderbook(OkcoinCurrency.XRP))
 print(cn_api.get_orderbook(CoinnestCurrency.TRON))
 
