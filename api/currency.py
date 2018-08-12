@@ -33,3 +33,23 @@ class GopaxCurrency(Currency):
     XRP = "XRP-KRW"
     XLM = "XLM-KRW"
     LTC = "LTC-KRW"
+
+
+class OkcoinCurrency(Currency):
+    BTC = "btc_krw"
+    BCH = "bch_krw"
+    ETH = "eth_krw"
+    ETC = "etc_krw"
+    XRP = "xrp_krw"
+
+
+class CoinnestCurrency(Currency):
+    BTC = "btc"
+    BCH = "bch"
+    ETH = "eth"
+    ETC = "etc"
+    XRP = "xrp"
+    QTUM = "qtum"
+    IOTA = "iota"
+    LTC = "ltc"
+    BTG = "btg"
