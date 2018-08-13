@@ -12,6 +12,11 @@ class IYOScheduler(BaseScheduler):
     interval_time_sec = 24 * 60 * 60
 
     def __init__(self, coin_name: str, mm1_abbr: str, mm2_abbr: str):
+        """
+        :param coin_name: ex) bch, btc, xrp...
+        :param mm1_abbr: ex) co, kb, bt...
+        :param mm2_abbr: ex) co, kb, bt...
+        """
         self.coin_name = coin_name
         self.mm1_abbr = mm1_abbr
         self.mm2_abbr = mm2_abbr

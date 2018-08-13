@@ -1,16 +1,21 @@
 from .market_manager import MarketManager
-from api.currency import Currency, CoinoneCurrency, KorbitCurrency, GopaxCurrency
+from api.currency import Currency, CoinoneCurrency, KorbitCurrency, \
+    GopaxCurrency, BithumbCurrency, OkcoinCurrency, CoinnestCurrency
 from trader.market.order import Market
 from api.coinone_api import CoinoneApi
 from api.korbit_api import KorbitApi
 from api.gopax_api import GopaxApi
+from api.bithumb_api import BithumbApi
+from api.okcoin_api import OkcoinApi
+from api.coinnest_api import CoinnestApi
 from trader.market.order import Order, OrderType
 from decimal import Decimal
 from bson import Decimal128
 
 
 class VirtualMarketManager(MarketManager):
-    def __init__(self, market_tag: Market, market_fee: float, krw_balance=100000, coin_balance=0.1, coin_name="eth"):
+    def __init__(self, market_tag: Market, taker_fee: float, maker_fee: float, krw_balance: float, coin_balance: float,
+                 coin_name: str, is_using_taker_fee: bool):
         # create api instance according to given api_type
         if market_tag is Market.VIRTUAL_CO:
             target_api = CoinoneApi.instance(is_public_access_only=True)
@@ -21,6 +26,15 @@ class VirtualMarketManager(MarketManager):
         elif market_tag is Market.VIRTUAL_GP:
             target_api = GopaxApi.instance(is_public_access_only=True)
             self.name = "gp"
+        elif market_tag is Market.VIRTUAL_BT:
+            target_api = BithumbApi.instance(is_public_access_only=True)
+            self.name = "bt"
+        elif market_tag is Market.VIRTUAL_OC:
+            target_api = OkcoinApi.instance(is_public_access_only=True)
+            self.name = "oc"
+        elif market_tag is Market.VIRTUAL_CN:
+            target_api = CoinnestApi.instance(is_public_access_only=True)
+            self.name = "cn"
         else:
             raise Exception("Invalid market type has set for virtual market!")
 
@@ -30,7 +44,7 @@ class VirtualMarketManager(MarketManager):
         }
         self.initial_vt_balance = dict(self.vt_balance)
         self.order_id_count = 0
-        super().__init__(market_tag, market_fee, target_api)
+        super().__init__(market_tag, taker_fee, maker_fee, target_api, is_using_taker_fee)
 
         self.history = dict()
 
@@ -90,6 +104,12 @@ class VirtualMarketManager(MarketManager):
             return KorbitCurrency[target_currency.upper()]
         elif self.market_tag is Market.VIRTUAL_GP:
             return GopaxCurrency[target_currency.upper()]
+        elif self.market_tag is Market.VIRTUAL_BT:
+            return BithumbCurrency[target_currency.upper()]
+        elif self.market_tag is Market.VIRTUAL_OC:
+            return OkcoinCurrency[target_currency.upper()]
+        elif self.market_tag is Market.VIRTUAL_CN:
+            return CoinnestCurrency[target_currency.upper()]
         else:
             raise Exception("Invalid target API type has set!")
 

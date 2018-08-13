@@ -12,6 +12,9 @@ class SharedMongoClient:
     COINONE_DB_NAME = "coinone"
     KORBIT_DB_NAME = "korbit"
     GOPAX_DB_NAME = "gopax"
+    BITHUMB_DB_NAME = "bithumb"
+    OKCOIN_DB_NAME = "okcoin"
+    COINNEST_DB_NAME = "coinnest"
 
     __singleton_instance = None
 
@@ -47,6 +50,18 @@ class SharedMongoClient:
     @classmethod
     def get_gopax_db(cls) -> "Database":
         return cls.instance()[cls.GOPAX_DB_NAME]
+
+    @classmethod
+    def get_bithumb_db(cls) -> "Database":
+        return cls.instance()[cls.BITHUMB_DB_NAME]
+
+    @classmethod
+    def get_okcoin_db(cls) -> "Database":
+        return cls.instance()[cls.OKCOIN_DB_NAME]
+
+    @classmethod
+    def get_coinnest_db(cls) -> "Database":
+        return cls.instance()[cls.COINNEST_DB_NAME]
 
     @classmethod
     def get_process_db(cls) -> "Database":
@@ -85,7 +100,10 @@ class SharedMongoClient:
         method_name = {
             Market.VIRTUAL_CO: "get_coinone_db",
             Market.VIRTUAL_KB: "get_korbit_db",
-            Market.VIRTUAL_GP: "get_gopax_db"
+            Market.VIRTUAL_GP: "get_gopax_db",
+            Market.VIRTUAL_BT: "get_bithumb_db",
+            Market.VIRTUAL_OC: "get_okcoin_db",
+            Market.VIRTUAL_CN: "get_coinnest_db"
         }[market_tag]
         return getattr(cls, method_name)()
 
@@ -114,6 +132,9 @@ class SharedMongoClient:
         method_name = {
             Market.VIRTUAL_CO: "get_coinone_db",
             Market.VIRTUAL_KB: "get_korbit_db",
-            Market.VIRTUAL_GP: "get_gopax_db"
+            Market.VIRTUAL_GP: "get_gopax_db",
+            Market.VIRTUAL_BT: "get_bithumb_db",
+            Market.VIRTUAL_OC: "get_okcoin_db",
+            Market.VIRTUAL_CN: "get_coinnest_db"
         }[market_tag]
         return getattr(SharedMongoClient, method_name)()[target_coin + "_orderbook"]

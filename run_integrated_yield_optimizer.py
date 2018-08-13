@@ -1,5 +1,4 @@
 import logging
-import time
 from config.global_conf import Global
 from trader.market.market import Market
 from config.shared_mongo_client import SharedMongoClient
@@ -10,7 +9,7 @@ def main():
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
     SharedMongoClient.initialize(should_use_localhost_db=True)
 
-    time_list = ["2018.08.11 03:00:00", "2018.08.12 03:00:00"]
+    time_list = ["2018.08.13 07:00:00", "2018.08.13 15:00:00"]
 
     prev_time = None
     for cur_time in time_list:
@@ -22,16 +21,18 @@ def main():
         end_time = Global.convert_local_datetime_to_epoch(cur_time, timezone="kr")
 
         settings = {
-            "target_currency": "bch",
+            "target_currency": "qtum",
             "mm1": {
-                "market_tag": Market.VIRTUAL_GP,
-                "fee_rate": 0.001,
+                "market_tag": Market.VIRTUAL_CO,
+                "taker_fee": Global.read_market_fee("coinone", True),
+                "maker_fee": Global.read_market_fee("coinone", False),
                 "krw_balance": 1000000,
                 "coin_balance": 10
             },
             "mm2": {
-                "market_tag": Market.VIRTUAL_KB,
-                "fee_rate": 0.00075,
+                "market_tag": Market.VIRTUAL_GP,
+                "taker_fee": Global.read_market_fee("gopax", True),
+                "maker_fee": Global.read_market_fee("gopax", False),
                 "krw_balance": 1000000,
                 "coin_balance": 10
 
@@ -93,7 +94,7 @@ def main():
         print(iyo_result)
         logging.warning("Nohup done, now conducting next time set!!")
         prev_time = cur_time
-        time.sleep(240)
+        # time.sleep(240)
 
     # Fixme: this is for Nonhup, if not erase
     # Global.send_to_slack_channel("[IYO] finished!! Check and nohup another time set!!")

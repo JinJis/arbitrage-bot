@@ -7,11 +7,11 @@ from collector.oppty_time_collector import OpptyTimeCollector
 Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
 SharedMongoClient.initialize(should_use_localhost_db=False)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.08.12 00:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.08.12 18:40:00", timezone="kr")
+start_time = Global.convert_local_datetime_to_epoch("2018.08.12 18:00:00", timezone="kr")
+end_time = Global.convert_local_datetime_to_epoch("2018.08.13 00:00:00", timezone="kr")
 
 settings = {
-    "target_currency": "bch",
+    "target_currency": "xrp",
     "mm1": {
         "market_tag": Market.VIRTUAL_CO,
         "fee_rate": 0.001,

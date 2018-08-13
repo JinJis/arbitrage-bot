@@ -23,7 +23,8 @@ class InitialSettingOptimizer(BaseOptimizer):
     @classmethod
     def run(cls, settings: dict, factor_settings: dict):
         # intial dry run
-        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict)
+        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict,
+                                                                 is_using_taker_fee=True)
         factor_settings = super().opt_factor_settings_by_oppty(factor_settings, new_oppty_count, rev_oppty_count)
         # set initial step
         flattened_items = cls.flatten_factor_settings_items(factor_settings)
@@ -99,7 +100,8 @@ class InitialSettingOptimizer(BaseOptimizer):
         for index, item in enumerate(batch):
             logging.info("Now conducting [ISO] %d out of %d" % (index + 1, total_odds))
             # in ISO, init_factor_setting is subject to change and balance_setting is fixed
-            bot = super().create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
+            bot = super().create_bot(settings["mm1"], settings["mm2"], settings["target_currency"],
+                                     is_using_taker_fee=True)
             bot.run(mm1_cursor.clone(), mm2_cursor.clone(), item, True)
             combined_dict = cls.combine_initial_settings_in_dict(settings, item, bot)
             result.append(combined_dict)

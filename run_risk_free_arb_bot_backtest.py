@@ -25,8 +25,8 @@ def main():
         }
     }
     target_currency = "bch"
-    mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 0, 1.2779555555555553, target_currency)
-    mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 1975308.6419753088, 0, target_currency)
+    mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 0.001, 0, 1.2779555555555553, target_currency, True)
+    mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 0.00075, 1975308.6419753088, 0, target_currency, True)
     mm1_col = SharedMongoClient.get_target_col(Market.VIRTUAL_CO, target_currency)
     mm2_col = SharedMongoClient.get_target_col(Market.VIRTUAL_GP, target_currency)
 

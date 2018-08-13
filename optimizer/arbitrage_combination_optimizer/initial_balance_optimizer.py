@@ -26,7 +26,8 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
         # initial dry run
         logging.warning("Now optimizing balance settings by oppty!!")
-        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict)
+        (new_oppty_count, rev_oppty_count) = cls.count_oppty_num(settings, cls.default_initial_setting_dict,
+                                                                 is_using_taker_fee=True)
         bal_factor_settings = super().opt_balance_settings_by_oppty(bal_factor_settings,
                                                                     new_oppty_count, rev_oppty_count)
 
@@ -150,7 +151,8 @@ class InitialBalanceOptimizer(BaseOptimizer):
             mm1_cursor, mm2_cursor = cls.get_history_data(cloned_settings)
 
             # opt_factor = [krw_bal_after, factor_Settings, new # , rev #]
-            bot = super().create_bot(cloned_settings["mm1"], cloned_settings["mm2"], cloned_settings["target_currency"])
+            bot = super().create_bot(cloned_settings["mm1"], cloned_settings["mm2"], cloned_settings["target_currency"],
+                                     is_using_taker_fee=True)
             # in IBO, init_factor_setting is fixed and balance_setting is subject to change
             bot.run(mm1_cursor, mm2_cursor, cls.default_initial_setting_dict, True)
             # combine opted_factor_settings returned and bal_settings into dict

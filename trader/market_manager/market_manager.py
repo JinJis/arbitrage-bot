@@ -10,10 +10,17 @@ from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class MarketManager(ABC):
-    def __init__(self, market_tag: Market, market_fee: float, market_api: MarketApi):
+    def __init__(self, market_tag: Market, taker_fee: float, maker_fee: float, market_api: MarketApi,
+                 is_using_taker_fee: bool):
         self.market_tag = market_tag
-        self.market_fee = market_fee
         self.market_api = market_api
+
+        if is_using_taker_fee:
+            self.market_fee = taker_fee
+        elif not is_using_taker_fee:
+            self.market_fee = maker_fee
+        else:
+            raise Exception("Please choose one of TAKER or MAKER fee!")
 
         # init fee accumulator
         GlobalFeeAccumulator.initialize_market(self.market_tag)

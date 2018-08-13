@@ -17,7 +17,8 @@ class Global:
     USER_CONFIG_LOCATION = "config/conf_user.ini"
     LOCALHOST_DB_CONFIG_LOCATION = "config/conf_db_localhost.ini"
     REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
-    COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "krw")
+    MARKET_FEE_LOCATION = "config/conf_market_fee.ini"
+    COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "tron", "krw")
 
     @staticmethod
     def read_mongodb_uri(should_use_localhost_db: bool = True):
@@ -40,6 +41,18 @@ class Global:
             return "mongodb://%s:%s@%s:%d" % (username, password, host, port)
         else:
             return "mongodb://%s:%d" % (host, port)
+
+    @staticmethod
+    def read_market_fee(market_name: str, is_taker_fee: bool = True):
+        config = configparser.ConfigParser()
+        config.read(Global.MARKET_FEE_LOCATION)
+        if is_taker_fee:
+            fee = config[market_name.upper()]["TAKER_FEE"]
+        elif not is_taker_fee:
+            fee = config[market_name.upper()]["MAKER_FEE"]
+        else:
+            raise Exception("Please choose between TAKER or MAKER fee!")
+        return float(fee)
 
     @staticmethod
     def configure_default_root_logging(log_level: int = logging.INFO, should_log_to_file: bool = False):
