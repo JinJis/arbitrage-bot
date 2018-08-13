@@ -17,22 +17,22 @@ class VirtualMarketManager(MarketManager):
     def __init__(self, market_tag: Market, taker_fee: float, maker_fee: float, krw_balance: float, coin_balance: float,
                  coin_name: str, is_using_taker_fee: bool):
         # create api instance according to given api_type
-        if market_tag is Market.VIRTUAL_CO:
+        if market_tag is Market.VIRTUAL_COINONE:
             target_api = CoinoneApi.instance(is_public_access_only=True)
             self.name = "co"
-        elif market_tag is Market.VIRTUAL_KB:
+        elif market_tag is Market.VIRTUAL_KORBIT:
             target_api = KorbitApi.instance(is_public_access_only=True)
             self.name = "kb"
-        elif market_tag is Market.VIRTUAL_GP:
+        elif market_tag is Market.VIRTUAL_GOPAX:
             target_api = GopaxApi.instance(is_public_access_only=True)
             self.name = "gp"
-        elif market_tag is Market.VIRTUAL_BT:
+        elif market_tag is Market.VIRTUAL_BITHUMB:
             target_api = BithumbApi.instance(is_public_access_only=True)
             self.name = "bt"
-        elif market_tag is Market.VIRTUAL_OC:
+        elif market_tag is Market.VIRTUAL_OKCOIN:
             target_api = OkcoinApi.instance(is_public_access_only=True)
             self.name = "oc"
-        elif market_tag is Market.VIRTUAL_CN:
+        elif market_tag is Market.VIRTUAL_COINNEST:
             target_api = CoinnestApi.instance(is_public_access_only=True)
             self.name = "cn"
         else:
@@ -98,17 +98,17 @@ class VirtualMarketManager(MarketManager):
 
     # override static method
     def get_market_currency(self, target_currency: str) -> "Currency":
-        if self.market_tag is Market.VIRTUAL_CO:
+        if self.market_tag is Market.VIRTUAL_COINONE:
             return CoinoneCurrency[target_currency.upper()]
-        elif self.market_tag is Market.VIRTUAL_KB:
+        elif self.market_tag is Market.VIRTUAL_KORBIT:
             return KorbitCurrency[target_currency.upper()]
-        elif self.market_tag is Market.VIRTUAL_GP:
+        elif self.market_tag is Market.VIRTUAL_GOPAX:
             return GopaxCurrency[target_currency.upper()]
-        elif self.market_tag is Market.VIRTUAL_BT:
+        elif self.market_tag is Market.VIRTUAL_BITHUMB:
             return BithumbCurrency[target_currency.upper()]
-        elif self.market_tag is Market.VIRTUAL_OC:
+        elif self.market_tag is Market.VIRTUAL_OKCOIN:
             return OkcoinCurrency[target_currency.upper()]
-        elif self.market_tag is Market.VIRTUAL_CN:
+        elif self.market_tag is Market.VIRTUAL_COINNEST:
             return CoinnestCurrency[target_currency.upper()]
         else:
             raise Exception("Invalid target API type has set!")

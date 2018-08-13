@@ -98,12 +98,12 @@ class SharedMongoClient:
     @classmethod
     def get_target_db(cls, market_tag: Market):
         method_name = {
-            Market.VIRTUAL_CO: "get_coinone_db",
-            Market.VIRTUAL_KB: "get_korbit_db",
-            Market.VIRTUAL_GP: "get_gopax_db",
-            Market.VIRTUAL_BT: "get_bithumb_db",
-            Market.VIRTUAL_OC: "get_okcoin_db",
-            Market.VIRTUAL_CN: "get_coinnest_db"
+            Market.VIRTUAL_COINONE: "get_coinone_db",
+            Market.VIRTUAL_KORBIT: "get_korbit_db",
+            Market.VIRTUAL_GOPAX: "get_gopax_db",
+            Market.VIRTUAL_BITHUMB: "get_bithumb_db",
+            Market.VIRTUAL_OKCOIN: "get_okcoin_db",
+            Market.VIRTUAL_COINNEST: "get_coinnest_db"
         }[market_tag]
         return getattr(cls, method_name)()
 
@@ -130,11 +130,11 @@ class SharedMongoClient:
     @staticmethod
     def get_target_col(market_tag: Market, target_coin: str):
         method_name = {
-            Market.VIRTUAL_CO: "get_coinone_db",
-            Market.VIRTUAL_KB: "get_korbit_db",
-            Market.VIRTUAL_GP: "get_gopax_db",
-            Market.VIRTUAL_BT: "get_bithumb_db",
-            Market.VIRTUAL_OC: "get_okcoin_db",
-            Market.VIRTUAL_CN: "get_coinnest_db"
+            Market.VIRTUAL_COINONE: "get_coinone_db",
+            Market.VIRTUAL_KORBIT: "get_korbit_db",
+            Market.VIRTUAL_GOPAX: "get_gopax_db",
+            Market.VIRTUAL_BITHUMB: "get_bithumb_db",
+            Market.VIRTUAL_OKCOIN: "get_okcoin_db",
+            Market.VIRTUAL_COINNEST: "get_coinnest_db"
         }[market_tag]
         return getattr(SharedMongoClient, method_name)()[target_coin + "_orderbook"]
