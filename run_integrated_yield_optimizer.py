@@ -1,15 +1,15 @@
 import logging
 from config.global_conf import Global
-from config.trade_setting_config import MarketSettingConfig
+from config.trade_setting_config import TradeSettingConfig
 from config.shared_mongo_client import SharedMongoClient
 from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
-def main():
+def main(coin_name: str, mm1: str, mm2: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
-    time_list = ["2018.07.13 07:00:00", "2018.07.13 15:00:00"]
+    time_list = ["2018.08.13 00:00:00", "2018.08.14 00:00:00"]
 
     prev_time = None
     for cur_time in time_list:
@@ -20,18 +20,22 @@ def main():
         start_time = Global.convert_local_datetime_to_epoch(prev_time, timezone="kr")
         end_time = Global.convert_local_datetime_to_epoch(cur_time, timezone="kr")
 
-        settings = MarketSettingConfig.get_settings(mm1="coinone",
-                                                    mm2="gopax",
-                                                    target_currency="bch",
-                                                    start_time=start_time, end_time=end_time,
-                                                    is_virtual_mm=True)
+        # draw iyo_config for bal & factor_setting
+        iyo_config = Global.read_iyo_setting_config(coin_name)
 
-        bal_factor_settings = MarketSettingConfig.get_bal_fact_settings(krw_seq_end=10000000)
+        # set settings, bal_fact_settings, factor_settings
+        settings = TradeSettingConfig.get_settings(mm1=mm1,
+                                                   mm2=mm2,
+                                                   target_currency="bch",
+                                                   start_time=start_time, end_time=end_time,
+                                                   is_virtual_mm=True)
 
-        factor_settings = MarketSettingConfig.get_factor_settings(max_trading_coin_end=0.1,
-                                                                  threshold_end=2500,
-                                                                  factor_end=3,
-                                                                  appx_unit_coin_price=800000)
+        bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"])
+
+        factor_settings = TradeSettingConfig.get_factor_settings(iyo_config["max_trade_coin_end"],
+                                                                 iyo_config["threshold_end"],
+                                                                 iyo_config["factor_end"],
+                                                                 iyo_config["appx_unit_coin_price"])
 
         iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
         """
@@ -55,11 +59,7 @@ def main():
         print(iyo_result)
         logging.warning("Nohup done, now conducting next time set!!")
         prev_time = cur_time
-        # time.sleep(240)
-
-    # Fixme: this is for Nonhup, if not erase
-    # Global.send_to_slack_channel("[IYO] finished!! Check and nohup another time set!!")
 
 
 if __name__ == '__main__':
-    main()
+    main(coin_name="xrp", mm1="coinone", mm2="gopax")

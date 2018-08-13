@@ -1,8 +1,7 @@
-import sys
 import time
 import logging
 from config.global_conf import Global
-from trader.market.market import Market
+from config.trade_setting_config import TradeSettingConfig
 from pymongo import MongoClient
 from collector.scheduler.base_scheduler import BaseScheduler
 from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
@@ -11,15 +10,15 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 class IYOScheduler(BaseScheduler):
     interval_time_sec = 24 * 60 * 60
 
-    def __init__(self, coin_name: str, mm1_abbr: str, mm2_abbr: str):
+    def __init__(self, coin_name: str, mm1_name: str, mm2_name: str):
         """
         :param coin_name: ex) bch, btc, xrp...
-        :param mm1_abbr: ex) co, kb, bt...
-        :param mm2_abbr: ex) co, kb, bt...
+        :param mm1_name: ex) coinone, korbit, bithumb...
+        :param mm2_name: ex) coinone, korbit, bithumb...
         """
         self.coin_name = coin_name
-        self.mm1_abbr = mm1_abbr
-        self.mm2_abbr = mm2_abbr
+        self.mm1_name = mm1_name
+        self.mm2_name = mm2_name
         super().__init__()
 
     @BaseScheduler.interval_waiter(interval_time_sec)
@@ -28,11 +27,10 @@ class IYOScheduler(BaseScheduler):
         end_time = int(time.time())
 
         Global.run_threaded(self.iyo_result_to_mongo_db,
-                            [self.coin_name, self.mm1_abbr, self.mm2_abbr, start_time, end_time])
+                            [self.coin_name, self.mm1_name, self.mm2_name, start_time, end_time])
 
     @staticmethod
-    def iyo_result_to_mongo_db(coin_name: str, mm1_abbr: str, mm2_abbr: str, start_time: int, end_time: int):
-
+    def iyo_result_to_mongo_db(coin_name: str, mm1_name: str, mm2_name: str, start_time: int, end_time: int):
         Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
         mongodb_uri = Global.read_mongodb_uri(should_use_localhost_db=True)
         db_client = MongoClient(mongodb_uri)
@@ -42,55 +40,13 @@ class IYOScheduler(BaseScheduler):
         local_end_time = Global.convert_epoch_to_local_datetime(end_time, timezone="kr")
         logging.warning("IYO conducting -> start_time: %s, end_time: %s" % (local_start_time, local_end_time))
 
-        settings = {
-            "target_currency": coin_name,
-            "mm1": {
-                "market_tag": getattr(Market, "VIRTUAL_%s" % mm1_abbr.upper()),
-                "fee_rate": 0.001,
-                "krw_balance": 1000000,
-                "coin_balance": 10
-            },
-            "mm2": {
-                "market_tag": getattr(Market, "VIRTUAL_%s" % mm2_abbr.upper()),
-                "fee_rate": 0.00075,
-                "krw_balance": 1000000,
-                "coin_balance": 10
+        settings = TradeSettingConfig.get_settings(mm1=mm1_name, mm2=mm2_name,
+                                                   target_currency=coin_name,
+                                                   start_time=start_time, end_time=end_time,
+                                                   is_virtual_mm=True)
 
-            },
-            "division": 3,
-            "depth": 5,
-            "consecution_time": 30,
-            "start_time": start_time,
-            "end_time": end_time
-        }
-
-        bal_factor_settings = {
-            "mm1": {
-                "krw_balance": {"start": 0, "end": 20000000, "step_limit": 1000
-                                },
-                "coin_balance": {"start": 0, "end": 20, "step_limit": 0.1
-                                 }
-            },
-            "mm2": {
-                "krw_balance": {"start": 0, "end": 20000000, "step_limit": 1000
-                                },
-                "coin_balance": {"start": 0, "end": 20, "step_limit": 0.1
-                                 }
-            }
-        }
-
-        factor_settings = {
-            "max_trading_coin": {"start": 0, "end": 0.8, "step_limit": 0.0001},
-            "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
-            "new": {
-                "threshold": {"start": 0, "end": 2500, "step_limit": 1},
-                "factor": {"start": 1, "end": 1, "step_limit": 0.01}
-            },
-            "rev": {
-                "threshold": {"start": 0, "end": 2500, "step_limit": 1},
-                "factor": {"start": 1, "end": 1, "step_limit": 0.01}
-            }
-        }
+        bal_factor_settings = TradeSettingConfig.get_bal_fact_settings()
+        factor_settings = TradeSettingConfig.get_factor_settings()
 
         iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
 

@@ -18,6 +18,7 @@ class Global:
     LOCALHOST_DB_CONFIG_LOCATION = "config/conf_db_localhost.ini"
     REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
     MARKET_FEE_LOCATION = "config/conf_market_fee.ini"
+    IYO_CONFIG_LOCATION = "config/conf_iyo_market.ini"
     COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "tron", "krw")
 
     @staticmethod
@@ -53,6 +54,24 @@ class Global:
         else:
             raise Exception("Please choose between TAKER or MAKER fee!")
         return float(fee)
+
+    @staticmethod
+    def read_iyo_setting_config(target_currency: str):
+        config = configparser.ConfigParser()
+        config.read(Global.IYO_CONFIG_LOCATION)
+        krw_seq_end = config["BALANCE_SETTING"]["KRW_SEQ_END"]
+        max_trade_coin_end = config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"]
+        threshold_end = config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"]
+        factor_end = config["%s_SETTING" % target_currency.upper()]["FACTOR_END"]
+        appx_unit_coin_p = config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"]
+
+        return {
+            "krw_seq_end": krw_seq_end,
+            "max_trade_coin_end": max_trade_coin_end,
+            "threshold_end": threshold_end,
+            "factor_end": factor_end,
+            "appx_unit_coin_price": appx_unit_coin_p
+        }
 
     @staticmethod
     def configure_default_root_logging(log_level: int = logging.INFO, should_log_to_file: bool = False):
