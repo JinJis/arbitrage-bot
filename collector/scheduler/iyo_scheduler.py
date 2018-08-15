@@ -15,13 +15,8 @@ class IYOScheduler(BaseScheduler):
         start_time = int(time.time()) - self.interval_time_sec
         end_time = int(time.time())
 
-        try:
-            for target_currency in list(Global.read_avail_coin_in_list()):
-                self.iyo_result_to_mongo_db(target_currency, start_time, end_time)
-
-        except TypeError as e:
-            Global.send_to_slack_channel("Something went wrong in IYO Schduler! >> %s" % e)
-            pass
+        for target_currency in list(Global.read_avail_coin_in_list()):
+            self.iyo_result_to_mongo_db(target_currency, start_time, end_time)
 
     @staticmethod
     def iyo_result_to_mongo_db(coin_name: str, start_time: int, end_time: int):
@@ -59,14 +54,19 @@ class IYOScheduler(BaseScheduler):
                                                                      iyo_config["factor_end"],
                                                                      iyo_config["appx_unit_coin_price"])
 
-            iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
+            try:
+                iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
 
-            # finally save to mongoDB
-            if len(iyo_result) > 0:
-                db_client["statistics"]["iyo"].insert_many(iyo_result)
-            else:
-                logging.critical("There was no oppty!! Skipping to next combination!")
-                continue
+                # finally save to mongoDB
+                if len(iyo_result) > 0:
+                    db_client["statistics"]["iyo"].insert_many(iyo_result)
+                else:
+                    logging.critical("There was no oppty!! Skipping to next combination!")
+                    continue
+
+            except TypeError as e:
+                Global.send_to_slack_channel("Something went wrong in IYO Schduler! >> %s" % e)
+                pass
 
 
 if __name__ == "__main__":
