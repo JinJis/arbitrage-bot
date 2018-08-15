@@ -16,7 +16,6 @@ class IYOScheduler(BaseScheduler):
         end_time = int(time.time())
 
         for target_currency in list(Global.read_avail_coin_in_list()):
-            print(target_currency)
             self.iyo_result_to_mongo_db(target_currency, start_time, end_time)
 
     @staticmethod
