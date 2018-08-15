@@ -1,5 +1,6 @@
 import time
 import logging
+from datetime import date, datetime
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from config.trade_setting_config import TradeSettingConfig
@@ -8,43 +9,48 @@ from collector.oppty_time_collector import OpptyTimeCollector
 
 
 class OTCScheduler(BaseScheduler):
-    interval_time_sec = 60 * 30
-    publishing_time = 210000  # ex) if 21:00:00 --> 210000
-
-    def __init__(self):
-        super().__init__()
+    interval_time_sec = 3
+    publishing_time = "09:00:00"
 
     @BaseScheduler.interval_waiter(interval_time_sec)
     def _actual_run_in_loop(self):
-        start_time = int(time.time()) - self.interval_time_sec
-        end_time = int(time.time())
+        now_date = int(time.time())
 
-        # convert epoch time to local_time and log
-        local_time = Global.convert_epoch_to_local_datetime(end_time, timezone="kr")
+        convted_pub_time = datetime.strptime(self.publishing_time, "%H:%M:%S").time()
+        publish_local_date = datetime.combine(date.today(), convted_pub_time).strftime("%Y.%m.%d %H:%M:%S %z")
+        publish_epoch_date = int(Global.convert_local_datetime_to_epoch(str(publish_local_date)))
 
-        local_time_conv = int(local_time[11:].replace(":", ""))
-        if (local_time_conv > (self.publishing_time - self.interval_time_sec)) \
-                and (local_time_conv < self.publishing_time + self.interval_time_sec):
+        start_time = publish_epoch_date - (24 * 60 * 60)
+        end_time = publish_epoch_date
 
-            Global.run_threaded(self.oppty_time_publisher, ["bch", start_time, end_time])
-            Global.run_threaded(self.oppty_time_publisher, ["btc", start_time, end_time])
-            Global.run_threaded(self.oppty_time_publisher, ["eth", start_time, end_time])
-            Global.run_threaded(self.oppty_time_publisher, ["qtum", start_time, end_time])
-            Global.run_threaded(self.oppty_time_publisher, ["tron", start_time, end_time])
-            Global.run_threaded(self.oppty_time_publisher, ["xrp", start_time, end_time])
+        if (now_date > publish_epoch_date - self.interval_time_sec) \
+                and (now_date < publish_epoch_date + self.interval_time_sec):
+            # loop through all possible coins and run
+            final_result = []
+            for target_currency in list(Global.read_avail_coin_in_list()):
+                result_by_one_coin = self.otc_all_mm_comb_by_one_coin(target_currency, start_time, end_time)
+                final_result.extend(result_by_one_coin)
+
+            print(final_result)
+            # sort by highest to lowest oppty duration
+            descending_order_result = self.sort_by_logest_oppty_time_to_lowest(final_result)
+
+            # send this final result to slack in form of str
+            start_local_date = Global.convert_epoch_to_local_datetime(start_time)
+            self.send_result_nicely_to_slack(descending_order_result, start_local_date, publish_local_date)
+
         else:
-            raise Exception("Publishing time not yet reached!!")
+            pass
 
     @staticmethod
-    def oppty_time_publisher(coin_name: str, start_time: int, end_time: int):
+    def otc_all_mm_comb_by_one_coin(coin_name: str, start_time: int, end_time: int) -> list:
         Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-        SharedMongoClient.initialize(should_use_localhost_db=True)
-        db_client = SharedMongoClient.instance()
+        SharedMongoClient.initialize(should_use_localhost_db=False)
 
         # create combination of coin that is injected by validating if the exchange has that coin
         rfab_combi_list = Global.get_rfab_combination_list(coin_name)
 
-        final_otc_result_by_coin =
+        all_comb_result_by_one_coin = []
         for _combi in rfab_combi_list:
             logging.critical("[%s-%s-%s] OTC conducting -> start_time: %s, end_time: %s" % (
                 coin_name.upper(), str(_combi[0]).upper(), str(_combi[1]).upper(), start_time, end_time))
@@ -63,9 +69,25 @@ class OTCScheduler(BaseScheduler):
 
             otc_result_dict = OpptyTimeCollector.run(settings=settings)
             total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
+            total_dur_dict["combination"] = \
+                "%s-%s-%s" % (coin_name.upper(), str(_combi[0]).upper(), str(_combi[1]).upper())
+            all_comb_result_by_one_coin.append(total_dur_dict)
+        return all_comb_result_by_one_coin
 
-            # save to excel
+    @staticmethod
+    def sort_by_logest_oppty_time_to_lowest(result: list):
+        result.sort(key=lambda x: (x["new"] + x["rev"]), reverse=True)
+        return result
+
+    @classmethod
+    def send_result_nicely_to_slack(cls, final_sorted_list: list, start_date: str, end_date: str):
+        to_be_sent = str("[OTC start date: %s, end date: %s]\n" % (start_date, end_date))
+        for each_result in final_sorted_list:
+            new_percent = (each_result["new"] / cls.interval_time_sec) * 100
+            rev_percent = (each_result["new"] / cls.interval_time_sec) * 100
+            to_be_sent += "[%s]\n NEW: %.2f%%, REV: %.2f%%\n" % (each_result["combination"], new_percent, rev_percent)
+        Global.send_to_slack_channel(to_be_sent)
 
 
 if __name__ == "__main__":
-    IYOScheduler().run()
+    OTCScheduler().run()

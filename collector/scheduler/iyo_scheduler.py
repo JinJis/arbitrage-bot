@@ -15,8 +15,13 @@ class IYOScheduler(BaseScheduler):
         start_time = int(time.time()) - self.interval_time_sec
         end_time = int(time.time())
 
-        for target_currency in list(Global.read_avail_coin_in_list()):
-            self.iyo_result_to_mongo_db(target_currency, start_time, end_time)
+        try:
+            for target_currency in list(Global.read_avail_coin_in_list()):
+                self.iyo_result_to_mongo_db(target_currency, start_time, end_time)
+
+        except TypeError as e:
+            Global.send_to_slack_channel("Something went wrong in IYO Schduler! >> %s" % e)
+            pass
 
     @staticmethod
     def iyo_result_to_mongo_db(coin_name: str, start_time: int, end_time: int):
