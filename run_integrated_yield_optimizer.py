@@ -7,7 +7,7 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 
 def main(coin_name: str, mm1: str, mm2: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=False)
+    SharedMongoClient.initialize(should_use_localhost_db=True)
 
     time_list = ["2018.08.13 00:00:00", "2018.08.14 00:00:00"]
 
@@ -26,8 +26,11 @@ def main(coin_name: str, mm1: str, mm2: str):
         # set settings, bal_fact_settings, factor_settings
         settings = TradeSettingConfig.get_settings(mm1=mm1,
                                                    mm2=mm2,
-                                                   target_currency="bch",
+                                                   target_currency=coin_name,
                                                    start_time=start_time, end_time=end_time,
+                                                   division=iyo_config["division"],
+                                                   depth=iyo_config["depth"],
+                                                   consecution_time=iyo_config["consecution_time"],
                                                    is_virtual_mm=True)
 
         bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"])
@@ -62,4 +65,4 @@ def main(coin_name: str, mm1: str, mm2: str):
 
 
 if __name__ == '__main__':
-    main(coin_name="xrp", mm1="coinone", mm2="gopax")
+    main(coin_name="bch", mm1="coinone", mm2="gopax")

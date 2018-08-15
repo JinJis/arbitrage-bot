@@ -16,7 +16,7 @@ settings = TradeSettingConfig.get_settings(mm1="coinone",
                                            start_time=start_time, end_time=end_time,
                                            is_virtual_mm=True)
 
-bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(krw_seq_end=10000000)
+bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(krw_seq_end=str(10000000))
 
 IBO_result = InitialBalanceOptimizer.run(settings, bal_factor_settings)
 print(IBO_result)

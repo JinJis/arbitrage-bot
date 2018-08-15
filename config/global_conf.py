@@ -59,6 +59,9 @@ class Global:
     def read_iyo_setting_config(target_currency: str):
         config = configparser.ConfigParser()
         config.read(Global.IYO_CONFIG_LOCATION)
+        division = config["UNIVERSAL_SETTING"]["DIVISION"]
+        depth = config["UNIVERSAL_SETTING"]["DEPTH"]
+        consecution_time = config["UNIVERSAL_SETTING"]["consecution_time"]
         krw_seq_end = config["BALANCE_SETTING"]["KRW_SEQ_END"]
         max_trade_coin_end = config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"]
         threshold_end = config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"]
@@ -66,6 +69,9 @@ class Global:
         appx_unit_coin_p = config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"]
 
         return {
+            "division": division,
+            "depth": depth,
+            "consecution_time": consecution_time,
             "krw_seq_end": krw_seq_end,
             "max_trade_coin_end": max_trade_coin_end,
             "threshold_end": threshold_end,

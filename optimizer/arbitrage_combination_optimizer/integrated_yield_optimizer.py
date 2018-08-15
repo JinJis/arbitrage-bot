@@ -85,13 +85,14 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     iyo_opt_result["rev_oppty_count"] = rev_oppty_count
                     db_result.append(iyo_opt_result)
 
-                    # finally run IYO Stat appender and return final result
-                    db_with_stat_result = cls.run_iyo_stat_appender(db_result)
-
-                    return db_with_stat_result
-
                 except Exception as e:
                     logging.error("Something went wrong while executing IYO loop!", time, e)
+
+        # finally run IYO Stat appender and return final result
+
+        db_with_stat_result = cls.run_iyo_stat_appender(db_result)
+
+        return db_with_stat_result
 
     @classmethod
     def init_initial_step(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):

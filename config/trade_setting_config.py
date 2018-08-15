@@ -5,7 +5,8 @@ from config.global_conf import Global
 class TradeSettingConfig:
 
     @staticmethod
-    def get_settings(mm1: str, mm2: str, target_currency: str, start_time: int, end_time: int, is_virtual_mm: bool):
+    def get_settings(mm1: str, mm2: str, target_currency: str, start_time: int, end_time: int, division: str,
+                     depth: str, consecution_time: str, is_virtual_mm: bool):
         if is_virtual_mm:
             mm1_tag = "VIRTUAL_%s" % mm1.upper()
             mm2_tag = "VIRTUAL_%s" % mm2.upper()
@@ -32,9 +33,9 @@ class TradeSettingConfig:
                 "coin_balance": 10
 
             },
-            "division": 3,
-            "depth": 5,
-            "consecution_time": 30,
+            "division": int(division),
+            "depth": int(depth),
+            "consecution_time": int(consecution_time),
             "start_time": start_time,
             "end_time": end_time
         }
@@ -77,7 +78,7 @@ class TradeSettingConfig:
                 "factor": {"start": 1, "end": int(factor_end), "step_limit": 0.01}
             },
             "rev": {
-                "threshold": {"start": 0, "end": 2500, "step_limit": 1},
+                "threshold": {"start": 0, "end": int(threshold_end), "step_limit": 1},
                 "factor": {"start": 1, "end": int(factor_end), "step_limit": 0.01}
             }
         }
