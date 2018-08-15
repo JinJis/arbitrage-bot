@@ -231,3 +231,5 @@ stat/*
 .idea/arbitrage-bot.iml
 .idea/misc.xml
 .idea/modules.xml
+
+config/conf_db_localhost.ini

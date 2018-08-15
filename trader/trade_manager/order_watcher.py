@@ -53,7 +53,7 @@ class OrderWatcher(Thread):
                     self.order.updated_at = int(time.time())
                     self.order.filled_amount = self.order.order_amount
                     self.order.remain_amount = 0
-                    self.order.fee_rate = GopaxMarketManager.MARKET_FEE
+                    self.order.fee_rate = GopaxMarketManager.TAKER_FEE
                     self.order.fee = self.order.fee_rate * self.order.filled_amount
                     self.order.status = OrderStatus.FILLED
                 else:

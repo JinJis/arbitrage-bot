@@ -1,44 +1,67 @@
-from pymongo.cursor import Cursor
-from analyzer.analyzer import ATSAnalyzer
-from analyzer.analyzer import BasicAnalyzer
+import logging
+from analyzer.trade_analyzer import BasicAnalyzer
+from config.shared_mongo_client import SharedMongoClient
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 
-class OpptyRequestTimeCollector:
-    TARGET_STRATEGY = ATSAnalyzer.actual_tradable_spread_strategy
-    INTERVAL = 5
+class OpptyTimeCollector:
+    # default CONSECUTION_GRACE_TIME
+    CONSECUTION_GRACE_TIME = 60
 
-    def __init__(self, mm1: VirtualMarketManager, mm2: VirtualMarketManager, target_currency: str):
-        self.target_currency = target_currency
-        self.mm1 = mm1
-        self.mm2 = mm2
-        self.raw_rq_time_dict = dict(new=[], rev=[])
+    @classmethod
+    def run(cls, settings: dict):
 
-    def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor):
+        # sync CONSECUTION_GRACE_TIME
+        cls.CONSECUTION_GRACE_TIME = settings["consecution_time"]
+
+        # initiate Market / Mongo settings
+        mm1, mm2, mm1_data_cursor, mm2_data_cursor = cls.initiate_market_mongo_settings(settings)
 
         # loop through history data
+        raw_rq_time_dict = dict(new=[], rev=[])
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
-            self.add_oppty_requesttime_to_list(mm1_data, mm2_data)
+            # skip if either of orderbook data is empty
+            if (not mm1_data) or (not mm1_data["asks"]) or (not mm1_data["bids"]):
+                logging.info("mm1_data is empty! Skipping current item... %s" %
+                             mm1_data["requestTime"] if mm1_data else "")
+                continue
+            if (not mm2_data) or (not mm2_data["asks"]) or (not mm2_data["bids"]):
+                logging.info("mm2_data is empty! Skipping current item... %s" %
+                             mm2_data["requestTime"] if mm2_data else "")
+                continue
+
+            # get spread
+            new_unit_spread, rev_unit_spread = cls.get_spread_info(mm1_data, mm2_data, mm1.market_fee, mm2.market_fee)
+            # collect requestTime when NEW
+            if new_unit_spread > 0:
+                raw_rq_time_dict["new"].append(mm1_data["requestTime"])
+
+            # collect requestTime when NEW
+            if rev_unit_spread > 0:
+                raw_rq_time_dict["rev"].append(mm1_data["requestTime"])
 
         # sort raw rq time into duration
-        new_oppty_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["new"])
-        rev_oppty_duration = OpptyRequestTimeCollector.sort_by_time_duration(self.raw_rq_time_dict["rev"])
+        new_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["new"])
+        rev_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["rev"])
         return dict(new=new_oppty_duration, rev=rev_oppty_duration)
 
-    def add_oppty_requesttime_to_list(self, mm1_data: dict, mm2_data: dict):
-        new_unit_spread, rev_unit_spread = self.get_spread_info(mm1_data, mm2_data,
-                                                                self.mm1.market_fee, self.mm2.market_fee)
-        # collect requestTime when NEW
-        if new_unit_spread > 0:
-            self.raw_rq_time_dict["new"].append(mm1_data["requestTime"])
-
-        # collect requestTime when NEW
-        if rev_unit_spread > 0:
-            self.raw_rq_time_dict["rev"].append(mm1_data["requestTime"])
+    @staticmethod
+    def initiate_market_mongo_settings(settings: dict):
+        target_currency = settings["target_currency"]
+        mm1 = VirtualMarketManager(settings["mm1"]["market_tag"], settings["mm1"]["taker_fee"],
+                                   settings["mm1"]["maker_fee"], settings["mm1"]["krw_balance"],
+                                   settings["mm1"]["coin_balance"], target_currency, is_using_taker_fee=True)
+        mm2 = VirtualMarketManager(settings["mm2"]["market_tag"], settings["mm2"]["taker_fee"],
+                                   settings["mm2"]["maker_fee"], settings["mm2"]["krw_balance"],
+                                   settings["mm2"]["coin_balance"], target_currency, is_using_taker_fee=True)
+        mm1_col = SharedMongoClient.get_target_col(settings["mm1"]["market_tag"], target_currency)
+        mm2_col = SharedMongoClient.get_target_col(settings["mm2"]["market_tag"], target_currency)
+        mm1_data_cursor, mm2_data_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, settings["start_time"],
+                                                                              settings["end_time"])
+        return mm1, mm2, mm1_data_cursor, mm2_data_cursor
 
     @classmethod
     def get_spread_info(cls, mm1_orderbook: dict, mm2_orderbook: dict, mm1_market_fee: float, mm2_market_fee: float):
-
         # mm1 price
         mm1_minask_price, mm1_maxbid_price = BasicAnalyzer.get_price_of_minask_maxbid(mm1_orderbook)
         # mm2 price
@@ -57,30 +80,21 @@ class OpptyRequestTimeCollector:
         return unit_spread
 
     @classmethod
-    def sort_by_time_duration(cls, rq_time_list: list):
-        was_in_oppty = False
-        temp_time_set = list()
+    def sort_by_consecutive_time_duration(cls, rq_time_list: list):
         result = list()
-        for index, item in enumerate(rq_time_list[1:]):
-            now = rq_time_list[index + 1]
-            before = rq_time_list[index]
-            # when in oppty
-            if now - before == cls.INTERVAL:
-                if not was_in_oppty:
-                    was_in_oppty = True
-                    temp_time_set.append(before)
-            # when not in oppty
-            else:
-                if was_in_oppty:
-                    was_in_oppty = False
-                    temp_time_set.append(before)
-                    result.append([i for i in temp_time_set])
-                    temp_time_set.clear()
-        # when the last item is under oppty
-        if was_in_oppty:
-            temp_time_set.append(rq_time_list[-1])
-            result.append([i for i in temp_time_set])
-            temp_time_set.clear()
+        start = None
+        prev = None
+        for index, item in enumerate(rq_time_list):
+            if prev is None:
+                start = item
+                prev = item
+                continue
+            current = item
+            if (current - prev) > cls.CONSECUTION_GRACE_TIME:
+                end = prev
+                result.append([start, end])
+                start = current
+            prev = current
         return result
 
     @staticmethod
@@ -88,6 +102,6 @@ class OpptyRequestTimeCollector:
         total_duration = dict(new=0, rev=0)
         for key in result_dict.keys():
             for time in result_dict[key]:
-                diff = time[1] - time[0]
+                diff = (time[1] - time[0])
                 total_duration[key] += diff
         return total_duration

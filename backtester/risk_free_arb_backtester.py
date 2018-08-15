@@ -1,7 +1,7 @@
 import logging
 from pymongo.cursor import Cursor
-from analyzer.analyzer import BasicAnalyzer
-from analyzer.analyzer import ATSAnalyzer, SpreadInfo
+from analyzer.trade_analyzer import BasicAnalyzer
+from analyzer.trade_analyzer import ATSAnalyzer, SpreadInfo
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.trade_manager.trade_manager import TradeManager
 from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
@@ -16,7 +16,7 @@ class RfabBacktester:
         self.mm2 = mm2
         self.target_currency = target_currency
         self.init_setting_dict = None
-        self.is_init_setting_opt = None
+        self.is_running_in_optimizer = None
 
         self.mm1_currency = self.mm1.get_market_currency(self.target_currency)
         self.mm2_currency = self.mm2.get_market_currency(self.target_currency)
@@ -24,17 +24,19 @@ class RfabBacktester:
         self.trade_manager = TradeManager(should_db_logging=True, is_backtesting=True)
         self.trade_logger = TradeInfoLogger(self.trade_manager, self.target_currency)
 
-        # attributes for InitialSettingOptimizer
+        # attributes for ISO, IBO, IYO
         self.total_krw_bal = 0
         self.trade_new = 0
         self.trade_rev = 0
+        self.new_oppty_count = 0
+        self.rev_oppty_count = 0
 
     def run(self, mm1_data_cursor: Cursor, mm2_data_cursor: Cursor,
-            init_setting_dict: dict, is_init_setting_opt: bool = False):
+            init_setting_dict: dict, is_running_in_optimizer: bool = False):
 
         # init settings
         self.init_setting_dict = init_setting_dict
-        self.is_init_setting_opt = is_init_setting_opt
+        self.is_running_in_optimizer = is_running_in_optimizer
 
         # clear balances & trade counter
         self.mm1.clear_balance()
@@ -45,9 +47,9 @@ class RfabBacktester:
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
             self.actual_trade_loop(mm1_data, mm2_data)
         # log backtesting result
-        if not self.is_init_setting_opt:
+        if not self.is_running_in_optimizer:
             self.trade_logger.log_trade_info()
-            self.trade_logger.log_oppty_info()
+            self.trade_logger.log_oppty_info(self.new_oppty_count, self.rev_oppty_count)
             self.trade_logger.log_combined_balance(self.mm1.balance, self.mm2.balance)
         else:
             self.total_krw_bal = self.get_krw_total_balance()
@@ -58,7 +60,7 @@ class RfabBacktester:
         if not trade:
             return
         self.trade_manager.add_trade(trade)
-        if not self.is_init_setting_opt:
+        if not self.is_running_in_optimizer:
             TradeInfoLogger.execute_trade_log_info(trade, spread_info)
 
     def actual_trade_loop(self, mm1_data: dict, mm2_data: dict):
@@ -77,14 +79,14 @@ class RfabBacktester:
 
         # NEW
         if new_spread_info.spread_in_unit > 0:
-            self.trade_logger.acc_oppty_counter("new")
+            self.new_oppty_count += 1
             new_trade = self.execute_trade(new_spread_info, "new")
             self.add_trade(new_trade, new_spread_info)
 
         # REVERSE
         if rev_spread_info.spread_in_unit > 0:
-            self.trade_logger.acc_oppty_counter("rev")
-            rev_trade = self.execute_trade(new_spread_info, "rev")
+            self.rev_oppty_count += 1
+            rev_trade = self.execute_trade(rev_spread_info, "rev")
             self.add_trade(rev_trade, rev_spread_info)
 
         # if there was any trade
@@ -112,7 +114,7 @@ class RfabBacktester:
         min_coin_cond = spread_info.tradable_qty >= self.init_setting_dict["min_trading_coin"]
 
         # quit if conditions don't meet
-        if not (threshold_cond and min_coin_cond):
+        if (not threshold_cond) and (not min_coin_cond):
             return None
 
         # get fee
@@ -127,18 +129,17 @@ class RfabBacktester:
         has_enough_coin = RfabBacktester.has_enough_coin_checker(selling_mkt, self.target_currency, coin_needed)
 
         # if enough krw & coin balance
-        if not (has_enough_krw and has_enough_coin):
-            if not self.is_init_setting_opt:
+        if (not has_enough_krw) or (not has_enough_coin):
+            if not self.is_running_in_optimizer:
                 TradeInfoLogger.not_enough_balance_log_info(trade_type, spread_info)
             return None
 
         # make buy & sell order
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_price, trading_amount)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_price, trading_amount)
-        # subtract considered fee if there was one
         if should_fee:
             GlobalFeeAccumulator.sub_fee_consideration(buying_mkt.get_market_tag(), self.target_currency, fee)
-        return Trade(TradeTag.NEW, [buy_order, sell_order], TradeMeta({}))
+        return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))
 
     @staticmethod
     def has_enough_coin_checker(market, coin_type: str, needed_amount: float):
@@ -161,13 +162,6 @@ class TradeInfoLogger:
     def __init__(self, trade_manager, target_currency):
         self.trade_manager = trade_manager
         self.target_currency = target_currency
-        self.new_oppty_counter = 0
-        self.rev_oppty_counter = 0
-
-    def acc_oppty_counter(self, trade_type: str):
-        attr_name = trade_type + "_oppty_counter"
-        oppty_count = getattr(self, attr_name)
-        setattr(self, attr_name, oppty_count + 1)
 
     def log_trade_info(self):
         trade_total = self.trade_manager.get_trade_count()
@@ -181,11 +175,12 @@ class TradeInfoLogger:
         except ZeroDivisionError:
             logging.info("[STAT] total trades: 0, new trades: 0, rev trades: 0")
 
-    def log_oppty_info(self):
+    @staticmethod
+    def log_oppty_info(new_oppty_count: int, rev_oppty_count: int):
         # log opportunity counter
         logging.info("[STAT] total oppty: %d, new oppty: %d, rev oppty: %d" %
-                     (self.new_oppty_counter + self.rev_oppty_counter,
-                      self.new_oppty_counter, self.rev_oppty_counter))
+                     (new_oppty_count + rev_oppty_count,
+                      new_oppty_count, rev_oppty_count))
 
     def log_combined_balance(self, mm1_balance, mm2_balance):
         # log combined balance

@@ -13,14 +13,11 @@ class BasicAnalyzer:
 
     @staticmethod
     def get_price_of_minask_maxbid(orderbook: dict):
-        return int(orderbook["asks"][0]["price"].to_decimal()), \
-               int(orderbook["bids"][0]["price"].to_decimal())
+        return int(orderbook["asks"][0]["price"].to_decimal()), int(orderbook["bids"][0]["price"].to_decimal())
 
     @staticmethod
     def get_amount_of_minask_maxbid(orderbook: dict):
-        return float(orderbook["asks"][0]["amount"].to_decimal()), \
-               float(orderbook["bids"][0][
-                         "amount"].to_decimal())
+        return float(orderbook["asks"][0]["amount"].to_decimal()), float(orderbook["bids"][0]["amount"].to_decimal())
 
         ######################################################################
         # buy at minask, sell at maxbid
@@ -41,8 +38,8 @@ class BasicAnalyzer:
         rev_spread = BasicAnalyzer.calc_spread(mm2_minask_price, mm2_market_fee,
                                                mm1_maxbid_price, mm1_market_fee)
 
-        return new_spread, rev_spread, mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price, \
-               mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount
+        return (new_spread, rev_spread, mm1_minask_price, mm1_maxbid_price, mm2_minask_price, mm2_maxbid_price,
+                mm1_minask_amount, mm1_maxbid_amount, mm2_minask_amount, mm2_maxbid_amount)
 
     ######################################################################
     # co:   buy at ma_mb_avg ±      sell at ma_mb_avg ±
@@ -186,8 +183,12 @@ class ATSAnalyzer:
 
 
 class ISOAnalyzer:
+
     @staticmethod
     def get_opt_initial_setting(result: list):
+        # in case where
+        if len(result) == 0:
+            return None
         max_krw_pair = None
         # Get list of those results that have same KRW balance
         same_krw_list = []
@@ -198,11 +199,11 @@ class ISOAnalyzer:
                 same_krw_list.append(max_krw_pair)
                 continue
             # 비교
-            if pair[0] > max_krw_pair[0]:
+            if pair["krw_earned"] > max_krw_pair["krw_earned"]:
                 max_krw_pair = pair
                 same_krw_list.clear()
                 same_krw_list.append(max_krw_pair)
-            elif pair[0] == max_krw_pair[0]:
+            elif pair["krw_earned"] == max_krw_pair["krw_earned"]:
                 same_krw_list.append(pair)
 
         if len(same_krw_list) > 1:
@@ -215,12 +216,59 @@ class ISOAnalyzer:
                     min_coin_pair = pair
                     same_coin_unit_list.append(pair)
                     continue
-                if pair[1]["max_trading_coin"] < min_coin_pair[1]["max_trading_coin"]:
+                if pair["initial_setting"]["max_trading_coin"] < min_coin_pair["initial_setting"]["max_trading_coin"]:
                     min_coin_pair = pair
                     same_coin_unit_list.clear()
                     same_coin_unit_list.append(min_coin_pair)
-                elif pair[1]["max_trading_coin"] == min_coin_pair[1]:
+                elif pair["initial_setting"]["max_trading_coin"] \
+                        == min_coin_pair["initial_setting"]["max_trading_coin"]:
                     same_coin_unit_list.append(pair)
             return same_coin_unit_list[0]
         else:
             return same_krw_list[0]
+
+
+"""Initial Balance optimizer Analyzer"""
+
+
+class IBOAnalyzer:
+
+    @classmethod
+    def get_opt_yield_pair(cls, result: list):
+        highest_yield_pair = None
+        same_yield_list = []
+        for pair in result:
+            # first setup
+            if highest_yield_pair is None:
+                highest_yield_pair = pair
+                same_yield_list.append(highest_yield_pair)
+                continue
+
+            # compare
+            if highest_yield_pair["yield"] < pair["yield"]:
+                highest_yield_pair = pair
+                same_yield_list.clear()
+                same_yield_list.append(highest_yield_pair)
+            elif highest_yield_pair["yield"] == pair["yield"]:
+                same_yield_list.append(pair)
+
+        # get the best pair within same_yield_list
+        if len(same_yield_list) == 1:
+            return same_yield_list[0]  # pair 하나 리턴
+        elif len(same_yield_list) > 1:
+            min_invested_krw_pair = None
+            same_invested_krw = []
+            for pair in same_yield_list:
+                if min_invested_krw_pair is None:
+                    min_invested_krw_pair = pair
+                    same_invested_krw.append(pair)
+                    continue
+                if pair["total_krw_invested"] < min_invested_krw_pair["total_krw_invested"]:
+                    min_invested_krw_pair = pair
+                    same_invested_krw.clear()
+                    same_invested_krw.append(pair)
+                elif pair["total_krw_invested"] == min_invested_krw_pair["total_krw_invested"]:
+                    same_invested_krw.append(pair)
+            return same_invested_krw[0]
+        else:
+            raise Exception("There is no item in same_yield_list!!! Check for solution")
