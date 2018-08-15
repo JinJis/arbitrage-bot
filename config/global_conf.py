@@ -6,6 +6,7 @@ import requests
 import threading
 import configparser
 import urllib.parse
+import itertools as it
 import scipy.stats as st
 from pymongo.cursor import Cursor
 from datetime import datetime
@@ -19,6 +20,7 @@ class Global:
     REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
     MARKET_FEE_LOCATION = "config/conf_market_fee.ini"
     IYO_CONFIG_LOCATION = "config/conf_iyo_market.ini"
+    RFAB_COMBINATION_CONFIG_LOCATION = "config/conf_rfab_combi.ini"
     COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "tron", "krw")
 
     @staticmethod
@@ -44,29 +46,29 @@ class Global:
             return "mongodb://%s:%d" % (host, port)
 
     @staticmethod
-    def read_market_fee(market_name: str, is_taker_fee: bool = True):
+    def read_market_fee(market_name: str, is_taker_fee: bool):
         config = configparser.ConfigParser()
         config.read(Global.MARKET_FEE_LOCATION)
         if is_taker_fee:
-            fee = config[market_name.upper()]["TAKER_FEE"]
+            fee = float(config[market_name.upper()]["TAKER_FEE"])
         elif not is_taker_fee:
-            fee = config[market_name.upper()]["MAKER_FEE"]
+            fee = float(config[market_name.upper()]["MAKER_FEE"])
         else:
             raise Exception("Please choose between TAKER or MAKER fee!")
-        return float(fee)
+        return fee
 
     @staticmethod
     def read_iyo_setting_config(target_currency: str):
         config = configparser.ConfigParser()
         config.read(Global.IYO_CONFIG_LOCATION)
-        division = config["UNIVERSAL_SETTING"]["DIVISION"]
-        depth = config["UNIVERSAL_SETTING"]["DEPTH"]
-        consecution_time = config["UNIVERSAL_SETTING"]["consecution_time"]
-        krw_seq_end = config["BALANCE_SETTING"]["KRW_SEQ_END"]
-        max_trade_coin_end = config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"]
-        threshold_end = config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"]
-        factor_end = config["%s_SETTING" % target_currency.upper()]["FACTOR_END"]
-        appx_unit_coin_p = config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"]
+        division = int(config["UNIVERSAL_SETTING"]["DIVISION"])
+        depth = int(config["UNIVERSAL_SETTING"]["DEPTH"])
+        consecution_time = int(config["UNIVERSAL_SETTING"]["consecution_time"])
+        krw_seq_end = float(config["BALANCE_SETTING"]["KRW_SEQ_END"])
+        max_trade_coin_end = float(config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"])
+        threshold_end = int(config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"])
+        factor_end = int(config["%s_SETTING" % target_currency.upper()]["FACTOR_END"])
+        appx_unit_coin_p = int(config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"])
 
         return {
             "division": division,
@@ -78,6 +80,25 @@ class Global:
             "factor_end": factor_end,
             "appx_unit_coin_price": appx_unit_coin_p
         }
+
+    @staticmethod
+    def get_rfab_combination_list(target_coin: str):
+        """
+        :param target_coin: bch, btc, tron...
+        :return: [('bithumb', 'coinone'), ('bithumb', 'okcoin')...]
+        """
+        config = configparser.ConfigParser()
+        config.read(Global.RFAB_COMBINATION_CONFIG_LOCATION)
+        target_config = config[target_coin.upper()]
+
+        exchange_list = []
+        for exchange in target_config.keys():
+            if target_config[exchange] == "yes":
+                exchange_list.append(exchange)
+            else:
+                continue
+
+        return list(it.combinations(exchange_list, 2))
 
     @staticmethod
     def configure_default_root_logging(log_level: int = logging.INFO, should_log_to_file: bool = False):

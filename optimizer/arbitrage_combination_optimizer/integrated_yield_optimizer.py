@@ -89,7 +89,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     logging.error("Something went wrong while executing IYO loop!", time, e)
 
         # finally run IYO Stat appender and return final result
-
         db_with_stat_result = cls.run_iyo_stat_appender(db_result)
 
         return db_with_stat_result

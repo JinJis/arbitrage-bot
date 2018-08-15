@@ -8,7 +8,7 @@ from collector.scheduler.base_scheduler import BaseScheduler
 class TickerOrderbookScheduler(ApiScheduler):
     """
     - XRP(리플) --> 코인네스트 없음
-    - TRX(트론) --> 고팍스, 코빗 없음
+    - TRON(트론) --> 고팍스, 코빗 없음
     - QTUM(퀀텀) --> 코빗 없음
     """
 
@@ -21,7 +21,7 @@ class TickerOrderbookScheduler(ApiScheduler):
         Global.run_threaded(self.kb_collector.collect_orderbook, [request_time])
         Global.run_threaded(self.go_collector.collect_orderbook, [request_time])
         Global.run_threaded(self.oc_collector.collect_orderbook, [request_time])
-        # Global.run_threaded(self.cn_collector.collect_orderbook, [request_time])
+        Global.run_threaded(self.cn_collector.collect_orderbook, [request_time])
 
 
 if __name__ == "__main__":
