@@ -7,7 +7,7 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 
 def main(coin_name: str, mm1: str, mm2: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
     time_list = ["2018.08.13 00:00:00", "2018.08.14 00:00:00"]
 
