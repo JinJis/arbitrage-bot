@@ -8,10 +8,7 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 
 
 class IYOScheduler(BaseScheduler):
-    interval_time_sec = 30 * 60
-
-    def __init__(self):
-        super().__init__()
+    interval_time_sec = 24 * 60 * 60
 
     @BaseScheduler.interval_waiter(interval_time_sec)
     def _actual_run_in_loop(self):
@@ -24,8 +21,8 @@ class IYOScheduler(BaseScheduler):
 
     @staticmethod
     def iyo_result_to_mongo_db(coin_name: str, start_time: int, end_time: int):
-        Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-        SharedMongoClient.initialize(should_use_localhost_db=False)
+        Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.CRITICAL)
+        SharedMongoClient.initialize(should_use_localhost_db=True)
         db_client = SharedMongoClient.instance()
 
         # convert epoch time to local_time and log
