@@ -82,6 +82,17 @@ class Global:
         }
 
     @staticmethod
+    def read_avail_coin_in_list():
+        config = configparser.ConfigParser()
+        config.read(Global.RFAB_COMBINATION_CONFIG_LOCATION)
+        result = []
+        for exchange in config:
+            if exchange == "DEFAULT":
+                continue
+            result.append(str(exchange).lower())
+        return result
+
+    @staticmethod
     def get_rfab_combination_list(target_coin: str):
         """
         :param target_coin: bch, btc, tron...

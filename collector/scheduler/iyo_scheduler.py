@@ -8,7 +8,7 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 
 
 class IYOScheduler(BaseScheduler):
-    interval_time_sec = 24 * 60 * 60
+    interval_time_sec = 30 * 60
 
     def __init__(self):
         super().__init__()
@@ -18,17 +18,14 @@ class IYOScheduler(BaseScheduler):
         start_time = int(time.time()) - self.interval_time_sec
         end_time = int(time.time())
 
-        Global.run_threaded(self.iyo_result_to_mongo_db, ["bch", start_time, end_time])
-        Global.run_threaded(self.iyo_result_to_mongo_db, ["btc", start_time, end_time])
-        Global.run_threaded(self.iyo_result_to_mongo_db, ["eth", start_time, end_time])
-        Global.run_threaded(self.iyo_result_to_mongo_db, ["qtum", start_time, end_time])
-        Global.run_threaded(self.iyo_result_to_mongo_db, ["tron", start_time, end_time])
-        Global.run_threaded(self.iyo_result_to_mongo_db, ["xrp", start_time, end_time])
+        for target_currency in list(Global.read_avail_coin_in_list()):
+            print(target_currency)
+            self.iyo_result_to_mongo_db(target_currency, start_time, end_time)
 
     @staticmethod
     def iyo_result_to_mongo_db(coin_name: str, start_time: int, end_time: int):
         Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-        SharedMongoClient.initialize(should_use_localhost_db=True)
+        SharedMongoClient.initialize(should_use_localhost_db=False)
         db_client = SharedMongoClient.instance()
 
         # convert epoch time to local_time and log
@@ -64,7 +61,11 @@ class IYOScheduler(BaseScheduler):
             iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
 
             # finally save to mongoDB
-            db_client["statistics"]["iyo"].insert_many(iyo_result)
+            if len(iyo_result) > 0:
+                db_client["statistics"]["iyo"].insert_many(iyo_result)
+            else:
+                logging.critical("There was no oppty!! Skipping to next combination!")
+                continue
 
 
 if __name__ == "__main__":
