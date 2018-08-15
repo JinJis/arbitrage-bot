@@ -28,7 +28,7 @@ class IYOScheduler(BaseScheduler):
     @staticmethod
     def iyo_result_to_mongo_db(coin_name: str, start_time: int, end_time: int):
         Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-        SharedMongoClient.initialize(should_use_localhost_db=False)
+        SharedMongoClient.initialize(should_use_localhost_db=True)
         db_client = SharedMongoClient.instance()
 
         # convert epoch time to local_time and log
