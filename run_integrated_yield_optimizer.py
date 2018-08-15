@@ -19,6 +19,8 @@ def main(coin_name: str, init_time: str, final_time: str):
             prev_time = cur_time
             continue
         logging.warning("Nohup conducting -> start_time: %s, end_time: %s" % (prev_time, cur_time))
+        Global.send_to_slack_channel("IYO Initiated!! start_time: %s, end_time: %s" % (prev_time, cur_time))
+
         start_time = Global.convert_local_datetime_to_epoch(prev_time, timezone="kr")
         end_time = Global.convert_local_datetime_to_epoch(cur_time, timezone="kr")
 
@@ -82,7 +84,6 @@ if __name__ == '__main__':
     s_time = '2018.05.01 00:00:00'
     e_time = '2018.05.31 00:00:00'
 
-    Global.send_to_slack_channel("IYO Initiated!! start_time: %s, end_time: %s" % (s_time, e_time))
     for target_currency in ["bch", "btc", "eth"]:
         main(target_currency, s_time, e_time)
     Global.send_to_slack_channel("IYO for past date set done for all COMBINATION!! ")
