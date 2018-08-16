@@ -11,7 +11,12 @@ from collector.oppty_time_collector import OpptyTimeCollector
 class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
     time_dur_to_anal = 24 * 60 * 60
-    publishing_time = "01:21:00"
+    publishing_time = "01:35:00"
+
+    def __init__(self):
+        Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.CRITICAL)
+        SharedMongoClient.initialize(should_use_localhost_db=True)
+        super().__init__()
 
     @BaseScheduler.interval_waiter(interval_time_sec)
     def _actual_run_in_loop(self):
@@ -26,7 +31,7 @@ class OTCScheduler(BaseScheduler):
 
         if (now_date >= publish_epoch_date) \
                 and (now_date <= publish_epoch_date + self.interval_time_sec):
-            logging.critical("OTC activated")
+            logging.critical("OTC activated start_time: %s end_time: %s" % (start_time, end_time))
             # loop through all possible coins and run
             final_result = []
             for target_currency in list(Global.read_avail_coin_in_list()):
@@ -42,13 +47,10 @@ class OTCScheduler(BaseScheduler):
             self.send_result_nicely_to_slack(descending_order_result, start_local_date, publish_local_date)
 
         else:
-            logging.critical("test")
             pass
 
     @staticmethod
     def otc_all_mm_comb_by_one_coin(coin_name: str, start_time: int, end_time: int) -> list:
-        Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.INFO)
-        SharedMongoClient.initialize(should_use_localhost_db=False)
 
         # create combination of coin that is injected by validating if the exchange has that coin
         rfab_combi_list = Global.get_rfab_combination_list(coin_name)
