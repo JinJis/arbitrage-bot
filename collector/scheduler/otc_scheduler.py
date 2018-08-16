@@ -44,7 +44,7 @@ class OTCScheduler(BaseScheduler):
 
     @staticmethod
     def otc_all_mm_comb_by_one_coin(coin_name: str, start_time: int, end_time: int) -> list:
-        Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.CRITICAL)
+        Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.CRITICAL)
         SharedMongoClient.initialize(should_use_localhost_db=True)
 
         # create combination of coin that is injected by validating if the exchange has that coin
