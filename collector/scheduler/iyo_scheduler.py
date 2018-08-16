@@ -8,7 +8,7 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 
 
 class IYOScheduler(BaseScheduler):
-    interval_time_sec = 30 * 60
+    interval_time_sec = 3 * 60 * 60
 
     @BaseScheduler.interval_waiter(interval_time_sec)
     def _actual_run_in_loop(self):

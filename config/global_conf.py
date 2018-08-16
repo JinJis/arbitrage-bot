@@ -46,13 +46,13 @@ class Global:
             return "mongodb://%s:%d" % (host, port)
 
     @staticmethod
-    def read_market_fee(market_name: str, is_taker_fee: bool):
+    def read_market_fee(exchange_name: str, is_taker_fee: bool):
         config = configparser.ConfigParser()
         config.read(Global.MARKET_FEE_LOCATION)
         if is_taker_fee:
-            fee = float(config[market_name.upper()]["TAKER_FEE"])
+            fee = float(config[exchange_name.upper()]["TAKER_FEE"])
         elif not is_taker_fee:
-            fee = float(config[market_name.upper()]["MAKER_FEE"])
+            fee = float(config[exchange_name.upper()]["MAKER_FEE"])
         else:
             raise Exception("Please choose between TAKER or MAKER fee!")
         return fee

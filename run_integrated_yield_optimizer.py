@@ -8,7 +8,7 @@ from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import
 
 def main(coin_name: str, init_time: str, final_time: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
     db_client = SharedMongoClient.instance()
 
     time_list = make_time_list(init_time, final_time)
@@ -19,7 +19,7 @@ def main(coin_name: str, init_time: str, final_time: str):
             prev_time = cur_time
             continue
         logging.warning("Nohup conducting -> start_time: %s, end_time: %s" % (prev_time, cur_time))
-        Global.send_to_slack_channel("IYO Initiated!! start_time: %s, end_time: %s" % (prev_time, cur_time))
+        # Global.send_to_slack_channel("IYO Initiated!! start_time: %s, end_time: %s" % (prev_time, cur_time))
 
         start_time = Global.convert_local_datetime_to_epoch(prev_time, timezone="kr")
         end_time = Global.convert_local_datetime_to_epoch(cur_time, timezone="kr")
@@ -29,7 +29,7 @@ def main(coin_name: str, init_time: str, final_time: str):
 
         # FIXME: 빗썸 등등 거래소 생긴 날부터는 밑에 주석 쓰기
         # rfab_combi_list = Global.get_rfab_combination_list(coin_name)
-        rfab_combi_list = list(it.combinations(["coinone", "gopax", "korbit"], 2))
+        rfab_combi_list = list(it.combinations(["okcoin", "coinnest"], 2))
         for _combi in rfab_combi_list:
             logging.critical("[%s-%s-%s] IYO conducting -> start_time: %s, end_time: %s" % (
                 coin_name.upper(), str(_combi[0]).upper(), str(_combi[1]).upper(), start_time, end_time))
@@ -59,7 +59,6 @@ def main(coin_name: str, init_time: str, final_time: str):
             else:
                 logging.critical("There was no oppty!! Skipping to next combination!")
                 continue
-
             logging.warning("Nohup done, now conducting next time set!!")
             prev_time = cur_time
 
@@ -75,15 +74,14 @@ def make_time_list(init_time: str, final_time: str):
             next_time_day = str(int(cur_time_day) + 1)
         cur_time = cur_time[:8] + next_time_day + cur_time[10:]
         time_list.append(cur_time)
-
     return time_list
 
 
 if __name__ == '__main__':
 
-    s_time = '2018.05.01 00:00:00'
-    e_time = '2018.05.31 00:00:00'
+    s_time = '2018.08.16 09:00:00'
+    e_time = '2018.08.16 20:00:00'
 
-    for target_currency in ["bch", "btc", "eth"]:
+    for target_currency in ["eth"]:
         main(target_currency, s_time, e_time)
-    Global.send_to_slack_channel("IYO for past date set done for all COMBINATION!! ")
+    # Global.send_to_slack_channel("IYO for past date set done for all COMBINATION!! ")

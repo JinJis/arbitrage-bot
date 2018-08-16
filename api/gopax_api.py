@@ -165,17 +165,27 @@ class GopaxApi(MarketApi):
         if res_json is None:
             return None
 
+        fee_rate = Global.read_market_fee("gopax", is_taker_fee=True)
+
         order_amount = float(res_json["amount"])
         remain_amount = float(res_json["remaining"])
+        filled_amount = order_amount - remain_amount
+        avg_filled_price = int(float(res_json["price"]))
+
+        if res_json["side"] == "buy":
+            fee = filled_amount * fee_rate
+        elif res_json["side"] == "sell":
+            fee = avg_filled_price * filled_amount * fee_rate
+        else:
+            raise Exception("Order type received from Okcoin API is not one of 'buy' or 'sell'!")
 
         return {
             "status": OrderStatus.get(res_json["status"]),
-            "avg_filled_price": int(float(res_json["price"])),
+            "avg_filled_price": avg_filled_price,
             "order_amount": order_amount,
-            "filled_amount": order_amount - remain_amount,
+            "filled_amount": filled_amount,
             "remain_amount": remain_amount,
-            # FIXME: 수수료 값을 제공 안 함...;;
-            "fee": 0
+            "fee": fee
         }
 
     def get_open_orders(self, currency: GopaxCurrency):
@@ -188,6 +198,7 @@ class GopaxApi(MarketApi):
         return res_json
 
     def get_past_trades(self, currency: GopaxCurrency):
+        # maximum past 2 days order history will be shown
         path = "/trades"
         headers = self.get_auth_headers("GET", path)
         res = self._session.get(self.BASE_URL + path, headers=headers, params={

@@ -9,8 +9,9 @@ from collector.oppty_time_collector import OpptyTimeCollector
 
 
 class OTCScheduler(BaseScheduler):
-    interval_time_sec = 3
-    publishing_time = "09:00:00"
+    interval_time_sec = 60
+    time_dur_to_anal = 24 * 60 * 60
+    publishing_time = "22:00:00"
 
     @BaseScheduler.interval_waiter(interval_time_sec)
     def _actual_run_in_loop(self):
@@ -20,7 +21,7 @@ class OTCScheduler(BaseScheduler):
         publish_local_date = datetime.combine(date.today(), convted_pub_time).strftime("%Y.%m.%d %H:%M:%S %z")
         publish_epoch_date = int(Global.convert_local_datetime_to_epoch(str(publish_local_date)))
 
-        start_time = publish_epoch_date - (24 * 60 * 60)
+        start_time = publish_epoch_date - self.time_dur_to_anal
         end_time = publish_epoch_date
 
         if (now_date > publish_epoch_date - self.interval_time_sec) \
@@ -31,7 +32,6 @@ class OTCScheduler(BaseScheduler):
                 result_by_one_coin = self.otc_all_mm_comb_by_one_coin(target_currency, start_time, end_time)
                 final_result.extend(result_by_one_coin)
 
-            print(final_result)
             # sort by highest to lowest oppty duration
             descending_order_result = self.sort_by_logest_oppty_time_to_lowest(final_result)
 
@@ -82,10 +82,10 @@ class OTCScheduler(BaseScheduler):
     @classmethod
     def send_result_nicely_to_slack(cls, final_sorted_list: list, start_date: str, end_date: str):
         to_be_sent = str("[OTC start date: %s, end date: %s]\n" % (start_date, end_date))
-        for each_result in final_sorted_list:
-            new_percent = (each_result["new"] / cls.interval_time_sec) * 100
-            rev_percent = (each_result["new"] / cls.interval_time_sec) * 100
-            to_be_sent += "[%s]\n NEW: %.2f%%, REV: %.2f%%\n" % (each_result["combination"], new_percent, rev_percent)
+        for result in final_sorted_list:
+            new_percent = (result["new"] / cls.time_dur_to_anal) * 100
+            rev_percent = (result["rev"] / cls.time_dur_to_anal) * 100
+            to_be_sent += ("[%s]\n NEW: %.2f%%, REV: %.2f%%\n" % (result["combination"], new_percent, rev_percent))
         Global.send_to_slack_channel(to_be_sent)
 
 

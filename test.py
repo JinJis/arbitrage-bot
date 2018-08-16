@@ -1,10 +1,4 @@
-target = []
-a = [{"new": 1, "rev": 2}, {"new": 1, "rev": 2}, {"new": 1, "rev": 2}, {"new": 1, "rev": 2}]
-b = [{"new": 1, "rev": 2}, {"new": 1, "rev": 2}, {"new": 1, "rev": 2}, {"new": 1, "rev": 2}]
-c = [{"new": 1, "rev": 2}, {"new": 1, "rev": 2}, {"new": 1, "rev": 2}, {"new": 1, "rev": 2}]
-
-target.extend(a)
-target.extend(b)
-target.extend(c)
-
-print(target)
+from api.okcoin_api import OkcoinApi
+from api.currency import OkcoinCurrency
+result = OkcoinApi.instance(is_public_access_only=False).order_limit_buy(OkcoinCurrency.BTC, 10000, 0.1)
+print(result)
