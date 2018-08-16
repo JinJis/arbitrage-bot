@@ -11,7 +11,7 @@ from collector.oppty_time_collector import OpptyTimeCollector
 class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
     time_dur_to_anal = 24 * 60 * 60
-    publishing_time = "03:35:00"
+    publishing_time = "07:00:00"
 
     def __init__(self):
         Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.CRITICAL)
@@ -31,7 +31,7 @@ class OTCScheduler(BaseScheduler):
 
         if (now_date >= publish_epoch_date) \
                 and (now_date <= publish_epoch_date + (self.interval_time_sec * 2)):
-            logging.critical("OTC activated start_time: %s end_time: %s" % (start_time, end_time))
+            logging.critical("OTC activated start_time: %d" % now_date)
             # loop through all possible coins and run
             final_result = []
             for target_currency in list(Global.read_avail_coin_in_list()):
@@ -45,9 +45,7 @@ class OTCScheduler(BaseScheduler):
             # send this final result to slack in form of str
             start_local_date = Global.convert_epoch_to_local_datetime(start_time)
             self.send_result_nicely_to_slack(descending_order_result, start_local_date, publish_local_date)
-
         else:
-            logging.critical("Not yet, now: %d, publish: %d" % (now_date, publish_epoch_date))
             pass
 
     @staticmethod
