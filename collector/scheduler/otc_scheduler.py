@@ -11,7 +11,7 @@ from collector.oppty_time_collector import OpptyTimeCollector
 class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
     time_dur_to_anal = 24 * 60 * 60
-    publishing_time = "01:05:00"
+    publishing_time = "01:10:00"
 
     @BaseScheduler.interval_waiter(interval_time_sec)
     def _actual_run_in_loop(self):
