@@ -1,18 +1,20 @@
+import base64
 import configparser
+import hashlib
+import hmac
+import logging
+import math
+import time
+from urllib.parse import urlencode
+
 from bson import Decimal128
 from requests import Response
+
 from config.global_conf import Global
 from trader.market.order import Order
+from .bithumb_error import BithumbError
 from .currency import BithumbCurrency
 from .market_api import MarketApi
-from trader.market.order import OrderStatus
-from .bithumb_error import BithumbError
-import logging
-import hashlib
-import base64
-import json
-import time
-import hmac
 
 
 class BithumbApi(MarketApi):
@@ -26,7 +28,7 @@ class BithumbApi(MarketApi):
             self._config.read(Global.USER_CONFIG_LOCATION)
 
             # set initial api_key & secret_key
-            self._connect_key = self._config["BITHUMB"]["connect_key"]
+            self._api_key = self._config["BITHUMB"]["api_key"]
             self._secret_key = self._config["BITHUMB"]["secret_key"]
 
     def get_ticker(self, currency: BithumbCurrency):
@@ -84,11 +86,67 @@ class BithumbApi(MarketApi):
 
         return result
 
+    @staticmethod
+    def usec_time():
+        mt = "%f %d" % math.modf(time.time())
+        mt_array = mt.split(" ")[:2]
+        return mt_array[1] + mt_array[0][2:5]
+
+    def bithumb_post(self, url_path: str, payload: dict = None):
+        if not payload:
+            payload = dict()
+        payload["endpoint"] = url_path
+        urlencoded_payload = urlencode(payload)
+
+        nonce = self.usec_time()
+        splinter = chr(0)
+        combined_data = url_path + splinter + urlencoded_payload + splinter + nonce
+
+        utf8_data = combined_data.encode("utf-8")
+        utf8_secret_key = self._secret_key.encode("utf-8")
+
+        hash_data = hmac.new(bytes(utf8_secret_key), utf8_data, hashlib.sha512)
+        utf8_hex_output = hash_data.hexdigest().encode("utf-8")
+
+        api_sign = base64.b64encode(utf8_hex_output)
+        utf8_api_sign = api_sign.decode("utf-8")
+
+        headers = {
+            "Api-Key": self._api_key,
+            "Api-Sign": utf8_api_sign,
+            "Api-Nonce": nonce
+        }
+
+        res = self._session.post(
+            self.BASE_URL + url_path,
+            headers=headers,
+            data=payload
+        )
+        res_json = self.filter_successful_response(res)
+
+        return res_json
+
+    def get_user_account_info(self, currency: BithumbCurrency):
+        return self.bithumb_post("/info/account", payload={"currency": currency.value})
+
     def get_filled_orders(self, currency: BithumbCurrency, time_range: str):
         pass
 
     def get_balance(self):
-        pass
+        # ini 파일에 있는 Bithumb거래 코인만 따올수 있음 (b/c 반환되는 데이터가 코인별로 정리 X)
+        all_res_json = self.bithumb_post("/info/balance", payload={"currency": "ALL"})
+
+        result = dict()
+        for key in dict(all_res_json["data"]).keys():
+            if "total_" in str(key):
+                currency_name = str(key).replace("total_", "")
+                result[currency_name] = {
+                    "available": all_res_json["data"]["available_%s" % currency_name],
+                    "trade_in_use": all_res_json["data"]["in_use_%s" % currency_name],
+                    "balance": all_res_json["data"][key]
+                }
+                continue
+        return result
 
     def order_limit_buy(self, currency: BithumbCurrency, price: int, amount: float):
         pass

@@ -6,18 +6,15 @@ from api.okcoin_api import OkcoinApi, OkcoinCurrency
 from api.coinnest_api import CoinnestApi, CoinnestCurrency
 
 
-bt_api = BithumbApi.instance()
-co_api = CoinoneApi.instance()
-kb_api = KorbitApi.instance()
-gp_api = GopaxApi.instance()
-oc_api = OkcoinApi.instance()
-cn_api = CoinnestApi.instance()
+# bt_api = BithumbApi.instance(is_public_access_only=False)
+co_api = CoinoneApi.instance(is_public_access_only=False)
+# kb_api = KorbitApi.instance()
+# gp_api = GopaxApi.instance()
+# oc_api = OkcoinApi.instance()
+# cn_api = CoinnestApi.instance()
 
 
-print(bt_api.get_orderbook(BithumbCurrency.TRON))
-print(bt_api.get_orderbook(KorbitCurrency.TRON))
-print(bt_api.get_orderbook(GopaxCurrency.TRON))
-print(co_api.get_orderbook(CoinoneCurrency.TRON))
-print(oc_api.get_orderbook(OkcoinCurrency.XRP))
-print(cn_api.get_orderbook(CoinnestCurrency.TRON))
+result = co_api.get_balance()
+print(result)
+
 
