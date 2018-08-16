@@ -11,7 +11,7 @@ from collector.oppty_time_collector import OpptyTimeCollector
 class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
     time_dur_to_anal = 3 * 60 * 60
-    publishing_time = "02:46:00"
+    publishing_time = "03:10:00"
 
     def __init__(self):
         Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.CRITICAL)
