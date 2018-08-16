@@ -10,8 +10,8 @@ from collector.oppty_time_collector import OpptyTimeCollector
 
 class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
-    time_dur_to_anal = 24 * 60 * 60
-    publishing_time = "01:35:00"
+    time_dur_to_anal = 3 * 60 * 60
+    publishing_time = "02:37:00"
 
     def __init__(self):
         Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.CRITICAL)
@@ -30,7 +30,7 @@ class OTCScheduler(BaseScheduler):
         end_time = publish_epoch_date
 
         if (now_date >= publish_epoch_date) \
-                and (now_date <= publish_epoch_date + self.interval_time_sec):
+                and (now_date <= publish_epoch_date + self.interval_time_sec + 5):
             logging.critical("OTC activated start_time: %s end_time: %s" % (start_time, end_time))
             # loop through all possible coins and run
             final_result = []
