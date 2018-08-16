@@ -30,6 +30,7 @@ class OTCScheduler(BaseScheduler):
             # loop through all possible coins and run
             final_result = []
             for target_currency in list(Global.read_avail_coin_in_list()):
+                logging.critical("Now conducting %s" % target_currency.upper())
                 result_by_one_coin = self.otc_all_mm_comb_by_one_coin(target_currency, start_time, end_time)
                 final_result.extend(result_by_one_coin)
 
