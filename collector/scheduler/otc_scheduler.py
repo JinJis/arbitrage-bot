@@ -26,16 +26,11 @@ class OTCScheduler(BaseScheduler):
         publish_local_date = datetime.combine(date.today(), convted_pub_time).strftime("%Y.%m.%d %H:%M:%S %z")
         publish_epoch_date = Global.convert_local_datetime_to_epoch(str(publish_local_date), timezone="kr")
 
-        print("now_epoch: %d" % now_date)
-        print("now_kr: %s" % Global.convert_epoch_to_local_datetime(now_date, timezone="kr"))
-        print("publish_local: %s" % publish_local_date)
-        print("publish_epoch_kr: %d" % publish_epoch_date)
-        
         start_time = publish_epoch_date - self.time_dur_to_anal
         end_time = publish_epoch_date
 
         if (now_date >= publish_epoch_date) \
-                and (now_date <= publish_epoch_date + self.interval_time_sec):
+                and (now_date <= publish_epoch_date + (self.interval_time_sec * 2)):
             logging.critical("OTC activated start_time: %s end_time: %s" % (start_time, end_time))
             # loop through all possible coins and run
             final_result = []
@@ -52,6 +47,7 @@ class OTCScheduler(BaseScheduler):
             self.send_result_nicely_to_slack(descending_order_result, start_local_date, publish_local_date)
 
         else:
+            logging.critical("Not yet, now: %d, publish: %d" % (now_date, publish_epoch_date))
             pass
 
     @staticmethod
