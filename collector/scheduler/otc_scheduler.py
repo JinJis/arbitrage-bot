@@ -26,6 +26,11 @@ class OTCScheduler(BaseScheduler):
         publish_local_date = datetime.combine(date.today(), convted_pub_time).strftime("%Y.%m.%d %H:%M:%S %z")
         publish_epoch_date = Global.convert_local_datetime_to_epoch(str(publish_local_date), timezone="kr")
 
+        print("now_epoch: %d" % now_date)
+        print("now_kr: %s" % Global.convert_epoch_to_local_datetime(now_date, timezone="kr"))
+        print("publish_local: %s" % publish_local_date)
+        print("publish_epoch_kr: %d" % publish_epoch_date)
+        
         start_time = publish_epoch_date - self.time_dur_to_anal
         end_time = publish_epoch_date
 
