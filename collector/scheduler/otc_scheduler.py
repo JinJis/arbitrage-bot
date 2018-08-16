@@ -26,14 +26,14 @@ class OTCScheduler(BaseScheduler):
         publish_local_date = datetime.combine(date.today(), convted_pub_time).strftime("%Y.%m.%d %H:%M:%S %z")
         publish_epoch_date = int(Global.convert_local_datetime_to_epoch(str(publish_local_date)))
 
-        print("now_time: %s" % Global.convert_epoch_to_local_datetime(now_date, timezone="kr"))
-        print("publish_time: %s" % publish_local_date)
+        print("now_time: %d" % now_date)
+        print("publish_time: %d" % publish_epoch_date)
 
         start_time = publish_epoch_date - self.time_dur_to_anal
         end_time = publish_epoch_date
 
         if (now_date >= publish_epoch_date) \
-                and (now_date <= publish_epoch_date + self.interval_time_sec + 5):
+                and (now_date <= publish_epoch_date + self.interval_time_sec):
             logging.critical("OTC activated start_time: %s end_time: %s" % (start_time, end_time))
             # loop through all possible coins and run
             final_result = []
