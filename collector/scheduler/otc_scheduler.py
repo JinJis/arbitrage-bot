@@ -9,9 +9,9 @@ from collector.oppty_time_collector import OpptyTimeCollector
 
 
 class OTCScheduler(BaseScheduler):
-    interval_time_sec = 60
+    interval_time_sec = 10
     time_dur_to_anal = 24 * 60 * 60
-    publishing_time = "01:00:00"
+    publishing_time = "01:05:00"
 
     @BaseScheduler.interval_waiter(interval_time_sec)
     def _actual_run_in_loop(self):
@@ -24,8 +24,9 @@ class OTCScheduler(BaseScheduler):
         start_time = publish_epoch_date - self.time_dur_to_anal
         end_time = publish_epoch_date
 
-        if (now_date >= publish_epoch_date - self.interval_time_sec) \
+        if (now_date >= publish_epoch_date) \
                 and (now_date <= publish_epoch_date + self.interval_time_sec):
+            logging.critical("OTC activated")
             # loop through all possible coins and run
             final_result = []
             for target_currency in list(Global.read_avail_coin_in_list()):
