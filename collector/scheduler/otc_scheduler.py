@@ -10,11 +10,11 @@ from collector.oppty_time_collector import OpptyTimeCollector
 
 class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
-    time_dur_to_anal = 3 * 60 * 60
-    publishing_time = "03:10:00"
+    time_dur_to_anal = 24 * 60 * 60
+    publishing_time = "03:16:00"
 
     def __init__(self):
-        Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.CRITICAL)
+        Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.CRITICAL)
         SharedMongoClient.initialize(should_use_localhost_db=True)
         super().__init__()
 
@@ -24,10 +24,7 @@ class OTCScheduler(BaseScheduler):
 
         convted_pub_time = datetime.strptime(self.publishing_time, "%H:%M:%S").time()
         publish_local_date = datetime.combine(date.today(), convted_pub_time).strftime("%Y.%m.%d %H:%M:%S %z")
-        publish_epoch_date = int(Global.convert_local_datetime_to_epoch(str(publish_local_date)))
-
-        print("now_time: %d" % now_date)
-        print("publish_time: %d" % publish_epoch_date)
+        publish_epoch_date = Global.convert_local_datetime_to_epoch(str(publish_local_date), timezone="kr")
 
         start_time = publish_epoch_date - self.time_dur_to_anal
         end_time = publish_epoch_date
@@ -50,7 +47,6 @@ class OTCScheduler(BaseScheduler):
             self.send_result_nicely_to_slack(descending_order_result, start_local_date, publish_local_date)
 
         else:
-            logging.critical("Not yet")
             pass
 
     @staticmethod
