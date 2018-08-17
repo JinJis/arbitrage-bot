@@ -178,6 +178,10 @@ class OkcoinApi(MarketApi):
                                                                             "order_id": order.order_id,
                                                                             "sign": sign})
 
+        if not len(res_json["orders"]) > 0:
+            # note that the error will also be raised when the order has been cancelled
+            raise OkcoinError(res_json.get("code"), "Order id does not exist: %s" % order.order_id)
+
         fee_rate = Global.read_market_fee("okcoin", is_taker_fee=True)
 
         order_info = res_json["orders"][0]
