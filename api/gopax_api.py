@@ -181,7 +181,7 @@ class GopaxApi(MarketApi):
         elif res_json["side"] == "sell":
             fee = avg_filled_price * filled_amount * fee_rate
         else:
-            fee = 0
+            fee = "null"
 
         return {
             "status": OrderStatus.get(res_json["status"]),

@@ -198,18 +198,22 @@ class BithumbApi(MarketApi):
 
         return {
             "status": OrderStatus.get(res_json["status"]),
-            "avg_filled_price": int(float(avg_filled_price)) if avg_filled_price is not None else 0,
+            "avg_filled_price": int(float(avg_filled_price)) if avg_filled_price is not None else "null",
             "order_amount": order_amount,
             "filled_amount": filled_amount,
             "remain_amount": order_amount - filled_amount,
-            "fee": float(fee) if fee is not None else 0
+            "fee": float(fee) if fee is not None else "null"
         }
 
+    # there is no function..
     def get_open_orders(self, currency: BithumbCurrency):
         pass
 
-    def get_past_trades(self, currency: BithumbCurrency):
-        pass
+    def get_past_trades(self, currency: BithumbCurrency, off_set: int = 0, limit: int = 50):
+        return self.bithumb_post("/info/user_transactions", payload={"offset": off_set,
+                                                                     "count": limit,
+                                                                     "searchGb": 0,
+                                                                     "currency": currency.value})
 
     def get_user_account_info(self, currency: BithumbCurrency):
         return self.bithumb_post("/info/account", payload={"currency": currency.value})
@@ -217,13 +221,6 @@ class BithumbApi(MarketApi):
     def get_wallet_address(self, currency: BithumbCurrency):
         res_json = self.bithumb_post("/info/wallet_address", payload={"currency": currency.value})
         return res_json["data"]["wallet_address"]
-
-    # get current 7 days trades
-    def get_user_transaction(self, currency: BithumbCurrency, offset: int = 0, count: int = 20):
-        return self.bithumb_post("/info/user_transactions", payload={"offset": offset,
-                                                                     "count": count,
-                                                                     "searchGb": 0,
-                                                                     "currency": currency.value})
 
     def get_krw_deposit_info(self):
         return self.bithumb_post("/trade/krw_deposit", payload=None)

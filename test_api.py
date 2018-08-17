@@ -7,15 +7,14 @@ from api.coinnest_api import CoinnestApi, CoinnestCurrency
 from trader.market.order import Order, OrderType
 from trader.market.market import Market
 
-bt_api = BithumbApi.instance(is_public_access_only=False)
+# bt_api = BithumbApi.instance(is_public_access_only=False)
 # co_api = CoinoneApi.instance(is_public_access_only=False)
 # kb_api = KorbitApi.instance()
 # gp_api = GopaxApi.instance()
-# oc_api = OkcoinApi.instance()
+oc_api = OkcoinApi.instance(is_public_access_only=False)
 # cn_api = CoinnestApi.instance()
 
-order = Order(Market.BITHUMB, BithumbCurrency.ETH, OrderType.LIMIT_BUY, "1534522439023338", 342900,
-              0.01)
-result = bt_api.get_order_info(BithumbCurrency.ETH, order)
+order = Order(Market.OKCOIN, OkcoinCurrency.ETH, OrderType.LIMIT_BUY, "70862443", 344300, 0.01)
+result = oc_api.get_order_info(OkcoinCurrency.ETH, order)
 # result = bt_api.order_limit_buy(BithumbCurrency.ETH, 343000, 0.01)
 print(result)

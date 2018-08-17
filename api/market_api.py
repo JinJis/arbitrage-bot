@@ -97,10 +97,12 @@ class MarketApi(ABC):
     def get_order_info(self, currency: Currency, order: Order):
         pass
 
+    # 미체결 주문 내역
     @abstractmethod
     def get_open_orders(self, currency: Currency):
         pass
 
+    # 체결 주문 내역
     @abstractmethod
     def get_past_trades(self, currency: Currency):
         pass

@@ -127,62 +127,60 @@ class OkcoinApi(MarketApi):
 
     def order_limit_buy(self, currency: OkcoinCurrency, price: int, amount: float):
         # {"result":true,"order_id":123456}
-        param_list = ["symbol=%s" % currency.value,
-                      "type=buy",
-                      "price=%s" % float(price),
-                      "amount=%s" % str(amount)]
-        sign = self.get_md5_sign(param_list=param_list)
+        sign = self.get_md5_sign(param_list=["symbol=%s" % currency.value,
+                                             "type=buy",
+                                             "price=%s" % price,
+                                             "amount=%s" % str(amount)])
 
-        return self.okcoin_post(self.BASE_URL + "/trade.do", data={
-            "api_key": self._api_key,
-            "symbol": param_list[0],
-            "type": param_list[1],
-            "price": param_list[2],
-            "amount": param_list[3],
-            "sign": sign})
+        res_json = self.okcoin_post(self.BASE_URL + "/trade.do", data={"api_key": self._api_key,
+                                                                       "symbol": currency.value,
+                                                                       "type": "buy",
+                                                                       "price": price,
+                                                                       "amount": str(amount),
+                                                                       "sign": sign})
+        return {
+            "orderId": res_json["order_id"]
+        }
 
     def order_limit_sell(self, currency: OkcoinCurrency, price: int, amount: float):
         # {"result":true,"order_id":123456}
-        param_list = ["symbol=%s" % currency.value,
-                      "type=sell",
-                      "price=%s" % float(price),
-                      "amount=%s" % str(amount)]
-        sign = self.get_md5_sign(param_list=param_list)
+        sign = self.get_md5_sign(param_list=["symbol=%s" % currency.value,
+                                             "type=sell",
+                                             "price=%s" % price,
+                                             "amount=%s" % str(amount)])
 
-        return self.okcoin_post(self.BASE_URL + "/trade.do", data={
-            "api_key": self._api_key,
-            "symbol": param_list[0],
-            "type": param_list[1],
-            "price": param_list[2],
-            "amount": param_list[3],
-            "sign": sign})
+        res_json = self.okcoin_post(self.BASE_URL + "/trade.do", data={"api_key": self._api_key,
+                                                                       "symbol": currency.value,
+                                                                       "type": "sell",
+                                                                       "price": price,
+                                                                       "amount": str(amount),
+                                                                       "sign": sign})
+        return {
+            "orderId": res_json["order_id"]
+        }
 
     def cancel_order(self, currency: OkcoinCurrency, order: Order):
         # {"result":true,"order_id":123456}
-        param_list = ["symbol=%s" % currency.value,
-                      "order_id=%s" % order.order_id]
-        sign = self.get_md5_sign(param_list=param_list)
+        sign = self.get_md5_sign(param_list=["symbol=%s" % currency.value,
+                                             "order_id=%s" % order.order_id])
 
-        return self.okcoin_post(self.BASE_URL + "/cancel_order.do", data={
-            "api_key": self._api_key,
-            "symbol": param_list[0],
-            "order_id": param_list[1],
-            "sign": sign})
+        return self.okcoin_post(self.BASE_URL + "/cancel_order.do", data={"api_key": self._api_key,
+                                                                          "symbol": currency.value,
+                                                                          "order_id": order.order_id,
+                                                                          "sign": sign})
 
     def get_order_info(self, currency: OkcoinCurrency, order: Order):
-        param_list = ["symbol=%s" % currency.value,
-                      "order_id=%s" % order.order_id]
-        sign = self.get_md5_sign(param_list=param_list)
+        sign = self.get_md5_sign(param_list=["symbol=%s" % currency.value,
+                                             "order_id=%s" % order.order_id])
 
-        res_json = self.okcoin_post(self.BASE_URL + "/order_info.do", data={
-            "api_key": self._api_key,
-            "symbol": param_list[0],
-            "order_id": param_list[1],
-            "sign": sign})
+        res_json = self.okcoin_post(self.BASE_URL + "/order_info.do", data={"api_key": self._api_key,
+                                                                            "symbol": currency.value,
+                                                                            "order_id": order.order_id,
+                                                                            "sign": sign})
 
         fee_rate = Global.read_market_fee("okcoin", is_taker_fee=True)
 
-        order_info = res_json["orders"]
+        order_info = res_json["orders"][0]
         order_amount = float(order_info["amount"])
         filled_amount = float(order_info["deal_amount"])
         avg_filled_price = int(float(order_info["avg_price"]))
@@ -192,7 +190,7 @@ class OkcoinApi(MarketApi):
         elif order_info["type"] == "sell":
             fee = avg_filled_price * filled_amount * fee_rate
         else:
-            fee = 0
+            fee = "null"
 
         # status: -1 = 취소 됨, 0 = 미체결, 1 = 부분 체결, 2 = 전부 체결, 3 = 주문취소 처리중
         return {
@@ -205,39 +203,41 @@ class OkcoinApi(MarketApi):
             "fee": fee
         }
 
-    def get_open_orders(self, currency: OkcoinCurrency):
-        pass
+    def get_open_orders(self, currency: OkcoinCurrency, page: int = 1, limit: int = 100):
+        # unfilled_order: status=0
+        status = 0
+        sign = self.get_md5_sign(param_list=["symbol=%s" % currency.value,
+                                             "status=%d" % status,
+                                             "current_page=%d" % page,
+                                             "page_length=%d" % limit])
 
-    def get_past_trades(self, currency: OkcoinCurrency, show_filled_orders: bool = True):
+        return self.okcoin_post(self.BASE_URL + "/order_history.do", data={"api_key": self._api_key,
+                                                                           "symbol": currency.value,
+                                                                           "status": status,
+                                                                           "current_page": page,
+                                                                           "page_length": limit,
+                                                                           "sign": sign})
 
-        # if filled order: status=1 / unfilled_order: status: 0
-        if show_filled_orders:
-            param_list = ["symbol=%s" % currency.value,
-                          "status=1",
-                          "current_page=1",
-                          "page_length=150"]
-        else:
-            param_list = ["symbol=%s" % currency.value,
-                          "status=0",
-                          "current_page=1",
-                          "page_length=150"]
+    def get_past_trades(self, currency: OkcoinCurrency, page: int = 1, limit: int = 100):
 
-        sign = self.get_md5_sign(param_list=param_list)
+        # filled order: status=2 / partially_filled: status=1
+        status = 2
+        sign = self.get_md5_sign(param_list=["symbol=%s" % currency.value,
+                                             "status=%d" % status,
+                                             "current_page=%d" % page,
+                                             "page_length=%d" % limit])
 
-        return self.okcoin_post(self.BASE_URL + "/order_history.do", data={
-            "api_key": self._api_key,
-            "symbol": param_list[0],
-            "status": param_list[1],
-            "current_page": param_list[2],
-            "page_length": param_list[3],
-            "sign": sign})
+        return self.okcoin_post(self.BASE_URL + "/order_history.do", data={"api_key": self._api_key,
+                                                                           "symbol": currency.value,
+                                                                           "status": status,
+                                                                           "current_page": page,
+                                                                           "page_length": limit,
+                                                                           "sign": sign})
 
     def get_user_account_info(self):
         sign = self.get_md5_sign(param_list=[])
-        res_json = self.okcoin_post(self.BASE_URL + "/userinfo.do", data={
-            "api_key": self._api_key,
-            "sign": sign
-        })
+        res_json = self.okcoin_post(self.BASE_URL + "/userinfo.do", data={"api_key": self._api_key,
+                                                                          "sign": sign})
         return res_json
 
     @staticmethod
