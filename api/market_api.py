@@ -94,7 +94,7 @@ class MarketApi(ABC):
         pass
 
     @abstractmethod
-    def get_order_info(self, currency: Currency, order_id: str):
+    def get_order_info(self, currency: Currency, order: Order):
         pass
 
     @abstractmethod

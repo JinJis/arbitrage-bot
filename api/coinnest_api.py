@@ -93,7 +93,7 @@ class CoinnestApi(MarketApi):
     def cancel_order(self, currency: CoinnestCurrency, order: Order):
         pass
 
-    def get_order_info(self, currency: CoinnestCurrency, order_id: str):
+    def get_order_info(self, currency: CoinnestCurrency, order_id: Order):
         pass
 
     def get_open_orders(self, currency: CoinnestCurrency):

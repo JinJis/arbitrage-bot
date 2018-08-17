@@ -41,6 +41,8 @@ class CoinoneApi(MarketApi):
             self._access_token_last_updated = None
             self.refresh_access_token()
 
+    # Public API
+
     def get_ticker(self, currency: CoinoneCurrency):
         res = self._session.get(self.BASE_URL + "/ticker", params={
             "currency": currency.value
@@ -120,6 +122,8 @@ class CoinoneApi(MarketApi):
         result.sort(key=itemgetter("timestamp"), reverse=True)
 
         return result
+
+    # Private API
 
     def refresh_access_token(self):
         # request for refresh, save in config file
@@ -202,14 +206,14 @@ class CoinoneApi(MarketApi):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_buy", payload={
             "price": price,
             "qty": amount,
-            "currency": currency.value,
+            "currency": currency.value
         })
 
     def order_limit_sell(self, currency: CoinoneCurrency, price: int, amount: float):
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_sell", payload={
             "price": price,
             "qty": amount,
-            "currency": currency.value,
+            "currency": currency.value
         })
 
     def cancel_order(self, currency: CoinoneCurrency, order: Order):
@@ -221,9 +225,9 @@ class CoinoneApi(MarketApi):
             "currency": currency.value
         })
 
-    def get_order_info(self, currency: CoinoneCurrency, order_id: str):
+    def get_order_info(self, currency: CoinoneCurrency, order: Order):
         res_json = self.coinone_post(self.BASE_URL + "/v2/order/order_info", payload={
-            "order_id": order_id,
+            "order_id": order.order_id,
             "currency": currency.value
         })
 

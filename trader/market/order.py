@@ -31,9 +31,13 @@ class OrderStatus(Enum):
     # for Okcoin only
     CANCEL_IN_PROCESS = "cancel_in_process"
 
+    # for not matched with any
+    UNKNOWN = "unknown"
+
     @classmethod
     def get(cls, order_status: (str or int)):
         # for coinone
+
         _status = "unfilled" if order_status == "live" else order_status
         # for gopax
         _status = "unfilled" if _status == "placed" else _status
@@ -45,6 +49,8 @@ class OrderStatus(Enum):
         _status = "filled" if _status == 2 else _status
         _status = "cancel_in_process" if _status == 3 else _status
         _status = "cancelled" if _status == -1 else _status
+        # for bithumb
+        _status = "filled" if _status == "0000" else _status
 
         # noinspection PyTypeChecker
         return cls.__new__(cls, _status)

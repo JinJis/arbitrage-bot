@@ -29,6 +29,8 @@ class GopaxApi(MarketApi):
             self._access_token = self._config["GOPAX"]["access_token"]
             self._secret_key = self._config["GOPAX"]["secret_key"]
 
+    # Public API
+
     def get_ticker(self, currency: GopaxCurrency):
         res = self._session.get(self.BASE_URL + "/trading-pairs/%s/stats" % currency.value)
         res_json = self.filter_successful_response(res)
@@ -79,6 +81,8 @@ class GopaxApi(MarketApi):
 
     def get_filled_orders(self, currency: GopaxCurrency, time_range: str):
         super().get_filled_orders(currency, time_range)
+
+    # Private API
 
     def get_auth_headers(self, http_method: str, request_path: str, json_body: str = None):
         nonce = str(time.time())
@@ -154,8 +158,8 @@ class GopaxApi(MarketApi):
         res_json = self.filter_successful_response(res)
         return res_json
 
-    def get_order_info(self, currency: GopaxCurrency, order_id: str):
-        path = "/orders/" + order_id
+    def get_order_info(self, currency: GopaxCurrency, order: Order):
+        path = "/orders/" + order.order_id
         headers = self.get_auth_headers("GET", path)
         res = self._session.get(self.BASE_URL + path, headers=headers)
         res_json = self.filter_successful_response(res)
@@ -177,7 +181,7 @@ class GopaxApi(MarketApi):
         elif res_json["side"] == "sell":
             fee = avg_filled_price * filled_amount * fee_rate
         else:
-            raise Exception("Order type received from Okcoin API is not one of 'buy' or 'sell'!")
+            fee = 0
 
         return {
             "status": OrderStatus.get(res_json["status"]),

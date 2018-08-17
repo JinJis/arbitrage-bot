@@ -1,4 +1,3 @@
-test = "interval_bch"
-if "interval_" in test:
-    new = test.replace("interval_", "")
-    print(new)
+test = {"fee": 0.001}
+
+print(test.get("fee"))
