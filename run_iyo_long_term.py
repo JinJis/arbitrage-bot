@@ -53,7 +53,7 @@ def main(coin_name: str, init_time: str, final_time: str):
 
             iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
 
-            # finally save to mongoDB
+            finally save to mongoDB
             if len(iyo_result) > 0:
                 db_client["statistics"]["iyo"].insert_many(iyo_result)
             else:
@@ -79,6 +79,7 @@ def make_time_list(init_time: str, final_time: str):
 
 if __name__ == '__main__':
 
+    # for more than one month dur
     s_time = '2018.08.16 09:00:00'
     e_time = '2018.08.16 20:00:00'
 

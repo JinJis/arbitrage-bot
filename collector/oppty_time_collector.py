@@ -1,12 +1,11 @@
 import logging
+from config.global_conf import Global
 from analyzer.trade_analyzer import BasicAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 
 class OpptyTimeCollector:
-    # default CONSECUTION_GRACE_TIME
-    CONSECUTION_GRACE_TIME = 60
 
     @classmethod
     def run(cls, settings: dict):
@@ -90,11 +89,14 @@ class OpptyTimeCollector:
                 prev = item
                 continue
             current = item
-            if (current - prev) > cls.CONSECUTION_GRACE_TIME:
+            if (current - prev) > getattr(cls, "CONSECUTION_GRACE_TIME"):
                 end = prev
                 result.append([start, end])
                 start = current
             prev = current
+        # if oppty continued from start til end but not caught by consecution_grace_time, return original
+        if (len(result) == 0) and (not len(rq_time_list) == 0):
+            result = [[rq_time_list[0], rq_time_list[-1]]]
         return result
 
     @staticmethod
@@ -105,3 +107,16 @@ class OpptyTimeCollector:
                 diff = (time[1] - time[0])
                 total_duration[key] += diff
         return total_duration
+
+    @staticmethod
+    def get_oppty_dur_human_time(oppty_dur_dict: dict, timezone: str):
+        final_dict = dict()
+        for key in oppty_dur_dict.keys():
+            result_list = []
+            for time_dur in oppty_dur_dict[key]:
+                human_st = Global.convert_epoch_to_local_datetime(time_dur[0], timezone=timezone)
+                human_et = Global.convert_epoch_to_local_datetime(time_dur[1], timezone=timezone)
+                result_list.append([human_st, human_et])
+            final_dict[key] = result_list
+
+        return final_dict

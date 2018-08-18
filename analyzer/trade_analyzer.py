@@ -142,7 +142,7 @@ class ATSAnalyzer:
     @staticmethod
     def actual_tradable_spread_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
                                         mm1_market_fee: float, mm2_market_fee: float,
-                                        max_coin_trading_unit: float = None):
+                                        max_coin_trading_unit: float):
         mm1_minask_price, mm1_maxbid_price = BasicAnalyzer.get_price_of_minask_maxbid(mm1_orderbook)
         mm1_minask_amount, mm1_maxbid_amount = BasicAnalyzer.get_amount_of_minask_maxbid(mm1_orderbook)
 

@@ -5,35 +5,60 @@ from backtester.risk_free_arb_backtester import RfabBacktester
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 
-def main():
-    Global.configure_default_root_logging(should_log_to_file=True)
+def main(target_currency: str, mm1_name: str, mm2_name: str, st_local: str, et_local: str):
+    Global.configure_default_root_logging(should_log_to_file=False)
     SharedMongoClient.initialize(should_use_localhost_db=False)
 
-    start_time = Global.convert_local_datetime_to_epoch("2018.07.11 15:35:00", timezone="kr")
-    end_time = Global.convert_local_datetime_to_epoch("2018.07.11 15:37:00", timezone="kr")
+    start_time = Global.convert_local_datetime_to_epoch(st_local, timezone="kr")
+    end_time = Global.convert_local_datetime_to_epoch(et_local, timezone="kr")
 
-    initial_setting_dict = {
-        "max_trading_coin": 0.04938271604938275,
-        "min_trading_coin": 0,
-        "new": {
-            "threshold": 0,
-            "factor": 1
+    mm1_taker_fee = Global.read_market_fee(mm1_name, True)
+    mm1_maker_fee = Global.read_market_fee(mm1_name, False)
+    mm2_taker_fee = Global.read_market_fee(mm2_name, True)
+    mm2_maker_fee = Global.read_market_fee(mm2_name, False)
+
+    mm1_market = getattr(Market, "VIRTUAL_%s" % mm1_name.upper())
+    mm2_market = getattr(Market, "VIRTUAL_%s" % mm2_name.upper())
+
+    bal_setting = {
+        'mm1': {
+            'krw_balance': 0,
+            'coin_balance': 2.96
         },
-        "rev": {
-            "threshold": 0,
-            "factor": 1
+        'mm2': {
+            'krw_balance': 987654.3209876544,
+            'coin_balance': 0.0
         }
     }
-    target_currency = "bch"
-    mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 0.001, 0, 1.2779555555555553, target_currency, True)
-    mm2 = VirtualMarketManager(Market.VIRTUAL_GP, 0.00075, 0.00075, 1975308.6419753088, 0, target_currency, True)
-    mm1_col = SharedMongoClient.get_target_col(Market.VIRTUAL_CO, target_currency)
-    mm2_col = SharedMongoClient.get_target_col(Market.VIRTUAL_GP, target_currency)
 
-    mm1_data_cursor, mm2_data_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, 1525014942, 1525014972)
-    RfabBacktester(mm1, mm2, "bch").run(mm1_data_cursor, mm2_data_cursor, initial_setting_dict,
-                                        is_running_in_optimizer=False)
+    initial_setting_dict = {
+        'max_trading_coin': 0.24691358024691357,
+        'min_trading_coin': 0,
+        'new': {
+            'threshold': 0,
+            'factor': 1
+        },
+        'rev': {
+            'threshold': 0,
+            'factor': 1
+        }
+    }
+
+    mm1 = VirtualMarketManager(mm1_market, mm1_taker_fee, mm1_maker_fee,
+                               bal_setting["mm1"]["krw_balance"], bal_setting["mm1"]["coin_balance"],
+                               target_currency, True)
+    mm2 = VirtualMarketManager(mm2_market, mm2_taker_fee, mm2_maker_fee,
+                               bal_setting["mm2"]["krw_balance"], bal_setting["mm2"]["coin_balance"],
+                               target_currency, True)
+    mm1_col = SharedMongoClient.get_target_col(mm1_market, target_currency)
+    mm2_col = SharedMongoClient.get_target_col(mm2_market, target_currency)
+
+    mm1_data_cursor, mm2_data_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
+    RfabBacktester(mm1, mm2, target_currency).run(mm1_data_cursor, mm2_data_cursor, initial_setting_dict,
+                                                  is_running_in_optimizer=False)
 
 
 if __name__ == '__main__':
-    main()
+    st_local = "2018.08.17 12:57:49"
+    et_local = "2018.08.17 13:07:49"
+    main("eth", "okcoin", "coinnest", st_local, et_local)

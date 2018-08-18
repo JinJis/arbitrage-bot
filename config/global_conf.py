@@ -46,7 +46,7 @@ class Global:
             return "mongodb://%s:%d" % (host, port)
 
     @staticmethod
-    def read_market_fee(exchange_name: str, is_taker_fee: bool):
+    def read_market_fee(exchange_name: str, is_taker_fee: bool) -> float:
         config = configparser.ConfigParser()
         config.read(Global.MARKET_FEE_LOCATION)
         if is_taker_fee:
@@ -146,7 +146,7 @@ class Global:
             # default behavior is to use system timezone
             tz = datetime.now().astimezone().tzinfo
 
-        return str(datetime.fromtimestamp(epoch_time, tz).strftime('%Y-%m-%d %H:%M:%S'))
+        return str(datetime.fromtimestamp(epoch_time, tz).strftime('%Y.%m.%d %H:%M:%S'))
 
     @staticmethod
     def get_z_score_for_probability(probability: float):
