@@ -63,7 +63,7 @@ def main(coin_name: str, init_time: str, final_time: str):
             prev_time = cur_time
 
 
-def make_time_list(init_time: str, final_time: str):
+def make_long_term_time_list(init_time: str, final_time: str):
     cur_time = init_time
     time_list = [init_time]
     while int(cur_time[8:10]) <= int(final_time[8:10]):
