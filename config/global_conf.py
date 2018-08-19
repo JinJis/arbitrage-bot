@@ -19,6 +19,7 @@ class Global:
     LOCALHOST_DB_CONFIG_LOCATION = "config/conf_db_localhost.ini"
     REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
     MARKET_FEE_LOCATION = "config/conf_market_fee.ini"
+    MIN_TRADING_COIN = "config/conf_min_trading_coin.ini"
     IYO_CONFIG_LOCATION = "config/conf_iyo_market.ini"
     RFAB_COMBINATION_CONFIG_LOCATION = "config/conf_rfab_combi.ini"
     COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "tron", "krw")
@@ -58,6 +59,12 @@ class Global:
         return fee
 
     @staticmethod
+    def read_min_trading_coin(exchange_name: str, coin_name: str):
+        config = configparser.ConfigParser()
+        config.read(Global.MIN_TRADING_COIN)
+        return float(config[exchange_name.upper()][coin_name])
+
+    @staticmethod
     def read_iyo_setting_config(target_currency: str):
         config = configparser.ConfigParser()
         config.read(Global.IYO_CONFIG_LOCATION)
@@ -67,7 +74,6 @@ class Global:
         krw_seq_end = float(config["BALANCE_SETTING"]["KRW_SEQ_END"])
         max_trade_coin_end = float(config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"])
         threshold_end = int(config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"])
-        factor_end = int(config["%s_SETTING" % target_currency.upper()]["FACTOR_END"])
         appx_unit_coin_p = int(config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"])
 
         return {
@@ -77,7 +83,6 @@ class Global:
             "krw_seq_end": krw_seq_end,
             "max_trade_coin_end": max_trade_coin_end,
             "threshold_end": threshold_end,
-            "factor_end": factor_end,
             "appx_unit_coin_price": appx_unit_coin_p
         }
 

@@ -5,14 +5,14 @@ from config.global_conf import Global
 class TradeSettingConfig:
 
     @staticmethod
-    def get_settings(mm1: str, mm2: str, target_currency: str, start_time: int, end_time: int, division: int,
+    def get_settings(mm1_name: str, mm2_name: str, target_currency: str, start_time: int, end_time: int, division: int,
                      depth: int, consecution_time: int, is_virtual_mm: bool):
         if is_virtual_mm:
-            mm1_tag = "VIRTUAL_%s" % mm1.upper()
-            mm2_tag = "VIRTUAL_%s" % mm2.upper()
+            mm1_tag = "VIRTUAL_%s" % mm1_name.upper()
+            mm2_tag = "VIRTUAL_%s" % mm2_name.upper()
         elif not is_virtual_mm:
-            mm1_tag = mm1.upper()
-            mm2_tag = mm2.upper()
+            mm1_tag = mm1_name.upper()
+            mm2_tag = mm2_name.upper()
         else:
             raise Exception("Please type mm1 and mm2 correctly! ex) coinone")
 
@@ -20,15 +20,17 @@ class TradeSettingConfig:
             "target_currency": target_currency,
             "mm1": {
                 "market_tag": getattr(Market, mm1_tag),
-                "taker_fee": Global.read_market_fee(mm1, is_taker_fee=True),
-                "maker_fee": Global.read_market_fee(mm1, is_taker_fee=False),
+                "taker_fee": Global.read_market_fee(mm1_name, is_taker_fee=True),
+                "maker_fee": Global.read_market_fee(mm1_name, is_taker_fee=False),
+                "min_trading_coin": Global.read_min_trading_coin(mm1_name, target_currency),
                 "krw_balance": 1000000,
                 "coin_balance": 10
             },
             "mm2": {
                 "market_tag": getattr(Market, mm2_tag),
-                "taker_fee": Global.read_market_fee(mm2, is_taker_fee=True),
-                "maker_fee": Global.read_market_fee(mm2, is_taker_fee=False),
+                "taker_fee": Global.read_market_fee(mm2_name, is_taker_fee=True),
+                "maker_fee": Global.read_market_fee(mm2_name, is_taker_fee=False),
+                "min_trading_coin": Global.read_min_trading_coin(mm2_name, target_currency),
                 "krw_balance": 1000000,
                 "coin_balance": 10
 
@@ -66,19 +68,16 @@ class TradeSettingConfig:
         }
 
     @staticmethod
-    def get_factor_settings(max_trade_coin_end: float, threshold_end: int, factor_end: int, appx_unit_coin_price: int):
+    def get_factor_settings(max_trade_coin_end: float, threshold_end: int, appx_unit_coin_price: int):
 
         trading_coin_limit = (1000 / appx_unit_coin_price)
 
         return {
             "max_trading_coin": {"start": 0, "end": max_trade_coin_end, "step_limit": float(trading_coin_limit)},
-            "min_trading_coin": {"start": 0, "end": 0, "step_limit": 0},
             "new": {
-                "threshold": {"start": 0, "end": threshold_end, "step_limit": 1},
-                "factor": {"start": 1, "end": factor_end, "step_limit": 0.01}
+                "threshold": {"start": 0, "end": threshold_end, "step_limit": 1}
             },
             "rev": {
-                "threshold": {"start": 0, "end": threshold_end, "step_limit": 1},
-                "factor": {"start": 1, "end": factor_end, "step_limit": 0.01}
+                "threshold": {"start": 0, "end": threshold_end, "step_limit": 1}
             }
         }

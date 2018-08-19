@@ -14,8 +14,8 @@ from bson import Decimal128
 
 
 class VirtualMarketManager(MarketManager):
-    def __init__(self, market_tag: Market, taker_fee: float, maker_fee: float, krw_balance: float, coin_balance: float,
-                 coin_name: str, is_using_taker_fee: bool):
+    def __init__(self, market_tag: Market, taker_fee: float, maker_fee: float, min_trading_coin: float,
+                 krw_balance: float, coin_balance: float, coin_name: str, is_using_taker_fee: bool):
         # create api instance according to given api_type
         if market_tag is Market.VIRTUAL_COINONE:
             target_api = CoinoneApi.instance(is_public_access_only=True)
@@ -44,35 +44,36 @@ class VirtualMarketManager(MarketManager):
         }
         self.initial_vt_balance = dict(self.vt_balance)
         self.order_id_count = 0
+        self.min_trading_coin = min_trading_coin
         super().__init__(market_tag, taker_fee, maker_fee, target_api, is_using_taker_fee)
 
         self.history = dict()
 
-    def order_buy(self, currency: Currency, price: int, amount: float):
-        if not self.has_enough_coin("krw", amount * price):
+    def order_buy(self, currency: Currency, unit_price: int, amount: float):
+        if not self.has_enough_coin("krw", amount * unit_price):
             raise Exception("[%s] Could not order_buy" % self.market_tag)
 
         self.vt_balance[currency.name.lower()] += amount * (1 - self.market_fee)
-        self.vt_balance["krw"] -= amount * price
+        self.vt_balance["krw"] -= amount * unit_price
         try:
-            self.history[price] -= amount
+            self.history[unit_price] -= amount
         except KeyError:
-            self.history[price] = 0
-            self.history[price] -= amount
-        return Order(self.market_tag, currency, OrderType.LIMIT_BUY, self.generate_buy_order_id(), price, amount)
+            self.history[unit_price] = 0
+            self.history[unit_price] -= amount
+        return Order(self.market_tag, currency, OrderType.LIMIT_BUY, self.generate_buy_order_id(), unit_price, amount)
 
-    def order_sell(self, currency: Currency, price: int, amount: float):
+    def order_sell(self, currency: Currency, unit_price: int, amount: float):
         if not self.has_enough_coin(currency.name.lower(), amount):
             raise Exception("[%s] Could not order_sell" % self.market_tag)
 
         self.vt_balance[currency.name.lower()] -= amount
-        self.vt_balance["krw"] += price * amount * (1 - self.market_fee)
+        self.vt_balance["krw"] += unit_price * amount * (1 - self.market_fee)
         try:
-            self.history[price] += amount
+            self.history[unit_price] += amount
         except KeyError:
-            self.history[price] = 0
-            self.history[price] += amount
-        return Order(self.market_tag, currency, OrderType.LIMIT_SELL, self.generate_sell_order_id(), price, amount)
+            self.history[unit_price] = 0
+            self.history[unit_price] += amount
+        return Order(self.market_tag, currency, OrderType.LIMIT_SELL, self.generate_sell_order_id(), unit_price, amount)
 
     def update_balance(self):
         balance_dict = dict()

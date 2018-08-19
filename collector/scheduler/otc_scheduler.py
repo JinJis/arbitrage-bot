@@ -62,8 +62,8 @@ class OTCScheduler(BaseScheduler):
             # draw iyo_config for settings
             iyo_config = Global.read_iyo_setting_config(coin_name)
 
-            settings = TradeSettingConfig.get_settings(mm1=_combi[0],
-                                                       mm2=_combi[1],
+            settings = TradeSettingConfig.get_settings(mm1_name=_combi[0],
+                                                       mm2_name=_combi[1],
                                                        target_currency=coin_name,
                                                        start_time=start_time, end_time=end_time,
                                                        division=iyo_config["division"],

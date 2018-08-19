@@ -2,7 +2,7 @@ import copy
 import logging
 from config.shared_mongo_client import SharedMongoClient
 from analyzer.trade_analyzer import BasicAnalyzer, IBOAnalyzer
-from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
+from optimizer.base_optimizer import BaseOptimizer
 from backtester.risk_free_arb_backtester import RfabBacktester
 
 
@@ -12,12 +12,10 @@ class InitialBalanceOptimizer(BaseOptimizer):
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,
         "new": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         },
         "rev": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         }
     }
 

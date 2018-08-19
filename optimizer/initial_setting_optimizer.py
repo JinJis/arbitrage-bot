@@ -2,7 +2,7 @@ import copy
 import logging
 from analyzer.trade_analyzer import ISOAnalyzer
 from backtester.risk_free_arb_backtester import RfabBacktester
-from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
+from optimizer.base_optimizer import BaseOptimizer
 
 
 class InitialSettingOptimizer(BaseOptimizer):
@@ -11,12 +11,10 @@ class InitialSettingOptimizer(BaseOptimizer):
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,
         "new": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         },
         "rev": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         }
     }
 
@@ -114,38 +112,31 @@ class InitialSettingOptimizer(BaseOptimizer):
         pre = factor_settings
         clone = copy.deepcopy(factor_settings)
 
-        for key in ["max_trading_coin", "min_trading_coin"]:
-            clone[key] = super().get_new_factor_settings_item(opt[key], pre[key], division)
-        for key_d1 in ["new", "rev"]:
-            for key_d2 in ["factor", "threshold"]:
-                clone[key_d1][key_d2] = super().get_new_factor_settings_item(
-                    opt[key_d1][key_d2],
-                    pre[key_d1][key_d2],
-                    division
-                )
+        clone["max_trading_coin"] = super().get_new_factor_settings_item(opt["max_trading_coin"],
+                                                                         pre["max_trading_coin"], division)
+        for key in ["new", "rev"]:
+            clone[key]["threshold"] = super().get_new_factor_settings_item(
+                opt[key]["threshold"],
+                pre[key]["threshold"],
+                division
+            )
         return clone
 
     @staticmethod
     def create_batch_initial_settings(factor_settings: dict):
         result = []
-        for min_unit in factor_settings["min_trading_coin"]["seq"]:
-            for new_f in factor_settings["new"]["factor"]["seq"]:
-                for rev_f in factor_settings["rev"]["factor"]["seq"]:
-                    for rev_th in factor_settings["rev"]["threshold"]["seq"]:
-                        for new_th in factor_settings["new"]["threshold"]["seq"]:
-                            for max_unit in factor_settings["max_trading_coin"]["seq"]:
-                                result.append({
-                                    "max_trading_coin": max_unit,
-                                    "min_trading_coin": min_unit,
-                                    "new": {
-                                        "threshold": new_th,
-                                        "factor": new_f
-                                    },
-                                    "rev": {
-                                        "threshold": rev_th,
-                                        "factor": rev_f
-                                    }
-                                })
+        for rev_th in factor_settings["rev"]["threshold"]["seq"]:
+            for new_th in factor_settings["new"]["threshold"]["seq"]:
+                for max_unit in factor_settings["max_trading_coin"]["seq"]:
+                    result.append({
+                        "max_trading_coin": max_unit,
+                        "new": {
+                            "threshold": new_th
+                        },
+                        "rev": {
+                            "threshold": rev_th
+                        }
+                    })
         return result
 
     @classmethod

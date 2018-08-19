@@ -4,7 +4,7 @@ from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from config.trade_setting_config import TradeSettingConfig
 from collector.scheduler.base_scheduler import BaseScheduler
-from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
+from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
 class IYOScheduler(BaseScheduler):
@@ -38,15 +38,15 @@ class IYOScheduler(BaseScheduler):
             # draw iyo_config for bal & factor_setting
             iyo_config = Global.read_iyo_setting_config(coin_name)
 
-            settings = TradeSettingConfig.get_settings(mm1=_combi[0],
-                                                       mm2=_combi[1],
+            settings = TradeSettingConfig.get_settings(mm1_name=_combi[0],
+                                                       mm2_name=_combi[1],
                                                        target_currency=coin_name,
                                                        start_time=start_time, end_time=end_time,
                                                        division=iyo_config["division"],
                                                        depth=iyo_config["depth"],
                                                        consecution_time=iyo_config["consecution_time"],
                                                        is_virtual_mm=True)
-
+            # todo
             bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"])
 
             factor_settings = TradeSettingConfig.get_factor_settings(iyo_config["max_trade_coin_end"],

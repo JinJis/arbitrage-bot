@@ -4,7 +4,6 @@ from analyzer.trade_analyzer import BasicAnalyzer
 from analyzer.trade_analyzer import ATSAnalyzer, SpreadInfo
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.trade_manager.trade_manager import TradeManager
-from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 from trader.market_manager.virtual_market_manager import VirtualMarketManager
 
 
@@ -80,14 +79,16 @@ class RfabBacktester:
         # NEW
         if new_spread_info.spread_in_unit > 0:
             self.new_oppty_count += 1
-            new_trade = self.execute_trade(new_spread_info, "new")
-            self.add_trade(new_trade, new_spread_info)
+            if new_spread_info.able_to_trade:
+                new_trade = self.execute_trade(new_spread_info, "new")
+                self.add_trade(new_trade, new_spread_info)
 
         # REVERSE
         if rev_spread_info.spread_in_unit > 0:
             self.rev_oppty_count += 1
-            rev_trade = self.execute_trade(rev_spread_info, "rev")
-            self.add_trade(rev_trade, rev_spread_info)
+            if rev_spread_info.able_to_trade:
+                rev_trade = self.execute_trade(rev_spread_info, "rev")
+                self.add_trade(rev_trade, rev_spread_info)
 
         # if there was any trade
         if new_trade or rev_trade:
@@ -110,35 +111,33 @@ class RfabBacktester:
             raise Exception("Invalid trade type!")
 
         # check condition
-        threshold_cond = spread_info.tradable_spread >= self.init_setting_dict[trade_type]["threshold"] >= 0
-        min_coin_cond = spread_info.tradable_qty >= self.init_setting_dict["min_trading_coin"]
+        threshold_cond = spread_info.spread_to_trade >= self.init_setting_dict[trade_type]["threshold"]
+
+        buy_min_cond = (spread_info.buy_order_amt >= buying_mkt.min_trading_coin)
+        sell_min_cond = (spread_info.sell_order_amt >= selling_mkt.min_trading_coin)
+        min_coin_cond = (buy_min_cond and sell_min_cond)
 
         # quit if conditions don't meet
-        if (not threshold_cond) and (not min_coin_cond):
+        if (not threshold_cond) or (not min_coin_cond):
             return None
 
-        # get fee
-        fee, should_fee = BasicAnalyzer.get_fee_consideration(buying_mkt.get_market_tag(), self.target_currency)
-        # apply fee if any
-        trading_amount = spread_info.tradable_qty + fee if should_fee else spread_info.tradable_qty
-
         # balance check
-        krw_needed = spread_info.buy_price * self.init_setting_dict[trade_type]["factor"]
-        coin_needed = trading_amount * self.init_setting_dict[trade_type]["factor"]
+        krw_needed = spread_info.buy_unit_price * spread_info.buy_order_amt
+        coin_needed = spread_info.sell_order_amt
         has_enough_krw = RfabBacktester.has_enough_coin_checker(buying_mkt, "krw", krw_needed)
         has_enough_coin = RfabBacktester.has_enough_coin_checker(selling_mkt, self.target_currency, coin_needed)
 
         # if enough krw & coin balance
         if (not has_enough_krw) or (not has_enough_coin):
             if not self.is_running_in_optimizer:
-                TradeInfoLogger.not_enough_balance_log_info(trade_type, spread_info)
+                mm1_bal_dict = self.mm1.balance.to_dict()
+                mm2_bal_dict = self.mm2.balance.to_dict()
+                TradeInfoLogger.not_enough_balance_log_info(trade_type, spread_info, mm1_bal_dict, mm2_bal_dict)
             return None
 
         # make buy & sell order
-        buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_price, trading_amount)
-        sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_price, trading_amount)
-        if should_fee:
-            GlobalFeeAccumulator.sub_fee_consideration(buying_mkt.get_market_tag(), self.target_currency, fee)
+        buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
+        sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
         return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))
 
     @staticmethod
@@ -195,12 +194,13 @@ class TradeInfoLogger:
         trade_tag = trade.trade_tag.name.upper()
         trade_amount = trade.orders[0].order_amount
         logging.warning("[EXECUTE] %s ->"
-                        "Trading INFOS: Spread in unit = %.2f, Traded Spread = %.2f, Traded_QTY = %.5f"
-                        % (trade_tag, spread_info.spread_in_unit, spread_info.tradable_spread, trade_amount))
+                        "Trading INFOS: Spread in unit = %.2f, Spread Traded = %.2f, Traded_QTY = %.5f"
+                        % (trade_tag, spread_info.spread_in_unit, spread_info.spread_to_trade, trade_amount))
 
     @staticmethod
-    def not_enough_balance_log_info(trade_tag, spread_info):
+    def not_enough_balance_log_info(trade_tag, spread_info, mm1_bal_dict: dict, mm2_bal_dict: dict):
         logging.error("[EXECUTE] %s -> failed (not enough balance!) -> "
-                      "Trading INFOS: Spread in unit = %.2f, Tradable Spread = %.2f, Tradable QTY= %.5f"
-                      % (trade_tag.upper(), spread_info.spread_in_unit, spread_info.tradable_spread,
-                         spread_info.tradable_qty))
+                      "Trading INFOS: Spread in unit = %.2f, Spread to Trade = %.2f, BUY amt= %.5f, SELL amt: %.5f, "
+                      "MM1 Balance: %s, MM2 Balance: %s"
+                      % (trade_tag.upper(), spread_info.spread_in_unit, spread_info.spread_to_trade,
+                         spread_info.buy_order_amt, spread_info.sell_order_amt, mm1_bal_dict, mm2_bal_dict))

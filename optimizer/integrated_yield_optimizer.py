@@ -6,9 +6,9 @@ from pymongo.cursor import Cursor
 from analyzer.trade_analyzer import BasicAnalyzer, IBOAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from collector.oppty_time_collector import OpptyTimeCollector
-from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
-from optimizer.arbitrage_combination_optimizer.initial_setting_optimizer import InitialSettingOptimizer
-from optimizer.arbitrage_combination_optimizer.initial_balance_optimizer import InitialBalanceOptimizer
+from optimizer.base_optimizer import BaseOptimizer
+from optimizer.initial_setting_optimizer import InitialSettingOptimizer
+from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
 
 OTC = OpptyTimeCollector
 ISO = InitialSettingOptimizer
@@ -21,12 +21,10 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,
         "new": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         },
         "rev": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         }
     }
 
@@ -44,7 +42,9 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         # get total duration hour for each trade
         total_dur_hour = OTC.get_total_duration_time(oppty_dur_dict)
         for key in total_dur_hour.keys():
-            logging.warning("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_hour[key] / 60 / 60)))
+            hour = total_dur_hour[key] // 3600
+            minute = int(((total_dur_hour[key] / 3600) - hour) * 60)
+            logging.warning("Total [%s] duration: %dhr %dmin" % (key.upper(), hour, minute))
 
         # loop through oppty times
         db_result = []
@@ -275,7 +275,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             end_bal = iyo_data["end_balance"]["mm2"]["krw"]
             return round(((start_bal - end_bal) / start_bal * 100), 4)
         else:
-            raise Exception("Both of NEW and REV must be 0 or traded at least once")
+            return 0
 
     @staticmethod
     def run_iyo_stat_appender(iyo_data_list: list):

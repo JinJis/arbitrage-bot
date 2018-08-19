@@ -23,16 +23,16 @@ def main(target_currency: str, mm1_name: str, mm2_name: str, st_local: str, et_l
     bal_setting = {
         'mm1': {
             'krw_balance': 0,
-            'coin_balance': 2.96
+            'coin_balance': 0.04475666666666667
         },
         'mm2': {
-            'krw_balance': 987654.3209876544,
+            'krw_balance': 333333.3333333333,
             'coin_balance': 0.0
         }
     }
 
     initial_setting_dict = {
-        'max_trading_coin': 0.24691358024691357,
+        'max_trading_coin': 0.005,
         'min_trading_coin': 0,
         'new': {
             'threshold': 0,
@@ -59,6 +59,6 @@ def main(target_currency: str, mm1_name: str, mm2_name: str, st_local: str, et_l
 
 
 if __name__ == '__main__':
-    st_local = "2018.08.17 12:57:49"
-    et_local = "2018.08.17 13:07:49"
-    main("eth", "okcoin", "coinnest", st_local, et_local)
+    st_local = '2018.08.18 20:42:10'
+    et_local = '2018.08.18 21:16:01'
+    main("btc", "gopax", "okcoin", st_local, et_local)

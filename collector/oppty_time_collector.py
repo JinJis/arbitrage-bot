@@ -48,11 +48,13 @@ class OpptyTimeCollector:
     def initiate_market_mongo_settings(settings: dict):
         target_currency = settings["target_currency"]
         mm1 = VirtualMarketManager(settings["mm1"]["market_tag"], settings["mm1"]["taker_fee"],
-                                   settings["mm1"]["maker_fee"], settings["mm1"]["krw_balance"],
-                                   settings["mm1"]["coin_balance"], target_currency, is_using_taker_fee=True)
+                                   settings["mm1"]["maker_fee"], settings["mm1"]["min_trading_coin"],
+                                   settings["mm1"]["krw_balance"], settings["mm1"]["coin_balance"],
+                                   target_currency, is_using_taker_fee=True)
         mm2 = VirtualMarketManager(settings["mm2"]["market_tag"], settings["mm2"]["taker_fee"],
-                                   settings["mm2"]["maker_fee"], settings["mm2"]["krw_balance"],
-                                   settings["mm2"]["coin_balance"], target_currency, is_using_taker_fee=True)
+                                   settings["mm2"]["maker_fee"], settings["mm2"]["min_trading_coin"],
+                                   settings["mm2"]["krw_balance"], settings["mm2"]["coin_balance"],
+                                   target_currency, is_using_taker_fee=True)
         mm1_col = SharedMongoClient.get_target_col(settings["mm1"]["market_tag"], target_currency)
         mm2_col = SharedMongoClient.get_target_col(settings["mm2"]["market_tag"], target_currency)
         mm1_data_cursor, mm2_data_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, settings["start_time"],

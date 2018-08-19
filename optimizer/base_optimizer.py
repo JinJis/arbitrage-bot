@@ -26,28 +26,14 @@ class BaseOptimizer:
 
         # classify the kind of strategies and renew factor_settings accordingly
         clone = copy.deepcopy(factor_settings)
-        new_factor_dict = clone["new"]["factor"]
-        rev_factor_dict = clone["rev"]["factor"]
         new_threshold_dict = clone["new"]["threshold"]
         rev_threshold_dict = clone["rev"]["threshold"]
 
         if rev_oppty_count == 0:
-            cls.tie_end_start(rev_factor_dict)
             cls.tie_end_start(rev_threshold_dict)
-            cls.tie_end_start(new_factor_dict)
 
         if new_oppty_count == 0:
-            cls.tie_end_start(new_factor_dict)
             cls.tie_end_start(new_threshold_dict)
-            cls.tie_end_start(rev_factor_dict)
-
-        if new_oppty_count > rev_oppty_count:
-            cls.tie_end_start(new_factor_dict)
-        elif new_oppty_count < rev_oppty_count:
-            cls.tie_end_start(rev_factor_dict)
-        else:
-            cls.tie_end_start(new_factor_dict)
-            cls.tie_end_start(rev_factor_dict)
 
         return clone
 
@@ -94,6 +80,7 @@ class BaseOptimizer:
             market_settings["market_tag"],
             market_settings["taker_fee"],
             market_settings["maker_fee"],
+            market_settings["min_trading_coin"],
             market_settings["krw_balance"],
             market_settings["coin_balance"],
             target_currency, is_using_taker_fee=is_using_taker_fee

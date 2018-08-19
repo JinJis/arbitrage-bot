@@ -3,7 +3,7 @@ import itertools as it
 from config.global_conf import Global
 from config.trade_setting_config import TradeSettingConfig
 from config.shared_mongo_client import SharedMongoClient
-from optimizer.arbitrage_combination_optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
+from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
 def main(coin_name: str, init_time: str, final_time: str):
@@ -35,8 +35,8 @@ def main(coin_name: str, init_time: str, final_time: str):
                 coin_name.upper(), str(_combi[0]).upper(), str(_combi[1]).upper(), start_time, end_time))
 
             # set settings, bal_fact_settings, factor_settings
-            settings = TradeSettingConfig.get_settings(mm1=_combi[0],
-                                                       mm2=_combi[1],
+            settings = TradeSettingConfig.get_settings(mm1_name=_combi[0],
+                                                       mm2_name=_combi[1],
                                                        target_currency=coin_name,
                                                        start_time=start_time, end_time=end_time,
                                                        division=iyo_config["division"],
@@ -48,7 +48,6 @@ def main(coin_name: str, init_time: str, final_time: str):
 
             factor_settings = TradeSettingConfig.get_factor_settings(iyo_config["max_trade_coin_end"],
                                                                      iyo_config["threshold_end"],
-                                                                     iyo_config["factor_end"],
                                                                      iyo_config["appx_unit_coin_price"])
 
             iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
