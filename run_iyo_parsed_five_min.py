@@ -16,7 +16,7 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
     end_time = Global.convert_local_datetime_to_epoch(end_time, timezone="kr")
 
     # draw iyo_config for bal & factor_setting
-    iyo_config = Global.read_iyo_setting_config(coin_name)
+    iyo_config = Global.read_parsed_iyo_setting_config(coin_name)
 
     logging.critical("[%s-%s-%s] IYO conducting -> start_time: %s, end_time: %s" % (
         coin_name.upper(), mm1_name.upper(), mm2_name.upper(), start_time, end_time))
@@ -46,7 +46,13 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
 
 if __name__ == '__main__':
     # for short term (=< one day)
-    st_local = "2018.08.18 19:48:10"
+    st_local = "2018.08.18 14:48:10"
     et_local = "2018.08.18 20:48:10"
 
-    main("btc", "gopax", "okcoin", st_local, et_local)
+    parsed_iyo_result = main("btc", "gopax", "okcoin", st_local, et_local)
+
+    yield_result = []
+    for iyo in parsed_iyo_result:
+        yield_result.append(iyo["yield"])
+
+    print(yield_result)
