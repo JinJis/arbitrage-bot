@@ -35,7 +35,8 @@ def main(coin_name: str, start_time: str, end_time: str):
                                                    consecution_time=iyo_config["consecution_time"],
                                                    is_virtual_mm=True)
 
-        bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"])
+        bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"],
+                                                                       iyo_config["coin_seq_end"])
 
         factor_settings = TradeSettingConfig.get_factor_settings(iyo_config["max_trade_coin_end"],
                                                                  iyo_config["threshold_end"],
@@ -49,8 +50,8 @@ if __name__ == '__main__':
 
     # for short term (=< one day)
     # '2018.08.18 20:42:10', '2018.08.18 21:16:01'
-    st_local = '2018.08.18 20:42:10'
-    et_local = '2018.08.18 21:16:01'
+    st_local = "2018.08.18 20:47:10"
+    et_local = "2018.08.18 20:48:10"
 
     for target_currency in ["btc"]:
         main(target_currency, st_local, et_local)

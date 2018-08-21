@@ -72,6 +72,7 @@ class Global:
         depth = int(config["UNIVERSAL_SETTING"]["DEPTH"])
         consecution_time = int(config["UNIVERSAL_SETTING"]["consecution_time"])
         krw_seq_end = float(config["BALANCE_SETTING"]["KRW_SEQ_END"])
+        coin_seq_end = float(config["BALANCE_SETTING"]["COIN_SEQ_END"])
         max_trade_coin_end = float(config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"])
         threshold_end = int(config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"])
         appx_unit_coin_p = int(config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"])
@@ -81,6 +82,7 @@ class Global:
             "depth": depth,
             "consecution_time": consecution_time,
             "krw_seq_end": krw_seq_end,
+            "coin_seq_end": coin_seq_end,
             "max_trade_coin_end": max_trade_coin_end,
             "threshold_end": threshold_end,
             "appx_unit_coin_price": appx_unit_coin_p

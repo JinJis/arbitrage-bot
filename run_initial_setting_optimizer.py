@@ -9,10 +9,13 @@ SharedMongoClient.initialize(should_use_localhost_db=False)
 start_time = Global.convert_local_datetime_to_epoch("2018.07.11 09:00:00", timezone="kr")
 end_time = Global.convert_local_datetime_to_epoch("2018.07.11 14:00:00", timezone="kr")
 
-settings = TradeSettingConfig.get_settings(mm1_name="coinone",
-                                           mm2_name="gopax",
-                                           target_currency="bch",
+settings = TradeSettingConfig.get_settings(mm1_name=_combi[0],
+                                           mm2_name=_combi[1],
+                                           target_currency=coin_name,
                                            start_time=start_time, end_time=end_time,
+                                           division=iyo_config["division"],
+                                           depth=iyo_config["depth"],
+                                           consecution_time=iyo_config["consecution_time"],
                                            is_virtual_mm=True)
 
 factor_settings = TradeSettingConfig.get_factor_settings(max_trade_coin_end=0.1,

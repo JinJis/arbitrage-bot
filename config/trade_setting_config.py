@@ -43,7 +43,7 @@ class TradeSettingConfig:
         }
 
     @staticmethod
-    def get_bal_fact_settings(krw_seq_end: float):
+    def get_bal_fact_settings(krw_seq_end: float, coin_seq_end: float):
         """
         :return:
         only need to config krw b/c COIN bal_fact_setting will be automatically adjusted
@@ -56,13 +56,13 @@ class TradeSettingConfig:
             "mm1": {
                 "krw_balance": {"start": 0, "end": krw_seq_end, "step_limit": krw_step_limit
                                 },
-                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.1
+                "coin_balance": {"start": 0, "end": coin_seq_end, "step_limit": 0.1
                                  }
             },
             "mm2": {
                 "krw_balance": {"start": 0, "end": krw_seq_end, "step_limit": krw_step_limit
                                 },
-                "coin_balance": {"start": 0, "end": 10, "step_limit": 0.1
+                "coin_balance": {"start": 0, "end": coin_seq_end, "step_limit": 0.1
                                  }
             }
         }

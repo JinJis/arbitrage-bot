@@ -109,16 +109,4 @@ class BaseOptimizer:
 
     @staticmethod
     def get_new_factor_settings_item(current_opt, factor_item: dict, division: int) -> dict:
-        prev_start = factor_item["start"]
-        prev_end = factor_item["end"]
-        if prev_start >= prev_end:
-            return factor_item
-
-        prev_step = factor_item["step"]
-        clone = copy.deepcopy(factor_item)
-        clone["start"] = current_opt - prev_step
-        if clone["start"] < 0:
-            clone["start"] = 0
-        clone["end"] = current_opt + prev_step
-        clone["step"] = (clone["end"] - clone["start"]) / division
-        return clone
+        pass

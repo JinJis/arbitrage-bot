@@ -23,7 +23,8 @@ def main(coin_name: str, mm1_name: str, mm2_name: str):
                                                consecution_time=iyo_config["consecution_time"],
                                                is_virtual_mm=True)
 
-    bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(krw_seq_end=float(10000000))
+    bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"],
+                                                                   iyo_config["coin_seq_end"])
 
     ibo_result = InitialBalanceOptimizer.run(settings, bal_factor_settings)
     print(ibo_result)

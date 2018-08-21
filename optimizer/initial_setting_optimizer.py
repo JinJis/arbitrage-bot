@@ -106,16 +106,32 @@ class InitialSettingOptimizer(BaseOptimizer):
 
         return result
 
+    @staticmethod
+    def get_new_factor_settings_item(current_opt, factor_item: dict, division: int):
+        prev_start = factor_item["start"]
+        prev_end = factor_item["end"]
+        if prev_start >= prev_end:
+            return factor_item
+
+        prev_step = factor_item["step"]
+        clone = copy.deepcopy(factor_item)
+        clone["start"] = current_opt - prev_step
+        if clone["start"] < 0:
+            clone["start"] = 0
+        clone["end"] = current_opt + prev_step
+        clone["step"] = (clone["end"] - clone["start"]) / division
+        return clone
+
     @classmethod
     def get_new_factor_settings(cls, opt_inital_settings: dict, factor_settings: dict, division: int):
         opt = opt_inital_settings
         pre = factor_settings
         clone = copy.deepcopy(factor_settings)
 
-        clone["max_trading_coin"] = super().get_new_factor_settings_item(opt["max_trading_coin"],
+        clone["max_trading_coin"] = cls.get_new_factor_settings_item(opt["max_trading_coin"],
                                                                          pre["max_trading_coin"], division)
         for key in ["new", "rev"]:
-            clone[key]["threshold"] = super().get_new_factor_settings_item(
+            clone[key]["threshold"] = cls.get_new_factor_settings_item(
                 opt[key]["threshold"],
                 pre[key]["threshold"],
                 division
