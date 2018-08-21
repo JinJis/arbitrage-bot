@@ -42,7 +42,13 @@ class OpptyTimeCollector:
         # sort raw rq time into duration
         new_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["new"])
         rev_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["rev"])
-        return dict(new=new_oppty_duration, rev=rev_oppty_duration)
+
+        final_result = dict(new=new_oppty_duration, rev=rev_oppty_duration)
+
+        # log opprt_dur in hour & minute
+        cls.log_hour_min_oppty_dur(cls.get_total_duration_time(final_result))
+
+        return final_result
 
     @staticmethod
     def initiate_market_mongo_settings(settings: dict):
@@ -122,3 +128,10 @@ class OpptyTimeCollector:
             final_dict[key] = result_list
 
         return final_dict
+
+    @staticmethod
+    def log_hour_min_oppty_dur(total_dur_hour: dict):
+        for key in total_dur_hour.keys():
+            hour = total_dur_hour[key] // 3600
+            minute = int(((total_dur_hour[key] / 3600) - hour) * 60)
+            logging.warning("Total [%s] duration: %dhr %dmin" % (key.upper(), hour, minute))

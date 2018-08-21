@@ -38,7 +38,8 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
                                                              iyo_config["threshold_end"],
                                                              iyo_config["appx_unit_coin_price"])
 
-    iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
+    iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
+                                              is_stat_appender=False, is_parsing_dur=True)
     logging.critical("Final IYO result: %s" % iyo_result)
     return iyo_result
 

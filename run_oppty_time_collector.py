@@ -1,42 +1,32 @@
 import logging
 from config.global_conf import Global
-from trader.market.market import Market
+from config.trade_setting_config import TradeSettingConfig
 from config.shared_mongo_client import SharedMongoClient
 from collector.oppty_time_collector import OpptyTimeCollector
 
-Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
-SharedMongoClient.initialize(should_use_localhost_db=False)
 
-start_time = Global.convert_local_datetime_to_epoch("2018.08.12 18:00:00", timezone="kr")
-end_time = Global.convert_local_datetime_to_epoch("2018.08.13 00:00:00", timezone="kr")
+def main(coin_name: str, mm1_name: str, mm2_name: str, start_time_local: str, end_time_local: str):
+    Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
-settings = {
-    "target_currency": "xrp",
-    "mm1": {
-        "market_tag": Market.VIRTUAL_CO,
-        "fee_rate": 0.001,
-        "krw_balance": 10000,
-        "coin_balance": 0.1
-    },
-    "mm2": {
-        "market_tag": Market.VIRTUAL_GP,
-        "fee_rate": 0.00075,
-        "krw_balance": 10000,
-        "coin_balance": 0.1
+    start_time = Global.convert_local_datetime_to_epoch(start_time_local, timezone="kr")
+    end_time = Global.convert_local_datetime_to_epoch(end_time_local, timezone="kr")
 
-    },
-    "division": 3,
-    "depth": 4,
-    "consecution_time": 45,
-    "start_time": start_time,
-    "end_time": end_time
-}
+    iyo_config = Global.read_iyo_setting_config(coin_name)
 
-result_dict = OpptyTimeCollector.run(settings)
+    settings = TradeSettingConfig.get_settings(mm1_name=mm1_name,
+                                               mm2_name=mm2_name,
+                                               target_currency=coin_name,
+                                               start_time=start_time, end_time=end_time,
+                                               division=iyo_config["division"],
+                                               depth=iyo_config["depth"],
+                                               consecution_time=iyo_config["consecution_time"],
+                                               is_virtual_mm=True)
 
-logging.critical("Oppty time result: %s" % result_dict)
+    OpptyTimeCollector.run(settings)
 
-# get total duration time for each trade
-total_dur_dict = OpptyTimeCollector.get_total_duration_time(result_dict)
-for key in total_dur_dict.keys():
-    logging.warning("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_dict[key] / 60 / 60)))
+
+if __name__ == '__main__':
+    st_local = "2018.08.18 20:38:10"
+    et_local = "2018.08.18 20:48:10"
+    main("btc", "gopax", "okcoin", st_local, et_local)

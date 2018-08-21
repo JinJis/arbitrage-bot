@@ -27,9 +27,11 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             "threshold": 0
         }
     }
+    parsing_interval = 300
 
     @classmethod
-    def run(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
+    def run(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict,
+            is_stat_appender: bool = False, is_parsing_dur: bool = False):
 
         # get oppty_dur dict
         oppty_dur_dict = OTC.run(settings)
@@ -39,14 +41,24 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         oppty_dur_human_dict = OTC.get_oppty_dur_human_time(oppty_dur_dict, timezone="kr")
         logging.warning("Total Oppty Duration Human date Dict: %s" % oppty_dur_human_dict)
 
-        # get total duration hour for each trade
-        total_dur_hour = OTC.get_total_duration_time(oppty_dur_dict)
-        for key in total_dur_hour.keys():
-            hour = total_dur_hour[key] // 3600
-            minute = int(((total_dur_hour[key] / 3600) - hour) * 60)
-            logging.warning("Total [%s] duration: %dhr %dmin" % (key.upper(), hour, minute))
-
         # loop through oppty times
+
+        # if parse oppty_dur by parsing_interval (usage for Trade Streamer
+        if is_parsing_dur:
+            parsed_oppty_dur_dict = cls.get_parsed_oppty_dur_dict(oppty_dur_dict)
+            return cls.run_iyo(settings, bal_factor_settings, factor_settings, parsed_oppty_dur_dict)
+
+        # only use of data collecting of IYO or shallow analysis
+        else:
+            result = cls.run_iyo(settings, bal_factor_settings, factor_settings, oppty_dur_dict)
+
+            if not is_stat_appender:
+                return result
+            else:
+                return cls.run_iyo_stat_appender(result)
+
+    @classmethod
+    def run_iyo(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict, oppty_dur_dict: dict):
         db_result = []
         for trade_type in oppty_dur_dict.keys():
             for time in oppty_dur_dict[trade_type]:
@@ -94,9 +106,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     logging.error("Something went wrong while executing IYO loop!", time, e)
 
         # finally run IYO Stat appender and return final result
-        db_with_stat_result = cls.run_iyo_stat_appender(db_result)
-
-        return db_with_stat_result
+        return db_result
 
     @classmethod
     def init_initial_step(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
@@ -285,6 +295,28 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             iyo_data["stat"] = IYOStatAppender.run(iyo_data)
             iyo_with_stat_list.append(iyo_data)
         return iyo_with_stat_list
+
+    @staticmethod
+    def get_parsed_oppty_dur_dict(oppty_dur_dict: dict):
+        parsed_oppty_dur_dict = dict()
+        for trade_type in oppty_dur_dict.keys():
+            result_list = []
+            for time_list in oppty_dur_dict[trade_type]:
+                start = None
+                while True:
+                    if start is None:
+                        start = time_list[0]
+                        continue
+                    end = start + IntegratedYieldOptimizer.parsing_interval
+                    if end <= time_list[1]:
+                        result_list.append([start, end])
+                        start = end
+                        continue
+                    else:
+                        result_list.append([start, time_list[1]])
+                        break
+            parsed_oppty_dur_dict[trade_type] = result_list
+        return parsed_oppty_dur_dict
 
 
 # This Analyzer is for analyzing and calculating statistical infos in IYO mongoDB data
