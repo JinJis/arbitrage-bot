@@ -70,12 +70,15 @@ class OTCScheduler(BaseScheduler):
                                                        depth=iyo_config["depth"],
                                                        consecution_time=iyo_config["consecution_time"],
                                                        is_virtual_mm=True)
-
-            otc_result_dict = OpptyTimeCollector.run(settings=settings)
-            total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
-            total_dur_dict["combination"] = \
-                "%s-%s-%s" % (coin_name.upper(), str(_combi[0]).upper(), str(_combi[1]).upper())
-            all_comb_result_by_one_coin.append(total_dur_dict)
+            try:
+                otc_result_dict = OpptyTimeCollector.run(settings=settings)
+                total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
+                total_dur_dict["combination"] = \
+                    "%s-%s-%s" % (coin_name.upper(), str(_combi[0]).upper(), str(_combi[1]).upper())
+                all_comb_result_by_one_coin.append(total_dur_dict)
+            except TypeError as e:
+                logging.error("Something went wrong in OTC scheduler", e)
+                continue
         return all_comb_result_by_one_coin
 
     @staticmethod
