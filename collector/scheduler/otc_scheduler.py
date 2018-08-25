@@ -10,8 +10,9 @@ from collector.oppty_time_collector import OpptyTimeCollector
 
 class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
-    time_dur_to_anal = 24 * 60 * 60
-    publishing_time = "07:00:00"
+    time_dur_to_anal = 3 * 60 * 60
+    publishing_time_set = ["07:00:00", "10:00:00", "13:00:00", "16:00:00",
+                           "19:00:00", "23:00:00", "01:00:00", "04:00:00"]
 
     def __init__(self):
         Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.CRITICAL)
@@ -22,31 +23,41 @@ class OTCScheduler(BaseScheduler):
     def _actual_run_in_loop(self):
         now_date = int(time.time())
 
-        convted_pub_time = datetime.strptime(self.publishing_time, "%H:%M:%S").time()
-        publish_local_date = datetime.combine(date.today(), convted_pub_time).strftime("%Y.%m.%d %H:%M:%S %z")
-        publish_epoch_date = Global.convert_local_datetime_to_epoch(str(publish_local_date), timezone="kr")
+        publish_epoch_date_set = self.get_publish_epoch_date_set()
 
-        start_time = publish_epoch_date - self.time_dur_to_anal
-        end_time = publish_epoch_date
+        for publish_epoch_date in publish_epoch_date_set:
+            if (now_date >= publish_epoch_date) \
+                    and (now_date <= publish_epoch_date + (self.interval_time_sec * 2)):
 
-        if (now_date >= publish_epoch_date) \
-                and (now_date <= publish_epoch_date + (self.interval_time_sec * 2)):
-            logging.critical("OTC activated start_time: %d" % now_date)
-            # loop through all possible coins and run
-            final_result = []
-            for target_currency in list(Global.read_avail_coin_in_list()):
-                logging.critical("Now conducting %s" % target_currency.upper())
-                result_by_one_coin = self.otc_all_mm_comb_by_one_coin(target_currency, start_time, end_time)
-                final_result.extend(result_by_one_coin)
+                start_time = publish_epoch_date - self.time_dur_to_anal
+                end_time = publish_epoch_date
 
-            # sort by highest to lowest oppty duration
-            descending_order_result = self.sort_by_logest_oppty_time_to_lowest(final_result)
+                logging.critical("OTC activated start_time: %d" % now_date)
+                # loop through all possible coins and run
+                final_result = []
+                for target_currency in list(Global.read_avail_coin_in_list()):
+                    logging.critical("Now conducting %s" % target_currency.upper())
+                    result_by_one_coin = self.otc_all_mm_comb_by_one_coin(target_currency, start_time, end_time)
+                    final_result.extend(result_by_one_coin)
 
-            # send this final result to slack in form of str
-            start_local_date = Global.convert_epoch_to_local_datetime(start_time)
-            self.send_result_nicely_to_slack(descending_order_result, start_local_date, publish_local_date)
-        else:
-            pass
+                # sort by highest to lowest oppty duration
+                descending_order_result = self.sort_by_logest_oppty_time_to_lowest(final_result)
+
+                # send this final result to slack in form of str
+                start_local_date = Global.convert_epoch_to_local_datetime(start_time)
+                self.send_result_nicely_to_slack(descending_order_result, start_local_date, publish_local_date)
+            else:
+                continue
+        pass
+
+    def get_publish_epoch_date_set(self):
+        pub_local_date_set \
+            = [datetime.combine(date.today(),
+                                datetime.strptime(pub_time, "%H:%M:%S").time()).strftime("%Y.%m.%d %H:%M:%S %z")
+               for pub_time in self.publishing_time_set]
+
+        return [Global.convert_local_datetime_to_epoch(str(pub_local_date), timezone="kr")
+                for pub_local_date in pub_local_date_set]
 
     @staticmethod
     def otc_all_mm_comb_by_one_coin(coin_name: str, start_time: int, end_time: int) -> list:
