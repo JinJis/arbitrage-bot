@@ -5,9 +5,9 @@ from config.shared_mongo_client import SharedMongoClient
 from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 
-def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time: str):
+def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time: str, slicing_interval: int):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
     logging.warning("Nohup conducting -> start_time: %s, end_time: %s" % (start_time, end_time))
     # Global.send_to_slack_channel("IYO Initiated!! start_time: %s, end_time: %s" % (prev_time, cur_time))
@@ -39,17 +39,18 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
                                                              iyo_config["appx_unit_coin_price"])
 
     iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
-                                              is_stat_appender=False, is_slicing_dur=True)
+                                              is_stat_appender=False, is_slicing_dur=True,
+                                              slicing_interval=slicing_interval)
     logging.critical("Final IYO result: %s" % iyo_result)
     return iyo_result
 
 
 if __name__ == '__main__':
     # for short term (=< one day)
-    st_local = "2018.08.22 07:00:00"
-    et_local = "2018.08.22 12:00:00"
+    st_local = "2018.08.25 22:00:00"
+    et_local = "2018.08.26 01:00:00"
 
-    parsed_iyo_result = main("bch", "coinone", "okcoin", st_local, et_local)
+    parsed_iyo_result = main("btc", "gopax", "okcoin", st_local, et_local, slicing_interval=120)
 
     yield_result = []
     for iyo in parsed_iyo_result:

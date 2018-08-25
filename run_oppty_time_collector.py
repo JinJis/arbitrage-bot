@@ -27,6 +27,6 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time_local: str, en
 
 
 if __name__ == '__main__':
-    st_local = "2018.08.18 20:38:10"
-    et_local = "2018.08.18 20:48:10"
+    st_local = "2018.08.25 22:30:10"
+    et_local = "2018.08.26 01:28:10"
     main("btc", "gopax", "okcoin", st_local, et_local)

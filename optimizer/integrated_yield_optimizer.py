@@ -44,8 +44,9 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
         # if parse oppty_dur by parsing_interval (usage for Trade Streamer
         if is_slicing_dur:
-            parsed_oppty_dur_dict = cls.get_sliced_oppty_dur_dict(oppty_dur_dict, slicing_interval)
-            return cls.run_iyo(settings, bal_factor_settings, factor_settings, parsed_oppty_dur_dict)
+
+            sliced_oppty_dur_dict = cls.get_sliced_oppty_dur_dict(oppty_dur_dict, slicing_interval)
+            return cls.run_iyo(settings, bal_factor_settings, factor_settings, sliced_oppty_dur_dict)
 
         # only use of data collecting of IYO or shallow analysis
         else:
@@ -276,13 +277,13 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         if (iyo_data["rev_traded"] == 0) and (iyo_data["new_traded"] != 0):
             start_bal = iyo_data["settings"]["mm1"]["krw_balance"]
             end_bal = iyo_data["end_balance"]["mm1"]["krw"]
-            return round(((start_bal - end_bal) / start_bal * 100), 4)
+            return round(((start_bal - end_bal) / start_bal), 4)
 
         # when rev, calc mm2 krw
         if (iyo_data["new_traded"] == 0) and (iyo_data["rev_traded"] != 0):
             start_bal = iyo_data["settings"]["mm2"]["krw_balance"]
             end_bal = iyo_data["end_balance"]["mm2"]["krw"]
-            return round(((start_bal - end_bal) / start_bal * 100), 4)
+            return round(((start_bal - end_bal) / start_bal), 4)
         else:
             return 0
 
