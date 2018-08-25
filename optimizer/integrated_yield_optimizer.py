@@ -27,11 +27,10 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             "threshold": 0
         }
     }
-    parsing_interval = 300
 
     @classmethod
     def run(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict,
-            is_stat_appender: bool = False, is_parsing_dur: bool = False):
+            is_stat_appender: bool = False, is_slicing_dur: bool = False, slicing_interval: int = None):
 
         # get oppty_dur dict
         oppty_dur_dict = OTC.run(settings)
@@ -44,8 +43,8 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         # loop through oppty times
 
         # if parse oppty_dur by parsing_interval (usage for Trade Streamer
-        if is_parsing_dur:
-            parsed_oppty_dur_dict = cls.get_parsed_oppty_dur_dict(oppty_dur_dict)
+        if is_slicing_dur:
+            parsed_oppty_dur_dict = cls.get_sliced_oppty_dur_dict(oppty_dur_dict, slicing_interval)
             return cls.run_iyo(settings, bal_factor_settings, factor_settings, parsed_oppty_dur_dict)
 
         # only use of data collecting of IYO or shallow analysis
@@ -297,7 +296,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         return iyo_with_stat_list
 
     @staticmethod
-    def get_parsed_oppty_dur_dict(oppty_dur_dict: dict):
+    def get_sliced_oppty_dur_dict(oppty_dur_dict: dict, slicing_interval: int):
         parsed_oppty_dur_dict = dict()
         for trade_type in oppty_dur_dict.keys():
             result_list = []
@@ -307,7 +306,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     if start is None:
                         start = time_list[0]
                         continue
-                    end = start + IntegratedYieldOptimizer.parsing_interval
+                    end = start + slicing_interval
                     if end <= time_list[1]:
                         result_list.append([start, end])
                         start = end
