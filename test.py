@@ -1,6 +1,5 @@
-test = [{"a": 1, "b": 3}, {"a": 1, "b": 3}, {"a": 1, "b": 3}, {"a": 1, "b": 3}, {"a": 1, "b": 3}, {"a": 1, "b": 3}]
-
-for data in test:
-    data["c"] = 4
-
-print(test)
+from config.global_conf import Global
+b = Global.get_rfab_combination_list("btc")
+a = Global.get_inner_ocat_combination("okcoin", "btc")
+print(a)
+print(b)

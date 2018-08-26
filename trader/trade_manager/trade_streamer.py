@@ -10,8 +10,8 @@ from trader.trade_manager.trade_stat_formula import TradeFormula, TradeFormulaAp
 
 
 class TradeStreamer:
-    INITIATION_REWEIND_TIME = 1 * 60 * 60
-    TIME_DUR_TIL_SETTLEMENT = 6 * 60 * 60
+    INITIATION_REWEIND_TIME = 3 * 60 * 60
+    TIME_DUR_TIL_SETTLEMENT = 24 * 60 * 60
 
     YIELD_THRESHOLD_RATE_START = 0.1
     YIELD_THRESHOLD_RATE_END = 0.7
@@ -86,11 +86,11 @@ class TradeStreamer:
             self.target_currency = str(input("Type target_currency:"))
             self.mm1_name = str(input("Type mm1_name:"))
             self.mm2_name = str(input("Type mm2_name:"))
-            self.mm1_krw_bal = float(input("Type [%s]_[KRW]_bal:" % self.mm1_name.upper()))
-            self.mm2_krw_bal = float(input("Type [%s]_[KRW]_bal:" % self.mm2_name.upper()))
-            self.mm1_coin_bal = float(input("Type [%s]_[%s]_bal:"
+            self.mm1_krw_bal = float(input("Type [%s]-[KRW] Balance:" % self.mm1_name.upper()))
+            self.mm1_coin_bal = float(input("Type [%s]-[%s] Balance:"
                                             % (self.mm1_name.upper(), self.target_currency.upper())))
-            self.mm2_coin_bal = float(input("Type [%s]_[%s]_bal:"
+            self.mm2_krw_bal = float(input("Type [%s]-[KRW] Balance:" % self.mm2_name.upper()))
+            self.mm2_coin_bal = float(input("Type [%s]-[%s] Balance:"
                                             % (self.mm2_name.upper(), self.target_currency.upper())))
 
             # change time info up-to-date
