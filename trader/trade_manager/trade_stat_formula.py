@@ -5,8 +5,9 @@ class TradeFormulaApplied:
 
     @staticmethod
     def get_formulated_trade_interval(sliced_iyo_list: list, mm1_krw_bal: float, mm2_krw_bal: float,
-                                      anal_stop_time: int, weight: float, min_trade_interval: int):
-        target_formula = TradeFormula.predicted_trading_interval_formula
+                                      settlement_time: int, weight: float, min_trade_interval: int,
+                                      max_trade_interval_multiplier: int):
+        target_formula = TradeFormula.formulated_trading_interval_formula
 
         # plz remember that FTI is an abbreviation of Formulated Trade Interval
         fti_list = []
@@ -29,14 +30,13 @@ class TradeFormulaApplied:
             print("yes")
 
         # loop through sliced_iyo_list and apply real_time simulation
-        iyo_yield_list = []
         fti_yield_list = []
 
         for iyo in sliced_iyo_list:
 
             # calc need params for Predicted Trading Interval FOURMULA
             act_exhaust_rate = iyo["exhaust_rate"] * (iyo["total_krw_invested"] / cur_end_krw_bal)
-            remain_time_sec = anal_stop_time - iyo["settings"]["start_time"]
+            remain_time_sec = settlement_time - iyo["settings"]["start_time"]
 
             # skip if start & end time is equal --> inexplicable data that triggers Formula Zerodevision
 
@@ -58,9 +58,11 @@ class TradeFormulaApplied:
                 calced_trade_interval = min_trade_interval
                 fti_list.append(calced_trade_interval)
             # if calced_trading_interval is greater than iyo_run_time -> iyo_run_time
-            if calced_trade_interval > iyo_run_time:
+            if iyo_run_time < calced_trade_interval < max_trade_interval_multiplier * iyo_run_time:
                 calced_trade_interval = iyo_run_time
                 fti_list.append(calced_trade_interval)
+            else:
+                continue
 
             # subtract actual traded krw applied with calced_trading_interval from current krw balance
             krw_traded = cur_end_krw_bal * act_exhaust_rate * (5 / calced_trade_interval)
@@ -72,13 +74,10 @@ class TradeFormulaApplied:
             # if current_krw_bal is still holdable, trade
             cur_end_krw_bal -= krw_traded
 
-            # first append purely IYOed yield to list
-            iyo_yield_list.append(iyo["yield"])
             # append yield updated with trading_interval_time and subtacted krw real_time balance
-
             # FIXME: 과연 여기가 줄어든 KRW를 반영한 수익률인가? --> 애초에 yield 구했던거 다시 점검 필요!!!
             expted_yield = iyo["yield"] * (5 / calced_trade_interval) * (cur_end_krw_bal / iyo["total_krw_invested"])
-            fti_yield_list.append(expted_yield)
+            fti_yield_list.append(round(expted_yield, 10))
 
         # finally, calculate PTIed KRW exhaust rate for further analysis for actual trader
         fti_exhaust_rate = (initial_krw_bal - cur_end_krw_bal) / initial_krw_bal
@@ -91,7 +90,7 @@ class TradeFormulaApplied:
 
 class TradeFormula:
     @staticmethod
-    def predicted_trading_interval_formula(actual_exhaust_rate: float, remain_time_sec: int, iyo_run_time: int):
+    def formulated_trading_interval_formula(actual_exhaust_rate: float, remain_time_sec: int, iyo_run_time: int):
         return (actual_exhaust_rate * remain_time_sec * 5) / iyo_run_time  # 5는 iyo 기본 trade interval
 
     @staticmethod

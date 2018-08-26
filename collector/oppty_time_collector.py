@@ -134,4 +134,4 @@ class OpptyTimeCollector:
         for key in total_dur_hour.keys():
             hour = total_dur_hour[key] // 3600
             minute = int(((total_dur_hour[key] / 3600) - hour) * 60)
-            logging.warning("Total [%s] duration: %dhr %dmin" % (key.upper(), hour, minute))
+            logging.info("Total [%s] duration: %dhr %dmin" % (key.upper(), hour, minute))

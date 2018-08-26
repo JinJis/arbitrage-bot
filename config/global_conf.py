@@ -131,14 +131,14 @@ class Global:
         return result
 
     @staticmethod
-    def get_rfab_combination_list(target_coin: str):
+    def get_rfab_combination_list(target_currency: str):
         """
-        :param target_coin: bch, btc, tron...
+        :param target_currency: bch, btc, tron...
         :return: [('bithumb', 'coinone'), ('bithumb', 'okcoin')...]
         """
         config = configparser.ConfigParser()
         config.read(Global.RFAB_COMBINATION_CONFIG_LOCATION)
-        target_config = config[target_coin.upper()]
+        target_config = config[target_currency.upper()]
 
         exchange_list = []
         for exchange in target_config.keys():
@@ -148,6 +148,15 @@ class Global:
                 continue
 
         return list(it.combinations(exchange_list, 2))
+
+    @staticmethod
+    def get_inner_ocat_combination(target_market: str, target_currency: str):
+        all_combi_list = Global.get_rfab_combination_list(target_currency)
+        inner_ocat_list = []
+        for combi in all_combi_list:
+            if target_market in combi:
+                inner_ocat_list.append(combi)
+        return inner_ocat_list
 
     @staticmethod
     def configure_default_root_logging(log_level: int = logging.INFO, should_log_to_file: bool = False):
