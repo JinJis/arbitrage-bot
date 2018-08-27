@@ -11,7 +11,7 @@ class TradeFormulaApplied:
 
         # plz remember that FTI is an abbreviation of Formulated Trade Interval
         fti_list = []
-
+        print(sliced_iyo_list)
         # decide whether each IYO data was NEW or REV
         new_traded_count = 0
         rev_traded_count = 0
@@ -35,7 +35,8 @@ class TradeFormulaApplied:
         for iyo in sliced_iyo_list:
 
             # calc need params for Predicted Trading Interval FOURMULA
-            act_exhaust_rate = iyo["exhaust_rate"] * (iyo["total_krw_invested"] / cur_end_krw_bal)
+            # iyo는 무조건 100% exhaust --> actual exhaust rate 으로 변환
+            act_exhaust_rate = iyo["total_krw_exhausted"] / cur_end_krw_bal
             remain_time_sec = settlement_time - iyo["settings"]["start_time"]
 
             # skip if start & end time is equal --> inexplicable data that triggers Formula Zerodevision
@@ -46,9 +47,13 @@ class TradeFormulaApplied:
             if iyo_run_time == 0:
                 continue
 
+            # get trade ratio (traded new + rev / new + rev oppty count)
+            trade_ratio = (iyo["new_traded"] + iyo["rev_traded"]) / (iyo["new_oppty_count"] + iyo["rev_oppty_count"])
+
             # calc trading_interval by formulated equation; Predicted Trading Interval Formula.
             # in order to opt the formula by multiplying weight
-            calced_trade_interval = int(weight * target_formula(act_exhaust_rate, remain_time_sec, iyo_run_time))
+            calced_trade_interval = int(weight * target_formula(trade_ratio, act_exhaust_rate,
+                                                                remain_time_sec, iyo_run_time))
 
             # if calculated trading_interval is between trading time and min_trade_interval -> good to go
             if min_trade_interval <= calced_trade_interval <= iyo_run_time:
@@ -90,8 +95,9 @@ class TradeFormulaApplied:
 
 class TradeFormula:
     @staticmethod
-    def formulated_trading_interval_formula(actual_exhaust_rate: float, remain_time_sec: int, iyo_run_time: int):
-        return (actual_exhaust_rate * remain_time_sec * 5) / iyo_run_time  # 5는 iyo 기본 trade interval
+    def formulated_trading_interval_formula(trade_ratio: float, actual_exhaust_rate: float,
+                                            remain_time_sec: int, iyo_run_time: int):
+        return (actual_exhaust_rate * remain_time_sec * 5 * trade_ratio) / iyo_run_time  # 5는 iyo 기본 trade interval
 
     @staticmethod
     def get_area_percent_by_histo_formula(past_data_list: list, current_data: float):

@@ -7,7 +7,7 @@ from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 
 def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
     logging.warning("Nohup conducting -> start_time: %s, end_time: %s" % (start_time, end_time))
     # Global.send_to_slack_channel("IYO Initiated!! start_time: %s, end_time: %s" % (prev_time, cur_time))
@@ -45,7 +45,7 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
 
 if __name__ == '__main__':
     # for short term (=< one day)
-    st_local = "2018.08.18 19:48:10"
-    et_local = "2018.08.18 20:48:10"
+    st_local = "2018.08.27 18:00:10"
+    et_local = "2018.08.27 20:00:10"
 
-    main("btc", "gopax", "okcoin", st_local, et_local)
+    main("eth", "coinone", "okcoin", st_local, et_local)

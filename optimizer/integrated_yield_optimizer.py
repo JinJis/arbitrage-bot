@@ -126,9 +126,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                                                factor_settings: dict,
                                                depth: int, optimized: dict = None):
         if depth == 0:
-            # append exhaust_rate for final Opt
-            optimized["exhaust_rate"] = cls.calc_exhaust_rate(optimized)
-
             # log final Opt result yield
             final_opt_yield = optimized["yield"]
             logging.critical("\n[IYO Final Opt Result]"
@@ -260,32 +257,33 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             encoded_mkt_tag = cloned_settings[market]["market_tag"].value
             cloned_settings[market]["market_tag"] = encoded_mkt_tag
 
-        result["total_krw_invested"] = bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]
-        result["krw_earned"] = exec_result["total_krw_bal"] - result["total_krw_invested"]
-        result["yield"] = result["krw_earned"] / result["total_krw_invested"] * 100
+        # if new is dominant,
+        if exec_result["rev_traded"] < exec_result["new_traded"]:
+            result["total_krw_exhausted"] = bal_setting["mm1"]["krw_balance"] - exec_result["end_balance"]["mm1"]["krw"]
+
+        # if rev is dominant,
+        if exec_result["rev_traded"] > exec_result["new_traded"]:
+            result["total_krw_exhausted"] = bal_setting["mm2"]["krw_balance"] - exec_result["end_balance"]["mm2"]["krw"]
+
+        # if nothing traded,
+        if exec_result["rev_traded"] == exec_result["new_traded"] == 0:
+            result["total_krw_exhausted"] = 0
+
+        result["krw_earned"] = exec_result["total_krw_bal"] - (
+                bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"])
+        try:
+            result["yield"] = (result["krw_earned"] / result["total_krw_exhausted"]) * 100
+        except ZeroDivisionError:
+            result["yield"] = 0
+
         result["new_traded"] = exec_result["new_traded"]
         result["rev_traded"] = exec_result["rev_traded"]
         result["end_balance"] = exec_result["end_balance"]
         result["settings"] = cloned_settings
         result["initial_setting"] = init_setting
         result["balance_setting"] = bal_setting
+
         return result
-
-    @staticmethod
-    def calc_exhaust_rate(iyo_data: dict):
-        # when new, calc mm1 krw
-        if (iyo_data["rev_traded"] == 0) and (iyo_data["new_traded"] != 0):
-            start_bal = iyo_data["settings"]["mm1"]["krw_balance"]
-            end_bal = iyo_data["end_balance"]["mm1"]["krw"]
-            return round(((start_bal - end_bal) / start_bal), 4)
-
-        # when rev, calc mm2 krw
-        if (iyo_data["new_traded"] == 0) and (iyo_data["rev_traded"] != 0):
-            start_bal = iyo_data["settings"]["mm2"]["krw_balance"]
-            end_bal = iyo_data["end_balance"]["mm2"]["krw"]
-            return round(((start_bal - end_bal) / start_bal), 4)
-        else:
-            return 0
 
     @staticmethod
     def run_iyo_stat_appender(iyo_data_list: list):
