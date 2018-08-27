@@ -76,8 +76,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
                     # initial dry run -> get new, rev oppty count
                     new_oppty_count, rev_oppty_count = super().count_oppty_num(settings_clone,
-                                                                               cls.default_initial_setting_dict,
-                                                                               is_using_taker_fee=True)
+                                                                               cls.default_initial_setting_dict)
 
                     # opt initial settings by oppty
                     fact_set_clone = cls.opt_factor_settings_by_oppty(fact_set_clone, new_oppty_count, rev_oppty_count)
@@ -217,7 +216,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
                 # init & run bot
                 bot = super().create_bot(cloned_settings["mm1"], cloned_settings["mm2"],
-                                         cloned_settings["target_currency"], is_using_taker_fee=True)
+                                         cloned_settings["target_currency"])
                 bot.run(mm1_cursor, mm2_cursor, init_setting, is_running_in_optimizer=True)
 
                 # append formatted data

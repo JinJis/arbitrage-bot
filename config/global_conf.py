@@ -52,10 +52,18 @@ class Global:
     def read_market_fee(exchange_name: str, is_taker_fee: bool) -> float:
         config = configparser.ConfigParser()
         config.read(Global.MARKET_FEE_LOCATION)
+
+        # first check whether exchange name includes VIRTUAL and remove if any
+        if "VIRTUAL_" in exchange_name:
+            unified_exchge_name = exchange_name.replace("VIRTUAL_", "")
+        else:
+            unified_exchge_name = exchange_name
+
+        # decide fee
         if is_taker_fee:
-            fee = float(config[exchange_name.upper()]["TAKER_FEE"])
+            fee = float(config[unified_exchge_name.upper()]["TAKER_FEE"])
         elif not is_taker_fee:
-            fee = float(config[exchange_name.upper()]["MAKER_FEE"])
+            fee = float(config[unified_exchge_name.upper()]["MAKER_FEE"])
         else:
             raise Exception("Please choose between TAKER or MAKER fee!")
         return fee

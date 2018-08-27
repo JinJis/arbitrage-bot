@@ -69,7 +69,7 @@ class RfabBacktester:
 
         new_trade = None
         rev_trade = None
-        spread_info = RfabBacktester.TARGET_STRATEGY(mm1_data, mm2_data, self.mm1.market_fee, self.mm2.market_fee,
+        spread_info = RfabBacktester.TARGET_STRATEGY(mm1_data, mm2_data, self.mm1.taker_fee, self.mm2.taker_fee,
                                                      self.init_setting_dict["max_trading_coin"])
 
         # Dictionary that possess spread information that will be used in trading algorithms

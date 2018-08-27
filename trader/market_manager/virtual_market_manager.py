@@ -14,8 +14,8 @@ from bson import Decimal128
 
 
 class VirtualMarketManager(MarketManager):
-    def __init__(self, market_tag: Market, taker_fee: float, maker_fee: float, min_trading_coin: float,
-                 krw_balance: float, coin_balance: float, coin_name: str, is_using_taker_fee: bool):
+    def __init__(self, market_tag: Market, min_trading_coin: float, krw_balance: float,
+                 coin_balance: float, coin_name: str):
         # create api instance according to given api_type
         if market_tag is Market.VIRTUAL_COINONE:
             target_api = CoinoneApi.instance(is_public_access_only=True)
@@ -45,7 +45,7 @@ class VirtualMarketManager(MarketManager):
         self.initial_vt_balance = dict(self.vt_balance)
         self.order_id_count = 0
         self.min_trading_coin = min_trading_coin
-        super().__init__(market_tag, taker_fee, maker_fee, target_api, is_using_taker_fee)
+        super().__init__(market_tag, target_api)
 
         self.history = dict()
 
@@ -53,7 +53,7 @@ class VirtualMarketManager(MarketManager):
         if not self.has_enough_coin("krw", amount * unit_price):
             raise Exception("[%s] Could not order_buy" % self.market_tag)
 
-        self.vt_balance[currency.name.lower()] += amount * (1 - self.market_fee)
+        self.vt_balance[currency.name.lower()] += amount * (1 - self.taker_fee)
         self.vt_balance["krw"] -= amount * unit_price
         try:
             self.history[unit_price] -= amount
@@ -67,7 +67,7 @@ class VirtualMarketManager(MarketManager):
             raise Exception("[%s] Could not order_sell" % self.market_tag)
 
         self.vt_balance[currency.name.lower()] -= amount
-        self.vt_balance["krw"] += unit_price * amount * (1 - self.market_fee)
+        self.vt_balance["krw"] += unit_price * amount * (1 - self.taker_fee)
         try:
             self.history[unit_price] += amount
         except KeyError:

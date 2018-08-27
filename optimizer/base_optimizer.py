@@ -8,8 +8,8 @@ from backtester.risk_free_arb_backtester import RfabBacktester
 class BaseOptimizer:
 
     @classmethod
-    def count_oppty_num(cls, settings: dict, default_init_setting_dict: dict, is_using_taker_fee: bool):
-        bot = cls.create_bot(settings["mm1"], settings["mm2"], settings["target_currency"], is_using_taker_fee)
+    def count_oppty_num(cls, settings: dict, default_init_setting_dict: dict):
+        bot = cls.create_bot(settings["mm1"], settings["mm2"], settings["target_currency"])
         mm1_cursor, mm2_cursor = cls.get_history_data(settings)
         bot.run(mm1_cursor, mm2_cursor, default_init_setting_dict, True)
 
@@ -69,21 +69,19 @@ class BaseOptimizer:
         return max([step, item["step_limit"]])
 
     @classmethod
-    def create_bot(cls, mm1_settings: dict, mm2_settings: dict, target_currency: str, is_using_taker_fee: bool):
-        mm1 = cls.create_market(mm1_settings, target_currency, is_using_taker_fee)
-        mm2 = cls.create_market(mm2_settings, target_currency, is_using_taker_fee)
+    def create_bot(cls, mm1_settings: dict, mm2_settings: dict, target_currency: str):
+        mm1 = cls.create_market(mm1_settings, target_currency)
+        mm2 = cls.create_market(mm2_settings, target_currency)
         return RfabBacktester(mm1, mm2, target_currency)
 
     @staticmethod
-    def create_market(market_settings: dict, target_currency: str, is_using_taker_fee: bool):
+    def create_market(market_settings: dict, target_currency: str):
         return VirtualMarketManager(
             market_settings["market_tag"],
-            market_settings["taker_fee"],
-            market_settings["maker_fee"],
             market_settings["min_trading_coin"],
             market_settings["krw_balance"],
             market_settings["coin_balance"],
-            target_currency, is_using_taker_fee=is_using_taker_fee
+            target_currency
         )
 
     @staticmethod

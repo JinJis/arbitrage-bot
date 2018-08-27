@@ -1,4 +1,5 @@
 import numpy as np
+from optimizer.base_optimizer import BaseOptimizer
 
 
 class TradeFormulaApplied:
@@ -81,16 +82,13 @@ class TradeFormulaApplied:
 
             # append yield updated with trading_interval_time and subtacted krw real_time balance
             # FIXME: 과연 여기가 줄어든 KRW를 반영한 수익률인가? --> 애초에 yield 구했던거 다시 점검 필요!!!
-            expted_yield = iyo["yield"] * (5 / calced_trade_interval) * (cur_end_krw_bal / iyo["total_krw_invested"])
+            expted_yield = iyo["yield"] * (5 / calced_trade_interval) * (cur_end_krw_bal / iyo["total_krw_exhausted"])
             fti_yield_list.append(round(expted_yield, 10))
 
         # finally, calculate PTIed KRW exhaust rate for further analysis for actual trader
         fti_exhaust_rate = (initial_krw_bal - cur_end_krw_bal) / initial_krw_bal
 
         return fti_list, fti_yield_list, fti_exhaust_rate
-
-    def exhaustion_reamining_time_formula(self):
-        pass
 
 
 class TradeFormula:
@@ -109,3 +107,36 @@ class TradeFormula:
                 break
             area_percentage += histo * np.diff(bin_edges)[0]
         return area_percentage
+
+    @staticmethod
+    def get_yield_histo_filtered_dict(sliced_iyo_list: list,
+                                      yield_th_rate_start, yield_th_rate_end, yield_th_rate_step):
+        """
+        :param sliced_iyo_list: [s_iyo, s_iyo, s_iyo....]
+        :return:
+        yield_rank_filtered_dict =
+        {"0.1": [filtered_iyo, filt_iyo, ....],
+         "0.2": [filtered_iyo, filt_iyo, ....],
+         ...
+        }
+        """
+        # calculate rank_perent for each s_iyo data and append to original
+        s_iyo_yield_list = [x["yield"] for x in sliced_iyo_list]
+        for s_iyo in sliced_iyo_list:
+            yield_threshold_rate = TradeFormula.get_area_percent_by_histo_formula(s_iyo_yield_list, s_iyo["yield"])
+            s_iyo["yield_threshold_rate"] = yield_threshold_rate
+
+        # create yield rank sequence to loop and analyze further down
+        yield_rank_filtered_dict = dict()
+        for yield_th_rate in BaseOptimizer.generate_seq(yield_th_rate_start, yield_th_rate_end,
+                                                        yield_th_rate_step):
+
+            yield_histo_filtered_list = []
+            for s_iyo in sliced_iyo_list:
+                if s_iyo["yield_threshold_rate"] >= yield_th_rate:
+                    yield_histo_filtered_list.append(s_iyo)
+                else:
+                    continue
+            yield_rank_filtered_dict[yield_th_rate] = yield_histo_filtered_list
+
+        return yield_rank_filtered_dict

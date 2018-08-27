@@ -1,8 +1,6 @@
 import logging
-
 import pymongo
 from pymongo.collection import Collection
-
 from analyzer.trade_analyzer import ATSAnalyzer
 from analyzer.trade_analyzer import SpreadInfo
 from config.global_conf import Global
