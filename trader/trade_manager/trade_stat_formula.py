@@ -8,11 +8,19 @@ class TradeFormulaApplied:
     def get_formulated_trade_interval(sliced_iyo_list: list, mm1_krw_bal: float, mm2_krw_bal: float,
                                       settlement_time: int, weight: float, min_trade_interval: int,
                                       max_trade_interval_multiplier: int):
+        """
+        :return:
+        fti_iyos_result_dict = {
+            "fti_exhaust_rate": flaot,
+            "fti_iyo_list": [iyo, iyo, iyo...]
+                            ** iyo = {
+                                "fti",
+                                "fti_yield"
+                            }
+        }
+        """
         target_formula = TradeFormula.formulated_trading_interval_formula
 
-        # plz remember that FTI is an abbreviation of Formulated Trade Interval
-        fti_list = []
-        print(sliced_iyo_list)
         # decide whether each IYO data was NEW or REV
         new_traded_count = 0
         rev_traded_count = 0
@@ -27,20 +35,18 @@ class TradeFormulaApplied:
             cur_end_krw_bal = mm2_krw_bal
 
         initial_krw_bal = cur_end_krw_bal
-        if initial_krw_bal == 0:
-            print("yes")
 
         # loop through sliced_iyo_list and apply real_time simulation
-        fti_yield_list = []
+        # plz remember that FTI is an abbreviation of Formulated Trade Interval
 
+        fti_iyos_result_dict = dict()
+        temp_iyo_list = []
         for iyo in sliced_iyo_list:
 
             # calc need params for Predicted Trading Interval FOURMULA
             # iyo는 무조건 100% exhaust --> actual exhaust rate 으로 변환
             act_exhaust_rate = iyo["total_krw_exhausted"] / cur_end_krw_bal
             remain_time_sec = settlement_time - iyo["settings"]["start_time"]
-
-            # skip if start & end time is equal --> inexplicable data that triggers Formula Zerodevision
 
             # calc iyo_run_time
             iyo_run_time = (iyo["settings"]["end_time"] - iyo["settings"]["start_time"])
@@ -58,15 +64,13 @@ class TradeFormulaApplied:
 
             # if calculated trading_interval is between trading time and min_trade_interval -> good to go
             if min_trade_interval <= calced_trade_interval <= iyo_run_time:
-                fti_list.append(calced_trade_interval)
+                pass
             # if calced_trading_interval is less than min_trade_interval -> min_trade_interval
             if calced_trade_interval < min_trade_interval:
                 calced_trade_interval = min_trade_interval
-                fti_list.append(calced_trade_interval)
             # if calced_trading_interval is greater than iyo_run_time -> iyo_run_time
             if iyo_run_time < calced_trade_interval < max_trade_interval_multiplier * iyo_run_time:
                 calced_trade_interval = iyo_run_time
-                fti_list.append(calced_trade_interval)
             else:
                 continue
 
@@ -81,14 +85,18 @@ class TradeFormulaApplied:
             cur_end_krw_bal -= krw_traded
 
             # append yield updated with trading_interval_time and subtacted krw real_time balance
-            # FIXME: 과연 여기가 줄어든 KRW를 반영한 수익률인가? --> 애초에 yield 구했던거 다시 점검 필요!!!
             expted_yield = iyo["yield"] * (5 / calced_trade_interval) * (cur_end_krw_bal / iyo["total_krw_exhausted"])
-            fti_yield_list.append(round(expted_yield, 10))
 
-        # finally, calculate PTIed KRW exhaust rate for further analysis for actual trader
-        fti_exhaust_rate = (initial_krw_bal - cur_end_krw_bal) / initial_krw_bal
+            # finally append them to the original s-IYO dictionary
+            iyo["fti"] = calced_trade_interval
+            iyo["fti_yield"] = expted_yield
+            temp_iyo_list.append(iyo)
 
-        return fti_list, fti_yield_list, fti_exhaust_rate
+        # after looping all the s-iyos, calculate PTIed KRW exhaust rate for further analysis for actual trader
+        fti_iyos_result_dict["fti_exhaust_rate"] = (initial_krw_bal - cur_end_krw_bal) / initial_krw_bal
+        fti_iyos_result_dict["fti_iyo_list"] = temp_iyo_list
+
+        return fti_iyos_result_dict
 
 
 class TradeFormula:
@@ -113,6 +121,9 @@ class TradeFormula:
                                       yield_th_rate_start, yield_th_rate_end, yield_th_rate_step):
         """
         :param sliced_iyo_list: [s_iyo, s_iyo, s_iyo....]
+        :param yield_th_rate_start
+        :param yield_th_rate_end
+        :param yield_th_rate_step
         :return:
         yield_rank_filtered_dict =
         {"0.1": [filtered_iyo, filt_iyo, ....],

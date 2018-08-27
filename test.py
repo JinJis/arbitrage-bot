@@ -1,5 +1,7 @@
-test = "VIRTUAL_BIT"
+from config.global_conf import Global
 
-if "VIRTUAL_" in test:
-    a = test.replace("VIRTUAL_", "")
-print(a)
+test = []
+
+result = Global.find_middle_of_list(test)
+
+print(result)

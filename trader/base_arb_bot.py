@@ -1,7 +1,6 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-
 from analyzer.trade_analyzer import BasicAnalyzer
 from trader.market.trade import Trade, TradeTag
 from trader.market_manager.market_manager import MarketManager

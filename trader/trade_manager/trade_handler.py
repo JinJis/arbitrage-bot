@@ -1,44 +1,52 @@
 import time
 import logging
-from collector.oppty_time_collector import OpptyTimeCollector
-from collector.scheduler.otc_scheduler import OTCScheduler
 from config.global_conf import Global
-from config.trade_setting_config import TradeSettingConfig
+from config.config_market_manager import ConfigMarketManager
 from optimizer.base_optimizer import BaseOptimizer
+from config.trade_setting_config import TradeSettingConfig
+from collector.scheduler.otc_scheduler import OTCScheduler
+from collector.oppty_time_collector import OpptyTimeCollector
 from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
-from trader.trade_manager.trade_stat_formula import TradeFormula, TradeFormulaApplied
+from trader.market_manager.market_manager import MarketManager
+from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
     INITIATION_REWEIND_TIME = 1 * 60 * 60
-    TIME_DUR_TIL_SETTLEMENT = 4 * 60 * 60
+    TIME_DUR_TIL_SETTLEMENT = 6 * 60 * 60
+
+    # TODO 이쪽 활용해줘야함
+    TRADING_REWIND_TIME = 5 * 60
 
     YIELD_THRESHOLD_RATE_START = 0.1
-    YIELD_THRESHOLD_RATE_END = 0.7
-    YIELD_THRESHOLD_RATE_STEP = 0.05
+    YIELD_THRESHOLD_RATE_END = 0.5
+    YIELD_THRESHOLD_RATE_STEP = 0.1
 
     FTI_FORMULA_WEIGHT_START = 0.1
     FTI_FORMULA_WEIGHT_END = 1.0
-    FTI_FORMULA_WEIGHT_STEP = 0.01
+    FTI_FORMULA_WEIGHT_STEP = 0.05
 
     FTI_MIN_INTERVAL = 1
 
     MAX_TI_MULTIPLIER_START = 1
     MAX_TI_MULTIPLIER_END = 5
-    MAX_TI_MULTIPLIER_STEP = 0.5
+    MAX_TI_MULTIPLIER_STEP = 1
 
-    def __init__(self, is_initiation_mode: bool, is_trading_mode: bool, streamer_settings: dict):
+    def __init__(self, mm1: MarketManager, mm2: MarketManager, target_currency: str,
+                 is_initiation_mode: bool, is_trading_mode: bool):
 
         self.is_initiation_mode = is_initiation_mode
         self.is_trading_mode = is_trading_mode
 
-        self.mm1_name = streamer_settings["mm1_name"]
-        self.mm2_name = streamer_settings["mm2_name"]
-        self.mm1_krw_bal = streamer_settings["mm1_krw_bal"]
-        self.mm2_krw_bal = streamer_settings["mm2_krw_bal"]
-        self.mm1_coin_bal = streamer_settings["mm1_coin_bal"]
-        self.mm2_coin_bal = streamer_settings["mm2_coin_bal"]
-        self.target_currency = streamer_settings["target_currency"]
+        self.mm1 = mm1
+        self.mm2 = mm2
+        self.mm1_name = mm1.get_market_name().lower()
+        self.mm2_name = mm2.get_market_name().lower()
+        self.mm1_krw_bal = float(mm1.balance.get_available_coin("krw"))
+        self.mm2_krw_bal = float(mm2.balance.get_available_coin("krw"))
+        self.mm1_coin_bal = float(mm1.balance.get_available_coin(target_currency))
+        self.mm2_coin_bal = float(mm2.balance.get_available_coin(target_currency))
+        self.target_currency = target_currency
 
         self.bot_start_time = int(time.time())
         self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
@@ -64,14 +72,14 @@ class TradeHandler:
         if to_proceed == "y":
             # set settings accordingly
             self.target_currency = str(input("Type target_currency:"))
-            self.mm1_name = str(input("Type mm1_name:"))
-            self.mm2_name = str(input("Type mm2_name:"))
-            self.mm1_krw_bal = float(input("Type [%s]-[KRW] Balance:" % self.mm1_name.upper()))
-            self.mm1_coin_bal = float(input("Type [%s]-[%s] Balance:"
-                                            % (self.mm1_name.upper(), self.target_currency.upper())))
-            self.mm2_krw_bal = float(input("Type [%s]-[KRW] Balance:" % self.mm2_name.upper()))
-            self.mm2_coin_bal = float(input("Type [%s]-[%s] Balance:"
-                                            % (self.mm2_name.upper(), self.target_currency.upper())))
+            self.mm1: MarketManager = getattr(ConfigMarketManager, input("Type mm1!! ex) BITHUMB :")).value
+            self.mm2: MarketManager = getattr(ConfigMarketManager, input("Type mm2!! ex) BITHUMB :")).value
+            self.mm1_name = self.mm1.get_market_name().lower()
+            self.mm2_name = self.mm2.get_market_name().lower()
+            self.mm1_krw_bal = float(self.mm1.balance.get_available_coin("krw"))
+            self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
+            self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
+            self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
 
             # change IYO config settings of krw, coin seq end
             Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
@@ -139,71 +147,108 @@ class TradeHandler:
 
         return all_ocat_result_by_one_coin
 
-    def run_monitoring_mode(self):
-        # change time info up-to-date (since some minutes passed b/c of OCAT and Balance transfer
-        self.bot_start_time = int(time.time())
-        self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
-
-        if self.is_initiation_mode:
-            logging.warning("Now conducting [Monitoring] for [Initiation Mode]")
-
-            # launch Oppty Sliced IYO
-            sliced_iyo_list = self.launch_oppty_sliced_iyo(self.bot_start_time, self.rewined_time)
-
-            # get yield_histo_filtered dict
-            yield_histo_filted_dict = TradeFormula.get_yield_histo_filtered_dict(sliced_iyo_list,
-                                                                                 self.YIELD_THRESHOLD_RATE_START,
-                                                                                 self.YIELD_THRESHOLD_RATE_END,
-                                                                                 self.YIELD_THRESHOLD_RATE_STEP)
-
-            # launch Formulated Trade Interval (FTI)
-            fti_result = self.launch_formulated_trade_interval(yield_histo_filted_dict, self.rewined_time)
-            logging.critical("FINAL FTI RESULT:\n %s" % fti_result)
-            return fti_result
-
-        if not self.is_initiation_mode:
-            logging.warning("Now conducting [Monitoring] for [Monitoring Mode]")
-            pass
-        return
-
     def launch_formulated_trade_interval(self, yield_histo_filted_dict: dict, rewined_time: int):
         """
         :param yield_histo_filted_dict: {"0.1": [s-iyo, s-iyo..], "0.2": [....]}
         :param rewined_time: actual simulation start time (bot_start_time - time_anal_dur)
-        :return: {"yield_threshold_rate":
-                    {"fti_formula_weight":
-                        "max_ti_multiplier"
-                            "fti": [.....],
-                            "fti_yield_list": [.....],
-                            "fti_yield_sum": float,
-                            "fti_exhaust_rate": float}}}
+
+        :return: fti_final_result_list =
+                    [fti_iyos_result_dict, fti_iyos_result_dict, fti_iyos_result_dict, ....]
+
+                    **
+                    fti_iyos_result_dict = {
+                        "fti_exhaust_rate": float,
+                        "fti_iyo_list": [iyo, iyo, iyo...]
+
+                                        ***
+                                        iyo = {"fti": int , "fti_yield": float}
         """
         time_dur_til_settle = int(rewined_time + self.TIME_DUR_TIL_SETTLEMENT)
-        result_dict = dict()
+
+        fti_final_result_list = []
         for yield_th_rate in list(yield_histo_filted_dict.keys()):
-            result_dict.update({yield_th_rate: {}})
             for fti_formul_weight in BaseOptimizer.generate_seq(self.FTI_FORMULA_WEIGHT_START,
                                                                 self.FTI_FORMULA_WEIGHT_END,
                                                                 self.FTI_FORMULA_WEIGHT_STEP):
-                result_dict[yield_th_rate].update({fti_formul_weight: {}})
                 for max_ti_multi in BaseOptimizer.generate_seq(self.MAX_TI_MULTIPLIER_START, self.MAX_TI_MULTIPLIER_END,
                                                                self.MAX_TI_MULTIPLIER_STEP):
-                    fti_list, fti_yield_list, fti_exhaust_rate = \
+                    fti_iyos_result_dict = \
                         TradeFormulaApplied.get_formulated_trade_interval(list(yield_histo_filted_dict[yield_th_rate]),
                                                                           self.mm1_krw_bal, self.mm2_krw_bal,
                                                                           time_dur_til_settle,
                                                                           fti_formul_weight, self.FTI_MIN_INTERVAL,
                                                                           max_ti_multi)
-                    # add these infos to yield_histo_filted_dict by its key value
-                    result_dict[yield_th_rate][fti_formul_weight].update({
-                        max_ti_multi: {
-                            "fti": fti_list,
-                            "fti_yield_list": fti_yield_list,
-                            "fti_yield_sum": sum(fti_yield_list),
-                            "fti_exhaust_rate": fti_exhaust_rate
-                        }})
 
-        return result_dict
+                    # add these infos to yield_histo_filted_dict by its key value
+                    fti_iyos_result_dict["yield_threshold_rate"] = yield_th_rate
+                    fti_iyos_result_dict["fti_formula_weight"] = fti_formul_weight
+                    fti_iyos_result_dict["max_time_interval_multiplier"] = max_ti_multi
+                    fti_final_result_list.append(fti_iyos_result_dict)
+
+        return fti_final_result_list
+
+    @staticmethod
+    def get_opt_fti_set_and_final_yield(fti_result: list):
+        # retrieve final optimized setting by calculating fti_yield * fti_exhaust rate
+        opted_yield = None
+        final_opted_fti_iyo_list = []
+
+        for fti_iyo_dict in fti_result:
+            fti_yield_sum = 0
+            for iyo in fti_iyo_dict["fti_iyo_list"]:
+                fti_yield_sum += iyo["fti_yield"]
+
+            fti_iyo_dict["fti_yield_sum"] = fti_yield_sum
+
+            try:
+                expted_settle_yield = fti_iyo_dict["fti_yield_sum"] / fti_iyo_dict["fti_exhaust_rate"]
+                fti_iyo_dict["predicted_yield_by_settle"] = expted_settle_yield
+            except ZeroDivisionError:
+                continue
+
+            if opted_yield is None:
+                opted_yield = expted_settle_yield
+                continue
+            if expted_settle_yield > opted_yield:
+                opted_yield = expted_settle_yield
+                final_opted_fti_iyo_list.clear()
+                final_opted_fti_iyo_list.append(fti_iyo_dict)
+            if expted_settle_yield == opted_yield:
+                final_opted_fti_iyo_list.append(fti_iyo_dict)
+
+        return final_opted_fti_iyo_list
+
+    @staticmethod
+    def sort_final_opted_fti_iyo_list_by_min_avg_trade_interval(final_opted_fti_iyo_list: list):
+        # if len(final_opted_fti_iyo_list) =! 1, then choose the best one
+        if len(final_opted_fti_iyo_list) != 1:
+
+            min_ti_sorted_fti_iyo_list = []
+            min_trade_interval = None
+            for fti_iyo_dict in final_opted_fti_iyo_list:
+
+                # calc avg trade_interval of current iyo_dict
+                avg_trade_interval = 0
+                for iyo in fti_iyo_dict["fti_iyo_list"]:
+                    avg_trade_interval += iyo["fti"]
+
+                # sort by minimum
+                if min_trade_interval is None:
+                    min_trade_interval = avg_trade_interval
+                    min_ti_sorted_fti_iyo_list.append(fti_iyo_dict)
+                    continue
+                if min_trade_interval > avg_trade_interval:
+                    min_trade_interval = avg_trade_interval
+                    min_ti_sorted_fti_iyo_list.clear()
+                    min_ti_sorted_fti_iyo_list.append(fti_iyo_dict)
+                if min_trade_interval == avg_trade_interval:
+                    min_ti_sorted_fti_iyo_list.append(fti_iyo_dict)
+                else:
+                    continue
+        else:
+            return final_opted_fti_iyo_list[0]
+
+        return Global.find_middle_of_list(min_ti_sorted_fti_iyo_list)
 
     def launch_oppty_sliced_iyo(self, anal_start_time: int, rewinded_time: int):
         logging.critical("[%s-%s-%s] Sliced IYO conducting -> start_time: %s, rewinded_time: %s" % (
@@ -232,29 +277,3 @@ class TradeHandler:
                                                           is_stat_appender=False, is_slicing_dur=True,
                                                           slicing_interval=sliced_iyo_config["slicing_interval"])
         return slicied_iyo_result
-
-    @staticmethod
-    def get_opt_fti_set_and_final_yield(fti_result: dict):
-        # retrieve final optimized setting by calculating fti_yield * fti_exhaust rate
-        opted_yield = None
-        final_opted_fti_list = []
-        for yield_th_rate in fti_result.keys():
-            for fti_forml_weight in fti_result[yield_th_rate].keys():
-                for max_ti_multi in fti_result[yield_th_rate][fti_forml_weight].keys():
-                    target_dict = fti_result[yield_th_rate][fti_forml_weight][max_ti_multi]
-
-                    try:
-                        expted_settle_yield = target_dict["fti_yield_sum"] / target_dict["fti_exhaust_rate"]
-                    except ZeroDivisionError:
-                        continue
-
-                    if opted_yield is None:
-                        opted_yield = expted_settle_yield
-                        continue
-                    if expted_settle_yield > opted_yield:
-                        opted_yield = expted_settle_yield
-                        final_opted_fti_list.clear()
-                        final_opted_fti_list.append(target_dict)
-                    if expted_settle_yield == opted_yield:
-                        final_opted_fti_list.append(target_dict)
-        return final_opted_fti_list, opted_yield

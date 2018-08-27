@@ -249,3 +249,14 @@ class Global:
         utc_dt = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%S.%fZ')
         converted_time = int((utc_dt - datetime(1970, 1, 1)).total_seconds())
         return converted_time
+
+    @staticmethod
+    def find_middle_of_list(input_list):
+        if len(input_list) == 0:
+            raise Exception("The input list should have at least one value embedded!")
+
+        middle = float(len(input_list)) / 2
+        if middle % 2 != 0:
+            return input_list[int(middle - .5)]
+        else:
+            return input_list[int(middle)]
