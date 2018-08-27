@@ -46,7 +46,7 @@ class RiskFreeArbBotV3(BaseArbBot):
         # read latest trade interval from db
         trade_interval = self.trade_interval_col.find_one(
             sort=[('_id', pymongo.DESCENDING)]
-        )
+        )["trade_interval"]
         # reset trade interval
         self.trade_interval_in_sec = trade_interval
 

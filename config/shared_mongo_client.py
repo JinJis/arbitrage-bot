@@ -16,6 +16,8 @@ class SharedMongoClient:
     OKCOIN_DB_NAME = "okcoin"
     COINNEST_DB_NAME = "coinnest"
 
+    STREAMER_DB_NAME = "streamer"
+
     __singleton_instance = None
 
     # target db name for current process
@@ -66,6 +68,10 @@ class SharedMongoClient:
     @classmethod
     def get_process_db(cls) -> "Database":
         return cls.instance()[cls.p_db]
+
+    @classmethod
+    def get_streamer_db(cls) -> "Database":
+        return cls.instance()[cls.STREAMER_DB_NAME]
 
     @classmethod
     def _async_insert(cls, target_col: Collection, doc: dict):
