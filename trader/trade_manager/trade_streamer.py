@@ -10,8 +10,8 @@ from trader.trade_manager.trade_stat_formula import TradeFormula, TradeFormulaAp
 
 
 class TradeStreamer:
-    INITIATION_REWEIND_TIME = 3 * 60 * 60
-    TIME_DUR_TIL_SETTLEMENT = 24 * 60 * 60
+    INITIATION_REWEIND_TIME = 1 * 60 * 60
+    TIME_DUR_TIL_SETTLEMENT = 4 * 60 * 60
 
     YIELD_THRESHOLD_RATE_START = 0.1
     YIELD_THRESHOLD_RATE_END = 0.7
@@ -23,7 +23,7 @@ class TradeStreamer:
 
     FTI_MIN_INTERVAL = 1
 
-    MAX_TI_MULTIPLIER_START = 2
+    MAX_TI_MULTIPLIER_START = 1
     MAX_TI_MULTIPLIER_END = 5
     MAX_TI_MULTIPLIER_STEP = 0.5
 
@@ -313,3 +313,4 @@ class TradeStreamer:
             yield_rank_filtered_dict[yield_th_rate] = yield_histo_filtered_list
 
         return yield_rank_filtered_dict
+    
