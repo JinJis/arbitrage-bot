@@ -22,7 +22,7 @@ class Global:
     MARKET_FEE_LOCATION = "config/conf_market_fee.ini"
     MIN_TRADING_COIN = "config/conf_min_trading_coin.ini"
     IYO_CONFIG_LOCATION = "config/conf_iyo_market.ini"
-    PARSED_IYO_CONFIG_LOCATION = "config/conf_sliced_iyo_market.ini"
+    SLICED_IYO_CONFIG_LOCATION = "config/conf_sliced_iyo_market.ini"
     RFAB_COMBINATION_CONFIG_LOCATION = "config/conf_rfab_combi.ini"
     COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "tron", "krw")
 
@@ -92,12 +92,12 @@ class Global:
 
     @staticmethod
     def read_sliced_iyo_setting_config(target_currency: str):
-        sliced_iyo__config = configparser.ConfigParser()
-        sliced_iyo__config.read(Global.PARSED_IYO_CONFIG_LOCATION)
-        division = int(sliced_iyo__config["SLICED_SETTING"]["DIVISION"])
-        depth = int(sliced_iyo__config["SLICED_SETTING"]["DEPTH"])
-        consecution_time = int(sliced_iyo__config["SLICED_SETTING"]["CONSECUTION_TIME"])
-        slicing_interval = int(sliced_iyo__config["SLICED_SETTING"]["SLICING_INTERVAL"])
+        sliced_iyo_config = configparser.ConfigParser()
+        sliced_iyo_config.read(Global.SLICED_IYO_CONFIG_LOCATION)
+        division = int(sliced_iyo_config["SLICED_SETTING"]["DIVISION"])
+        depth = int(sliced_iyo_config["SLICED_SETTING"]["DEPTH"])
+        consecution_time = int(sliced_iyo_config["SLICED_SETTING"]["CONSECUTION_TIME"])
+        slicing_interval = int(sliced_iyo_config["SLICED_SETTING"]["SLICING_INTERVAL"])
 
         # for rest of infos, use original IYO config
         iyo_config = configparser.ConfigParser()
@@ -119,6 +119,15 @@ class Global:
             "threshold_end": threshold_end,
             "appx_unit_coin_price": appx_unit_coin_p
         }
+
+    @staticmethod
+    def write_balance_seq_end_to_ini(krw_seq_end: float, coin_seq_end: float):
+        config = configparser.ConfigParser()
+        config.read(Global.IYO_CONFIG_LOCATION)
+        config.set("BALANCE_SETTING", "KRW_SEQ_END", str(krw_seq_end))
+        config.set("BALANCE_SETTING", "COIN_SEQ_END", str(coin_seq_end))
+        with open(Global.IYO_CONFIG_LOCATION, 'w') as configfile:
+            config.write(configfile)
 
     @staticmethod
     def read_avail_coin_in_list():

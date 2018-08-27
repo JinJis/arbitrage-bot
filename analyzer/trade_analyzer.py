@@ -310,11 +310,11 @@ class IBOAnalyzer:
                     min_invested_krw_pair = pair
                     same_invested_krw.append(pair)
                     continue
-                if pair["total_krw_invested"] < min_invested_krw_pair["total_krw_invested"]:
+                if pair["total_krw_exhausted"] < min_invested_krw_pair["total_krw_exhausted"]:
                     min_invested_krw_pair = pair
                     same_invested_krw.clear()
                     same_invested_krw.append(pair)
-                elif pair["total_krw_invested"] == min_invested_krw_pair["total_krw_invested"]:
+                elif pair["total_krw_exhausted"] == min_invested_krw_pair["total_krw_exhausted"]:
                     same_invested_krw.append(pair)
             return same_invested_krw[0]
         else:

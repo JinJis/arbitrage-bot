@@ -93,6 +93,10 @@ class TradeStreamer:
             self.mm2_coin_bal = float(input("Type [%s]-[%s] Balance:"
                                             % (self.mm2_name.upper(), self.target_currency.upper())))
 
+            # change IYO config settings of krw, coin seq end
+            Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
+                                                coin_seq_end=self.mm1_coin_bal + self.mm2_coin_bal)
+
             # change time info up-to-date
             self.bot_start_time = int(time.time())
             self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
@@ -313,4 +317,3 @@ class TradeStreamer:
             yield_rank_filtered_dict[yield_th_rate] = yield_histo_filtered_list
 
         return yield_rank_filtered_dict
-    
