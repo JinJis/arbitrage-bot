@@ -28,7 +28,7 @@ class RiskFreeArbBot(BaseArbBot):
                  is_backtesting: bool = False, start_time: int = None, end_time: int = None):
 
         # init virtual mm when backtesting
-        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, 0.001, 75000, 0.05) if is_backtesting else None
+        v_mm1 = VirtualMarketManager(Market.VIRTUAL_CO, , 75000, 0.05) if is_backtesting else None
         v_mm2 = VirtualMarketManager(Market.VIRTUAL_KB, 0.002, 25000, 0.25) if is_backtesting else None
 
         super().__init__(target_currency, target_interval_in_sec,

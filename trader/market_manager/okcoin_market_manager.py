@@ -7,8 +7,8 @@ from trader.market.market import Market
 
 class OkcoinMarketManager(MarketManager):
     MARKET_TAG = Market.OKCOIN
-    TAKER_FEE = Global.read_market_fee(market_name="okcoin", is_taker_fee=True)
-    MAKER_FEE = Global.read_market_fee(market_name="okcoin", is_taker_fee=False)
+    TAKER_FEE = Global.read_market_fee(exchange_name="okcoin", is_taker_fee=True)
+    MAKER_FEE = Global.read_market_fee(exchange_name="okcoin", is_taker_fee=False)
 
     def __init__(self, is_using_taker_fee: bool):
         super().__init__(self.MARKET_TAG, self.TAKER_FEE, self.MAKER_FEE, OkcoinApi.instance(), is_using_taker_fee)

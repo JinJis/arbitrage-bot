@@ -19,7 +19,9 @@ class Global:
     LOCALHOST_DB_CONFIG_LOCATION = "config/conf_db_localhost.ini"
     REMOTE_DB_CONFIG_LOCATION = "config/conf_db_remote.ini"
     MARKET_FEE_LOCATION = "config/conf_market_fee.ini"
+    MIN_TRADING_COIN = "config/conf_min_trading_coin.ini"
     IYO_CONFIG_LOCATION = "config/conf_iyo_market.ini"
+    PARSED_IYO_CONFIG_LOCATION = "config/conf_sliced_iyo_market.ini"
     RFAB_COMBINATION_CONFIG_LOCATION = "config/conf_rfab_combi.ini"
     COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "tron", "krw")
 
@@ -46,16 +48,22 @@ class Global:
             return "mongodb://%s:%d" % (host, port)
 
     @staticmethod
-    def read_market_fee(market_name: str, is_taker_fee: bool):
+    def read_market_fee(exchange_name: str, is_taker_fee: bool) -> float:
         config = configparser.ConfigParser()
         config.read(Global.MARKET_FEE_LOCATION)
         if is_taker_fee:
-            fee = float(config[market_name.upper()]["TAKER_FEE"])
+            fee = float(config[exchange_name.upper()]["TAKER_FEE"])
         elif not is_taker_fee:
-            fee = float(config[market_name.upper()]["MAKER_FEE"])
+            fee = float(config[exchange_name.upper()]["MAKER_FEE"])
         else:
             raise Exception("Please choose between TAKER or MAKER fee!")
         return fee
+
+    @staticmethod
+    def read_min_trading_coin(exchange_name: str, coin_name: str):
+        config = configparser.ConfigParser()
+        config.read(Global.MIN_TRADING_COIN)
+        return float(config[exchange_name.upper()][coin_name])
 
     @staticmethod
     def read_iyo_setting_config(target_currency: str):
@@ -65,9 +73,9 @@ class Global:
         depth = int(config["UNIVERSAL_SETTING"]["DEPTH"])
         consecution_time = int(config["UNIVERSAL_SETTING"]["consecution_time"])
         krw_seq_end = float(config["BALANCE_SETTING"]["KRW_SEQ_END"])
+        coin_seq_end = float(config["BALANCE_SETTING"]["COIN_SEQ_END"])
         max_trade_coin_end = float(config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"])
         threshold_end = int(config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"])
-        factor_end = int(config["%s_SETTING" % target_currency.upper()]["FACTOR_END"])
         appx_unit_coin_p = int(config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"])
 
         return {
@@ -75,21 +83,62 @@ class Global:
             "depth": depth,
             "consecution_time": consecution_time,
             "krw_seq_end": krw_seq_end,
+            "coin_seq_end": coin_seq_end,
             "max_trade_coin_end": max_trade_coin_end,
             "threshold_end": threshold_end,
-            "factor_end": factor_end,
             "appx_unit_coin_price": appx_unit_coin_p
         }
 
     @staticmethod
-    def get_rfab_combination_list(target_coin: str):
+    def read_sliced_iyo_setting_config(target_currency: str):
+        sliced_iyo__config = configparser.ConfigParser()
+        sliced_iyo__config.read(Global.PARSED_IYO_CONFIG_LOCATION)
+        division = int(sliced_iyo__config["SLICED_SETTING"]["DIVISION"])
+        depth = int(sliced_iyo__config["SLICED_SETTING"]["DEPTH"])
+        consecution_time = int(sliced_iyo__config["SLICED_SETTING"]["CONSECUTION_TIME"])
+        slicing_interval = int(sliced_iyo__config["SLICED_SETTING"]["SLICING_INTERVAL"])
+
+        # for rest of infos, use original IYO config
+        iyo_config = configparser.ConfigParser()
+        iyo_config.read(Global.IYO_CONFIG_LOCATION)
+        krw_seq_end = float(iyo_config["BALANCE_SETTING"]["KRW_SEQ_END"])
+        coin_seq_end = float(iyo_config["BALANCE_SETTING"]["COIN_SEQ_END"])
+        max_trade_coin_end = float(iyo_config["%s_SETTING" % target_currency.upper()]["MAX_TRADE_COIN_END"])
+        threshold_end = int(iyo_config["%s_SETTING" % target_currency.upper()]["THRESHOLD_END"])
+        appx_unit_coin_p = int(iyo_config["%s_SETTING" % target_currency.upper()]["APPX_UNIT_COIN_PRICE"])
+
+        return {
+            "division": division,
+            "depth": depth,
+            "consecution_time": consecution_time,
+            "slicing_interval": slicing_interval,
+            "krw_seq_end": krw_seq_end,
+            "coin_seq_end": coin_seq_end,
+            "max_trade_coin_end": max_trade_coin_end,
+            "threshold_end": threshold_end,
+            "appx_unit_coin_price": appx_unit_coin_p
+        }
+
+    @staticmethod
+    def read_avail_coin_in_list():
+        config = configparser.ConfigParser()
+        config.read(Global.RFAB_COMBINATION_CONFIG_LOCATION)
+        result = []
+        for exchange in config:
+            if exchange == "DEFAULT":
+                continue
+            result.append(str(exchange).lower())
+        return result
+
+    @staticmethod
+    def get_rfab_combination_list(target_currency: str):
         """
-        :param target_coin: bch, btc, tron...
+        :param target_currency: bch, btc, tron...
         :return: [('bithumb', 'coinone'), ('bithumb', 'okcoin')...]
         """
         config = configparser.ConfigParser()
         config.read(Global.RFAB_COMBINATION_CONFIG_LOCATION)
-        target_config = config[target_coin.upper()]
+        target_config = config[target_currency.upper()]
 
         exchange_list = []
         for exchange in target_config.keys():
@@ -99,6 +148,15 @@ class Global:
                 continue
 
         return list(it.combinations(exchange_list, 2))
+
+    @staticmethod
+    def get_inner_ocat_combination(target_market: str, target_currency: str):
+        all_combi_list = Global.get_rfab_combination_list(target_currency)
+        inner_ocat_list = []
+        for combi in all_combi_list:
+            if target_market in combi:
+                inner_ocat_list.append(combi)
+        return inner_ocat_list
 
     @staticmethod
     def configure_default_root_logging(log_level: int = logging.INFO, should_log_to_file: bool = False):
@@ -135,7 +193,7 @@ class Global:
             # default behavior is to use system timezone
             tz = datetime.now().astimezone().tzinfo
 
-        return str(datetime.fromtimestamp(epoch_time, tz).strftime('%Y-%m-%d %H:%M:%S'))
+        return str(datetime.fromtimestamp(epoch_time, tz).strftime('%Y.%m.%d %H:%M:%S'))
 
     @staticmethod
     def get_z_score_for_probability(probability: float):

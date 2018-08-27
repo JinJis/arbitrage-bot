@@ -1,18 +1,18 @@
+import math
+import hmac
+import time
+import base64
+import hashlib
+import logging
 import configparser
 from bson import Decimal128
 from requests import Response
-from config.global_conf import Global
-from trader.market.order import Order
-from .currency import BithumbCurrency
 from .market_api import MarketApi
-from trader.market.order import OrderStatus
+from urllib.parse import urlencode
+from config.global_conf import Global
+from .currency import BithumbCurrency
 from .bithumb_error import BithumbError
-import logging
-import hashlib
-import base64
-import json
-import time
-import hmac
+from trader.market.order import Order, OrderStatus
 
 
 class BithumbApi(MarketApi):
@@ -26,7 +26,7 @@ class BithumbApi(MarketApi):
             self._config.read(Global.USER_CONFIG_LOCATION)
 
             # set initial api_key & secret_key
-            self._connect_key = self._config["BITHUMB"]["connect_key"]
+            self._api_key = self._config["BITHUMB"]["api_key"]
             self._secret_key = self._config["BITHUMB"]["secret_key"]
 
     def get_ticker(self, currency: BithumbCurrency):
@@ -51,6 +51,8 @@ class BithumbApi(MarketApi):
         }
 
         return result
+
+    # Public API
 
     def get_orderbook(self, currency: BithumbCurrency):
         res = self._session.get(self.BASE_URL + "/public/orderbook/%s" % currency.value)
@@ -87,26 +89,141 @@ class BithumbApi(MarketApi):
     def get_filled_orders(self, currency: BithumbCurrency, time_range: str):
         pass
 
+    # Private API
+
+    @staticmethod
+    def usec_time():
+        mt = "%f %d" % math.modf(time.time())
+        mt_array = mt.split(" ")[:2]
+        return mt_array[1] + mt_array[0][2:5]
+
+    def bithumb_post(self, url_path: str, payload: dict = None):
+        if not payload:
+            payload = dict()
+        payload["endpoint"] = url_path
+        urlencoded_payload = urlencode(payload)
+
+        nonce = self.usec_time()
+        splinter = chr(0)
+        combined_data = url_path + splinter + urlencoded_payload + splinter + nonce
+
+        utf8_data = combined_data.encode("utf-8")
+        utf8_secret_key = self._secret_key.encode("utf-8")
+
+        hash_data = hmac.new(bytes(utf8_secret_key), utf8_data, hashlib.sha512)
+        utf8_hex_output = hash_data.hexdigest().encode("utf-8")
+
+        api_sign = base64.b64encode(utf8_hex_output)
+        utf8_api_sign = api_sign.decode("utf-8")
+
+        headers = {
+            "Api-Key": self._api_key,
+            "Api-Sign": utf8_api_sign,
+            "Api-Nonce": nonce
+        }
+
+        res = self._session.post(
+            self.BASE_URL + url_path,
+            headers=headers,
+            data=payload
+        )
+        res_json = self.filter_successful_response(res)
+
+        return res_json
+
     def get_balance(self):
-        pass
+        # ini 파일에 있는 Bithumb거래 코인만 따올수 있음 (b/c 반환되는 데이터가 코인별로 정리 X)
+        all_res_json = self.bithumb_post("/info/balance", payload={"currency": "ALL"})
+
+        result = dict()
+        for key in dict(all_res_json["data"]).keys():
+            if "total_" in str(key):
+                currency_name = str(key).replace("total_", "")
+                result[currency_name] = {
+                    "available": all_res_json["data"]["available_%s" % currency_name],
+                    "trade_in_use": all_res_json["data"]["in_use_%s" % currency_name],
+                    "balance": all_res_json["data"][key]
+                }
+                continue
+        return result
 
     def order_limit_buy(self, currency: BithumbCurrency, price: int, amount: float):
-        pass
+        res_json = self.bithumb_post("/trade/place", payload={"order_currency": currency.value,
+                                                              "Payment_currency": "krw",
+                                                              "units": amount,
+                                                              "price": price,
+                                                              "type": "bid"})
+        # {"status": "0000", "order_id": "1428646963419", "data": []}
+        return {
+            "orderId": str(res_json["order_id"])
+        }
 
     def order_limit_sell(self, currency: BithumbCurrency, price: int, amount: float):
-        pass
+        res_json = self.bithumb_post("/trade/place", payload={"order_currency": currency.value,
+                                                              "Payment_currency": "krw",
+                                                              "units": amount,
+                                                              "price": price,
+                                                              "type": "ask"})
+        # {"status": "0000", "order_id": "1428646963419", "data": []}
+        return {
+            "orderId": str(res_json["order_id"])
+        }
 
     def cancel_order(self, currency: BithumbCurrency, order: Order):
-        pass
+        return self.bithumb_post("/trade/cancel", payload={
+            "type": order.order_type,
+            "order_id": order.order_id,
+            "currency": currency.value})
 
-    def get_order_info(self, currency: BithumbCurrency, order_id: str):
-        pass
+    def get_order_info(self, currency: BithumbCurrency, order: Order):
 
+        # unlike other exchanges api, Bithumb requires additional 'order_type' param when request
+        if (order.order_type.value == "limit_sell") or (order.order_type.value == "market_sell"):
+            order_type = "ask"
+        elif (order.order_type.value == "limit_buy") or (order.order_type.value == "market_buy"):
+            order_type = "bid"
+        else:
+            raise BithumbError("Unknow order_type doesn't exist %s" % order.order_type.value)
+
+        # if no trade_info --> {'status': '5600', 'message': '거래 체결내역이 존재하지 않습니다.'}
+        res_json = self.bithumb_post("/info/order_detail", payload={"order_id": order.order_id,
+                                                                    "type": order_type,
+                                                                    "currency": currency.value})
+
+        order_data = res_json["data"][0]
+        order_amount = float(order.order_amount)
+        filled_amount = float(order_data["units_traded"])
+        fee = order_data.get("fee")
+        avg_filled_price = order_data["price"]
+
+        return {
+            "status": OrderStatus.get(res_json["status"]),
+            "avg_filled_price": int(float(avg_filled_price)) if avg_filled_price is not None else "null",
+            "order_amount": order_amount,
+            "filled_amount": filled_amount,
+            "remain_amount": order_amount - filled_amount,
+            "fee": float(fee) if fee is not None else "null"
+        }
+
+    # there is no function..
     def get_open_orders(self, currency: BithumbCurrency):
         pass
 
-    def get_past_trades(self, currency: BithumbCurrency):
-        pass
+    def get_past_trades(self, currency: BithumbCurrency, off_set: int = 0, limit: int = 50):
+        return self.bithumb_post("/info/user_transactions", payload={"offset": off_set,
+                                                                     "count": limit,
+                                                                     "searchGb": 0,
+                                                                     "currency": currency.value})
+
+    def get_user_account_info(self, currency: BithumbCurrency):
+        return self.bithumb_post("/info/account", payload={"currency": currency.value})
+
+    def get_wallet_address(self, currency: BithumbCurrency):
+        res_json = self.bithumb_post("/info/wallet_address", payload={"currency": currency.value})
+        return res_json["data"]["wallet_address"]
+
+    def get_krw_deposit_info(self):
+        return self.bithumb_post("/trade/krw_deposit", payload=None)
 
     @staticmethod
     def filter_successful_response(res: Response):

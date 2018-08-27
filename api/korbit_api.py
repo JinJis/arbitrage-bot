@@ -35,6 +35,8 @@ class KorbitApi(MarketApi):
             self._expires_in_seconds = None
             self.set_access_token()
 
+    # Public API
+
     def get_ticker(self, currency: KorbitCurrency):
         res = self._session.get(self.BASE_URL + "/v1/ticker/detailed", params={
             "currency_pair": currency.value
@@ -119,6 +121,8 @@ class KorbitApi(MarketApi):
 
         return result
 
+    # Private API
+
     def set_access_token(self):
         res = self._session.post(self.BASE_URL + "/v1/oauth2/access_token", data={
             "client_id": self._client_id,
@@ -199,9 +203,8 @@ class KorbitApi(MarketApi):
             "coin_amount": amount,
             "nonce": self.get_nonce()
         })
-        res_json = self.filter_successful_response_on_order(res)
         # {"orderId":"58738","status":"success","currency_pair":"btc_krw"}
-        return res_json
+        return self.filter_successful_response_on_order(res)
 
     def order_limit_sell(self, currency: KorbitCurrency, price: int, amount: float):
         res = self._session.post(self.BASE_URL + "/v1/user/orders/sell", headers=self.get_auth_header(), data={
@@ -211,8 +214,62 @@ class KorbitApi(MarketApi):
             "coin_amount": amount,
             "nonce": self.get_nonce()
         })
-        res_json = self.filter_successful_response_on_order(res)
-        return res_json
+        # {"orderId":"58738","status":"success","currency_pair":"btc_krw"}
+        return self.filter_successful_response_on_order(res)
+
+    def cancel_order(self, currency: KorbitCurrency, order: Order):
+        res = self._session.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
+            "currency_pair": currency.value,
+            "nonce": self.get_nonce(),
+            "id": order.order_id
+        })
+        return self.filter_successful_response_on_order(res)
+
+    def get_order_info(self, currency: KorbitCurrency, order: Order):
+        res = self._session.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
+            "currency_pair": currency.value,
+            "id": order.order_id,
+            "nonce": self.get_nonce()
+        })
+        res_json = self.filter_successful_response(res)
+
+        if not len(res_json) > 0:
+            # note that the error will also be raised when the order has been cancelled
+            raise KorbitError("Order id does not exist: %s" % order.order_id)
+
+        order_info = res_json[0]
+        order_amount = float(order_info["order_amount"])
+        filled_amount = float(order_info["filled_amount"])
+        # korbit api says that no fee data will be sent if the order has never been filled
+        fee = order_info.get("fee")
+        avg_filled_price = order_info.get("avg_price")
+
+        return {
+            "status": OrderStatus.get(order_info["status"]),
+            "avg_filled_price": int(float(avg_filled_price)) if avg_filled_price is not None else "null",
+            "order_amount": order_amount,
+            "filled_amount": filled_amount,
+            "remain_amount": order_amount - filled_amount,
+            "fee": float(fee) if fee is not None else "null"
+        }
+
+    def get_open_orders(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
+        res = self._session.get(self.BASE_URL + "/v1/user/orders/open", headers=self.get_auth_header(), params={
+            "currency_pair": currency.value,
+            "offset": offset,
+            "limit": limit,
+            "nonce": self.get_nonce()
+        })
+        return self.filter_successful_response(res)
+
+    def get_past_trades(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
+        res = self._session.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
+            "currency_pair": currency.value,
+            "offset": offset,
+            "limit": limit,
+            "nonce": self.get_nonce()
+        })
+        return self.filter_successful_response(res)
 
     def order_market_buy(self, currency: KorbitCurrency, amount_of_krw: int):
         res = self._session.post(self.BASE_URL + "/v1/user/orders/buy", headers=self.get_auth_header(), data={
@@ -233,61 +290,6 @@ class KorbitApi(MarketApi):
         })
         res_json = self.filter_successful_response_on_order(res)
         return res_json
-
-    def cancel_order(self, currency: KorbitCurrency, order: Order):
-        res = self._session.post(self.BASE_URL + "/v1/user/orders/cancel", headers=self.get_auth_header(), data={
-            "currency_pair": currency.value,
-            "nonce": self.get_nonce(),
-            "id": order.order_id
-        })
-        res_json = self.filter_successful_response_on_order(res)
-        return res_json
-
-    def get_order_info(self, currency: KorbitCurrency, order_id: str):
-        res = self._session.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
-            "currency_pair": currency.value,
-            "id": order_id,
-            "nonce": self.get_nonce()
-        })
-        res_json = self.filter_successful_response(res)
-
-        if not len(res_json) > 0:
-            # note that the error will also be raised when the order has been cancelled
-            raise KorbitError("Order id does not exist: %s" % order_id)
-
-        order_info = res_json[0]
-        order_amount = float(order_info["order_amount"])
-        filled_amount = float(order_info["filled_amount"])
-        # korbit api says that no fee data will be sent if the order has never been filled
-        fee = order_info.get("fee")
-        avg_filled_price = order_info.get("avg_price")
-
-        return {
-            "status": OrderStatus.get(order_info["status"]),
-            "avg_filled_price": int(float(avg_filled_price)) if avg_filled_price is not None else 0,
-            "order_amount": order_amount,
-            "filled_amount": filled_amount,
-            "remain_amount": order_amount - filled_amount,
-            "fee": float(fee) if fee is not None else 0
-        }
-
-    def get_open_orders(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
-        res = self._session.get(self.BASE_URL + "/v1/user/orders/open", headers=self.get_auth_header(), params={
-            "currency_pair": currency.value,
-            "offset": offset,
-            "limit": limit,
-            "nonce": self.get_nonce()
-        })
-        return self.filter_successful_response(res)
-
-    def get_past_trades(self, currency: KorbitCurrency, offset: int = 0, limit: int = 100):
-        res = self._session.get(self.BASE_URL + "/v1/user/orders", headers=self.get_auth_header(), params={
-            "currency_pair": currency.value,
-            "offset": offset,
-            "limit": limit,
-            "nonce": self.get_nonce()
-        })
-        return self.filter_successful_response(res)
 
     @staticmethod
     def filter_successful_response(res: Response):

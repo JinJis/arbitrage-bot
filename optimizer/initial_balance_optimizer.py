@@ -2,7 +2,7 @@ import copy
 import logging
 from config.shared_mongo_client import SharedMongoClient
 from analyzer.trade_analyzer import BasicAnalyzer, IBOAnalyzer
-from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
+from optimizer.base_optimizer import BaseOptimizer
 from backtester.risk_free_arb_backtester import RfabBacktester
 
 
@@ -12,12 +12,10 @@ class InitialBalanceOptimizer(BaseOptimizer):
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,
         "new": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         },
         "rev": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         }
     }
 
@@ -49,9 +47,20 @@ class InitialBalanceOptimizer(BaseOptimizer):
         exchange_rate = cls.calc_krw_coin_exchange_ratio_during_oppty_dur(settings)  # (krw / 1 coin)
 
         clone = copy.deepcopy(bal_factor_settings)
-        for item in ["start", "end", "step_limit"]:
+        for item in ["start", "step_limit"]:
             clone["mm1"]["coin_balance"][item] = round(clone["mm2"]["krw_balance"][item] / exchange_rate, 5)
             clone["mm2"]["coin_balance"][item] = round(clone["mm1"]["krw_balance"][item] / exchange_rate, 5)
+
+        # check if inject COIN_SEQ_END is more or less that that of injected KRW_SEQ_END injected
+        for standard_mm, opposite_mm in zip(["mm1", "mm2"], ["mm2", "mm1"]):
+            standard_mm_krw_in_coin_end = (clone[standard_mm]["krw_balance"]["end"] / exchange_rate)
+            opposite_mm_coin_end = clone[opposite_mm]["coin_balance"]["end"]
+
+            if standard_mm_krw_in_coin_end > opposite_mm_coin_end:
+                clone[standard_mm]["krw_balance"]["end"] = int(opposite_mm_coin_end * exchange_rate)
+            else:
+                clone[opposite_mm]["coin_balance"]["end"] = round(standard_mm_krw_in_coin_end, 5)
+
         return clone
 
     @staticmethod
@@ -169,7 +178,34 @@ class InitialBalanceOptimizer(BaseOptimizer):
 
         for market in bal_factor_settings.keys():
             for key in bal_factor_settings[market]:
-                clone[market][key] = super().get_new_factor_settings_item(opt[market][key], pre[market][key], division)
+                clone[market][key] = cls.get_new_factor_settings_item(opt[market][key], pre[market][key], division)
+        return clone
+
+    @staticmethod
+    def get_new_factor_settings_item(current_opt, factor_item: dict, division: int):
+
+        prev_start = factor_item["start"]
+        prev_end = factor_item["end"]
+        prev_step = factor_item["step"]
+
+        if prev_start >= prev_end:
+            return factor_item
+
+        # if used in IBO, initial seq end set by IYO config for krw and coin should be fixed,
+        # since this amount will be interpreted as the maximum balance used in trading.
+        if prev_end == current_opt:
+            clone = copy.deepcopy(factor_item)
+            clone["end"] = current_opt
+            clone["start"] = current_opt - 2 * prev_step
+            clone["step"] = (clone["end"] - clone["start"]) / division
+            return clone
+
+        clone = copy.deepcopy(factor_item)
+        clone["start"] = current_opt - prev_step
+        if clone["start"] < 0:
+            clone["start"] = 0
+        clone["end"] = current_opt + prev_step
+        clone["step"] = (clone["end"] - clone["start"]) / division
         return clone
 
     @classmethod

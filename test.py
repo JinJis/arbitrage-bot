@@ -1,5 +1,5 @@
 from config.global_conf import Global
-
-hello = Global.get_rfab_combination_list("tron")
-for i in hello:
-    print(type(i[0]), type(i[1]))
+b = Global.get_rfab_combination_list("btc")
+a = Global.get_inner_ocat_combination("okcoin", "btc")
+print(a)
+print(b)

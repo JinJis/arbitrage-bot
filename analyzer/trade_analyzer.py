@@ -128,12 +128,17 @@ class BasicAnalyzer:
 # Simplified version of OTS strategy.
 # This considers amount of coin that each markets provide but do not optimize with oderbook indexes
 class SpreadInfo:
-    def __init__(self, spread_in_unit, tradable_spread, tradable_qty, buy_price, sell_price):
+    # spread_in_unit, spread_to_trade, buy_unit_price, sell_unit_price, buy_amt, sell_amt
+    def __init__(self, able_to_trade: bool, spread_in_unit: float, spread_to_trade: float = None,
+                 buy_unit_price: float = None, sell_unit_price: float = None,
+                 buy_order_amt: float = None, sell_order_amt: float = None):
+        self.able_to_trade = able_to_trade
         self.spread_in_unit = spread_in_unit
-        self.tradable_spread = tradable_spread
-        self.tradable_qty = tradable_qty
-        self.buy_price = buy_price
-        self.sell_price = sell_price
+        self.spread_to_trade = spread_to_trade
+        self.buy_unit_price = buy_unit_price
+        self.sell_unit_price = sell_unit_price
+        self.buy_order_amt = buy_order_amt
+        self.sell_order_amt = sell_order_amt
 
 
 class ATSAnalyzer:
@@ -142,7 +147,7 @@ class ATSAnalyzer:
     @staticmethod
     def actual_tradable_spread_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
                                         mm1_market_fee: float, mm2_market_fee: float,
-                                        max_coin_trading_unit: float = None):
+                                        max_coin_trading_unit: float):
         mm1_minask_price, mm1_maxbid_price = BasicAnalyzer.get_price_of_minask_maxbid(mm1_orderbook)
         mm1_minask_amount, mm1_maxbid_amount = BasicAnalyzer.get_amount_of_minask_maxbid(mm1_orderbook)
 
@@ -168,15 +173,57 @@ class ATSAnalyzer:
                                sell_unit_price: int, sell_avail_amount: float, sell_fee: float,
                                max_trading_unit: float):
         # buy, sell 그리고 설정한 최대 거래 코인수 중 최소값이 거래되는 qty (tradable qty는 mm1, mm2에서 제공하는 qty에 모두 만족되는 양)
-        tradable_qty = float(min(buy_avail_amount, sell_avail_amount, max_trading_unit))
-        if tradable_qty < 0:
-            tradable_qty = 0
+        tradable_qty = min(buy_avail_amount, sell_avail_amount, max_trading_unit)
+        spread_in_unit = (-1) * buy_unit_price / (1 - buy_fee) + (+1) * sell_unit_price * (1 - sell_fee)
+
+        if (tradable_qty < 0) or (buy_avail_amount == sell_avail_amount == max_trading_unit):
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+
+        # 여기 굉장히 중요!!! trade후 mm1, mm2 코인 수 합 정확히 유지해줘야함
+        # buy하면 buy하는 코인 주문 amt에서 fee 차감되어 들어옴
+        # sell은 코인 주문 amt 만큼 들어옴
+
+        # 1)
+        if tradable_qty == max_trading_unit:
+            # if actual coin amt that will be transfered to buying account is less that max_trading_unit,
+            # Don't trade
+            if buy_avail_amount < tradable_qty / (1 - buy_fee):
+                return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+            else:
+                buy_amt = tradable_qty / (1 - buy_fee)
+                sell_amt = tradable_qty
+
+        # 2)
+        elif tradable_qty == sell_avail_amount:
+            # in case of sell and buy amt are same and tradable qty at the same time
+            if buy_avail_amount < tradable_qty / (1 - buy_fee):
+                if buy_avail_amount == sell_avail_amount:
+                    buy_amt = tradable_qty
+                    sell_amt = tradable_qty * (1 - buy_fee)
+                else:
+                    return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+            # if sell_amt is the sole tradable qty, which means the minimum amt
+            else:
+                buy_amt = tradable_qty / (1 - buy_fee)
+                sell_amt = tradable_qty
+
+        # 3)
+        elif tradable_qty == buy_avail_amount:
+            # if buy_avail_amt is the tradable_qty, no need to further analyze!
+            buy_amt = tradable_qty
+            sell_amt = tradable_qty * (1 - buy_fee)  # buy_fee로 계산해야 buy 쪽 코인이랑 수량 맞춰짐!!
+
+        else:
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
 
         # in unit은 코인 한개 거래시 스프레드. possible trading qty 곱해주면 (buy쪽 수수료 코인으로 차감되는 경우 감안) 실제 스프레드
-        spread_in_unit = (-1) * buy_unit_price / (1 - buy_fee) + (+1) * sell_unit_price * (1 - sell_fee)
-        actual_tradable_spread = spread_in_unit * tradable_qty
+        spread_to_trade = \
+            (-1) * buy_unit_price * buy_amt * (1 - buy_fee) + (+1) * sell_unit_price * sell_amt * (1 - sell_fee)
 
-        return SpreadInfo(spread_in_unit, actual_tradable_spread, tradable_qty, buy_unit_price, sell_unit_price)
+        return SpreadInfo(able_to_trade=True,
+                          spread_in_unit=spread_in_unit, spread_to_trade=spread_to_trade,
+                          buy_unit_price=buy_unit_price, sell_unit_price=sell_unit_price,
+                          buy_order_amt=buy_amt, sell_order_amt=sell_amt)
 
 
 """Initial Setting optimizer Analyzer"""

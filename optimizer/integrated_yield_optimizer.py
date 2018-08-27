@@ -6,9 +6,9 @@ from pymongo.cursor import Cursor
 from analyzer.trade_analyzer import BasicAnalyzer, IBOAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from collector.oppty_time_collector import OpptyTimeCollector
-from optimizer.arbitrage_combination_optimizer.base_optimizer import BaseOptimizer
-from optimizer.arbitrage_combination_optimizer.initial_setting_optimizer import InitialSettingOptimizer
-from optimizer.arbitrage_combination_optimizer.initial_balance_optimizer import InitialBalanceOptimizer
+from optimizer.base_optimizer import BaseOptimizer
+from optimizer.initial_setting_optimizer import InitialSettingOptimizer
+from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
 
 OTC = OpptyTimeCollector
 ISO = InitialSettingOptimizer
@@ -21,28 +21,44 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         "max_trading_coin": 0.1,
         "min_trading_coin": 0,
         "new": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         },
         "rev": {
-            "threshold": 0,
-            "factor": 1
+            "threshold": 0
         }
     }
 
     @classmethod
-    def run(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
+    def run(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict,
+            is_stat_appender: bool = False, is_slicing_dur: bool = False, slicing_interval: int = None):
 
-        # get oppty_time_duration dict
+        # get oppty_dur dict
         oppty_dur_dict = OTC.run(settings)
         logging.warning("Total Oppty Duration Dict: %s" % oppty_dur_dict)
 
-        # get total duration hour for each trade
-        total_dur_hour = OTC.get_total_duration_time(oppty_dur_dict)
-        for key in total_dur_hour.keys():
-            logging.warning("Total [%s] duration (hour): %.2f" % (key.upper(), (total_dur_hour[key] / 60 / 60)))
+        # get oppty_dur in human date dict
+        oppty_dur_human_dict = OTC.get_oppty_dur_human_time(oppty_dur_dict, timezone="kr")
+        logging.warning("Total Oppty Duration Human date Dict: %s" % oppty_dur_human_dict)
 
         # loop through oppty times
+
+        # if parse oppty_dur by parsing_interval (usage for Trade Streamer
+        if is_slicing_dur:
+
+            sliced_oppty_dur_dict = cls.get_sliced_oppty_dur_dict(oppty_dur_dict, slicing_interval)
+            return cls.run_iyo(settings, bal_factor_settings, factor_settings, sliced_oppty_dur_dict)
+
+        # only use of data collecting of IYO or shallow analysis
+        else:
+            result = cls.run_iyo(settings, bal_factor_settings, factor_settings, oppty_dur_dict)
+
+            if not is_stat_appender:
+                return result
+            else:
+                return cls.run_iyo_stat_appender(result)
+
+    @classmethod
+    def run_iyo(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict, oppty_dur_dict: dict):
         db_result = []
         for trade_type in oppty_dur_dict.keys():
             for time in oppty_dur_dict[trade_type]:
@@ -83,15 +99,14 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     # append original oppty count to final result
                     iyo_opt_result["new_oppty_count"] = new_oppty_count
                     iyo_opt_result["rev_oppty_count"] = rev_oppty_count
+
                     db_result.append(iyo_opt_result)
 
                 except Exception as e:
                     logging.error("Something went wrong while executing IYO loop!", time, e)
 
         # finally run IYO Stat appender and return final result
-        db_with_stat_result = cls.run_iyo_stat_appender(db_result)
-
-        return db_with_stat_result
+        return db_result
 
     @classmethod
     def init_initial_step(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict):
@@ -111,10 +126,15 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                                                factor_settings: dict,
                                                depth: int, optimized: dict = None):
         if depth == 0:
+            # append exhaust_rate for final Opt
+            optimized["exhaust_rate"] = cls.calc_exhaust_rate(optimized)
+
+            # log final Opt result yield
             final_opt_yield = optimized["yield"]
             logging.critical("\n[IYO Final Opt Result]"
                              "\n>>>Final Opted Yield: %.4f%%"
                              "\n>>>Final Optimized Info: %s" % (final_opt_yield, optimized))
+
             return optimized
 
         logging.critical("\n<<<< Now in [IYO] depth: %d >>>>" % depth)
@@ -252,6 +272,22 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         return result
 
     @staticmethod
+    def calc_exhaust_rate(iyo_data: dict):
+        # when new, calc mm1 krw
+        if (iyo_data["rev_traded"] == 0) and (iyo_data["new_traded"] != 0):
+            start_bal = iyo_data["settings"]["mm1"]["krw_balance"]
+            end_bal = iyo_data["end_balance"]["mm1"]["krw"]
+            return round(((start_bal - end_bal) / start_bal), 4)
+
+        # when rev, calc mm2 krw
+        if (iyo_data["new_traded"] == 0) and (iyo_data["rev_traded"] != 0):
+            start_bal = iyo_data["settings"]["mm2"]["krw_balance"]
+            end_bal = iyo_data["end_balance"]["mm2"]["krw"]
+            return round(((start_bal - end_bal) / start_bal), 4)
+        else:
+            return 0
+
+    @staticmethod
     def run_iyo_stat_appender(iyo_data_list: list):
         iyo_with_stat_list = []
         for iyo_data in iyo_data_list:
@@ -259,6 +295,28 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             iyo_data["stat"] = IYOStatAppender.run(iyo_data)
             iyo_with_stat_list.append(iyo_data)
         return iyo_with_stat_list
+
+    @staticmethod
+    def get_sliced_oppty_dur_dict(oppty_dur_dict: dict, slicing_interval: int):
+        parsed_oppty_dur_dict = dict()
+        for trade_type in oppty_dur_dict.keys():
+            result_list = []
+            for time_list in oppty_dur_dict[trade_type]:
+                start = None
+                while True:
+                    if start is None:
+                        start = time_list[0]
+                        continue
+                    end = start + slicing_interval
+                    if end <= time_list[1]:
+                        result_list.append([start, end])
+                        start = end
+                        continue
+                    else:
+                        result_list.append([start, time_list[1]])
+                        break
+            parsed_oppty_dur_dict[trade_type] = result_list
+        return parsed_oppty_dur_dict
 
 
 # This Analyzer is for analyzing and calculating statistical infos in IYO mongoDB data
@@ -276,7 +334,6 @@ class IYOStatAppender:
         # <Inner Oppty Duration Stats>
         mm1_cur, mm2_cur = cls.get_orderbook_cursor(mm1, mm2, coin, start_time, end_time)
         inner_stats_result = cls.get_inner_oppty_dur_stats(mm1_cur, mm2_cur)
-        inner_stats_result["exhaus_rate"] = cls.calc_exhaust_rate(iyo_data)
 
         # <Outer Oppty Duration Stats>
         outer_stats_result = cls.get_outer_oppty_dur_stats(mm1, mm2, coin, start_time)
@@ -423,22 +480,6 @@ class IYOStatAppender:
         cls.calc_avg_var_std_data(target_dict[mkt_tag]["amount"][order_type]["top5"], top_five_amt_list)
         cls.calc_avg_var_std_data(target_dict[mkt_tag]["amount"][order_type]["top10"], top_ten_amt_list)
         cls.calc_avg_var_std_data(target_dict[mkt_tag]["amount"][order_type]["total"], total_amt_list)
-
-    @staticmethod
-    def calc_exhaust_rate(iyo_data: dict):
-        # when new, calc mm1 krw
-        if (iyo_data["rev_traded"] == 0) and (iyo_data["new_traded"] != 0):
-            start_bal = iyo_data["settings"]["mm1"]["krw_balance"]
-            end_bal = iyo_data["end_balance"]["mm1"]["krw"]
-            return round(((start_bal - end_bal) / start_bal * 100), 4)
-
-        # when rev, calc mm2 krw
-        if (iyo_data["new_traded"] == 0) and (iyo_data["rev_traded"] != 0):
-            start_bal = iyo_data["settings"]["mm2"]["krw_balance"]
-            end_bal = iyo_data["end_balance"]["mm2"]["krw"]
-            return round(((start_bal - end_bal) / start_bal * 100), 4)
-        else:
-            raise Exception("Both of NEW and REV must be 0 or traded at least once")
 
     @staticmethod
     def calc_avg_var_std_data(target_dict: dict, data_list: list):

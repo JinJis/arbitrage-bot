@@ -43,7 +43,7 @@ class OrderWatcher(Thread):
     def do_interval(self):
         # noinspection PyBroadException
         try:
-            res_json = self.api.get_order_info(self.order.currency, self.order.order_id)
+            res_json = self.api.get_order_info(self.order.currency, self.order)
             if res_json is None:
                 # it's impossible to know if a gopax order is cancelled or not
                 # this behavior may need to be changed in accordance with the api changes

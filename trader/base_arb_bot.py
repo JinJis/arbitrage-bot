@@ -79,7 +79,7 @@ class BaseArbBot(ABC):
         pass
 
     @abstractmethod
-    def run(self):
+    def run(self, initial_setting_dict: dict):
         pass
 
     def log_common_stat(self, log_level: int = logging.INFO):
