@@ -29,12 +29,12 @@ class StatArbBot(BaseArbBot):
 
         self.COIN_TRADING_UNIT = 0.1
         self.TARGET_SPREAD_STACK_HOUR = 18
-        self.TARGET_SPREAD_STACK_SIZE = (60 / self.TRADE_INTERVAL_IN_SEC) * 60 * self.TARGET_SPREAD_STACK_HOUR
+        self.TARGET_SPREAD_STACK_SIZE = (60 / self.trade_interval_in_sec) * 60 * self.TARGET_SPREAD_STACK_HOUR
         self.Z_SCORE_SIGMA = Global.get_z_score_for_probability(0.9)
 
         # init mongo related
-        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
-        self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.TARGET_CURRENCY + "_orderbook"]
+        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.target_currency + "_orderbook"]
+        self.mm2_data_col = SharedMongoClient.get_korbit_db()[self.target_currency + "_orderbook"]
 
         # init spread stack
         self.spread_stack = np.array([], dtype=np.float32)
@@ -69,7 +69,7 @@ class StatArbBot(BaseArbBot):
 
             # calculate and wait for request time gap to match the trade interval
             current_ts = time.time()
-            wait_n_sec = self.TRADE_INTERVAL_IN_SEC - (current_ts - last_request_time)
+            wait_n_sec = self.trade_interval_in_sec - (current_ts - last_request_time)
             logging.info("Last requestTime: %.2f, current: %.2f, will wait %.2f sec..." %
                          (last_request_time, current_ts, wait_n_sec))
             if wait_n_sec > 0:
@@ -130,12 +130,12 @@ class StatArbBot(BaseArbBot):
         if cur_spread < lower:
             # NEW: long in mm1, short in mm2
             self.new_oppty_counter += 1
-            fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm1.get_market_tag(), self.target_currency)
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
             if Analyzer.have_enough_balance_for_arb(self.mm1, self.mm2, mm1_price,
-                                                    trading_unit, self.TARGET_CURRENCY):
+                                                    trading_unit, self.target_currency):
                 logging.warning("[EXECUTE] New")
                 buy_order = self.mm1.order_buy(self.mm1_currency, mm1_price, trading_unit)
                 sell_order = self.mm2.order_sell(self.mm2_currency, mm2_price, trading_unit)
@@ -143,19 +143,19 @@ class StatArbBot(BaseArbBot):
 
                 # subtract considered fee if there was one
                 if should_fee:
-                    GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY, fee)
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.target_currency, fee)
             else:
                 logging.error("[EXECUTE] New -> failed (not enough balance!)")
 
         elif cur_spread > upper:
             # REV: long in mm2, short in mm1
             self.rev_oppty_counter += 1
-            fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
+            fee, should_fee = Analyzer.get_fee_consideration(self.mm2.get_market_tag(), self.target_currency)
             trading_unit = self.COIN_TRADING_UNIT + fee if should_fee else self.COIN_TRADING_UNIT
 
             # check balance
             if Analyzer.have_enough_balance_for_arb(self.mm2, self.mm1, mm2_price,
-                                                    trading_unit, self.TARGET_CURRENCY):
+                                                    trading_unit, self.target_currency):
                 logging.warning("[EXECUTE] Reverse")
                 buy_order = self.mm2.order_buy(self.mm2_currency, mm2_price, trading_unit)
                 sell_order = self.mm1.order_sell(self.mm1_currency, mm1_price, trading_unit)
@@ -163,7 +163,7 @@ class StatArbBot(BaseArbBot):
 
                 # subtract considered fee if there was one
                 if should_fee:
-                    GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY, fee)
+                    GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.target_currency, fee)
             else:
                 logging.error("[EXECUTE] Reverse -> failed (not enough balance!)")
 

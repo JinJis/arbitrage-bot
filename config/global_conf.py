@@ -1,17 +1,18 @@
+import configparser
+import itertools as it
+import logging
 import os
 import sys
-import pytz
-import logging
-import requests
 import threading
-import configparser
 import urllib.parse
-import itertools as it
-import scipy.stats as st
-from pymongo.cursor import Cursor
 from datetime import datetime
 from itertools import zip_longest
 from time import gmtime, strftime
+
+import pytz
+import requests
+import scipy.stats as st
+from pymongo.cursor import Cursor
 
 
 class Global:

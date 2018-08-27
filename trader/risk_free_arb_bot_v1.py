@@ -45,8 +45,8 @@ class RiskFreeArbBot1(BaseArbBot):
         self.REV_FACTOR = 1
 
         # init mongo related
-        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
-        self.mm2_data_col = SharedMongoClient.get_gopax_db()[self.TARGET_CURRENCY + "_orderbook"]
+        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.target_currency + "_orderbook"]
+        self.mm2_data_col = SharedMongoClient.get_gopax_db()[self.target_currency + "_orderbook"]
 
         self.mm1_buy_coin_trading_unit = self.mm1.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
         self.mm2_buy_coin_trading_unit = self.mm2.calc_actual_coin_need_to_buy(self.COIN_TRADING_UNIT)
@@ -112,7 +112,7 @@ class RiskFreeArbBot1(BaseArbBot):
             self.new_oppty_counter += 1
             if (
                         self.mm1.has_enough_coin("krw", mm1_buy_krw)
-                    and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
+                    and self.mm2.has_enough_coin(self.target_currency, self.COIN_TRADING_UNIT)
             ):
                 if (
                                 mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
@@ -136,7 +136,7 @@ class RiskFreeArbBot1(BaseArbBot):
             self.rev_oppty_counter += 1
             if (
                         self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
-                    and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT * self.REV_FACTOR)
+                    and self.mm1.has_enough_coin(self.target_currency, self.COIN_TRADING_UNIT * self.REV_FACTOR)
             ):
                 if (
                                 mm2_buy_amount >= self.mm2_buy_coin_trading_unit * self.REV_FACTOR + self.SLIPPAGE_HEDGE
@@ -171,7 +171,7 @@ class RiskFreeArbBot1(BaseArbBot):
 
             # log combined balance
             combined = BasicAnalyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
-                                                     (self.TARGET_CURRENCY, "krw"))
+                                                     (self.target_currency, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
@@ -226,8 +226,8 @@ class RiskFreeArbBot2(BaseArbBot):
         self.trade_rev = 0
 
         # init mongo related
-        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.TARGET_CURRENCY + "_orderbook"]
-        self.mm2_data_col = SharedMongoClient.get_gopax_db()[self.TARGET_CURRENCY + "_orderbook"]
+        self.mm1_data_col = SharedMongoClient.get_coinone_db()[self.target_currency + "_orderbook"]
+        self.mm2_data_col = SharedMongoClient.get_gopax_db()[self.target_currency + "_orderbook"]
         self.is_init_setting_opt = is_init_setting_opt
 
     def run(self):
@@ -319,11 +319,11 @@ class RiskFreeArbBot2(BaseArbBot):
             self.new_oppty_counter += 1
             if opt_new_spread >= self.NEW_SPREAD_THRESHOLD and not opt_new_spread == 0 \
                     and new_trading_amount >= self.MIN_COIN_TRADING_UNIT:
-                fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY)
+                fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm1.get_market_tag(), self.target_currency)
                 new_trading_amount = new_trading_amount + fee if should_fee else new_trading_amount
                 if (
                             self.mm1.has_enough_coin("krw", mm1_buy_krw * self.NEW_FACTOR)
-                        and self.mm2.has_enough_coin(self.TARGET_CURRENCY, new_trading_amount * self.NEW_FACTOR)
+                        and self.mm2.has_enough_coin(self.target_currency, new_trading_amount * self.NEW_FACTOR)
                 ):
                     logging.warning("[EXECUTE] New ->"
                                     "Trading INFOS: Spread in unit = %.2f, BUY_index = %d, "
@@ -337,7 +337,7 @@ class RiskFreeArbBot2(BaseArbBot):
 
                     # subtract considered fee if there was one
                     if should_fee:
-                        GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.TARGET_CURRENCY, fee)
+                        GlobalFeeAccumulator.sub_fee_consideration(self.mm1.get_market_tag(), self.target_currency, fee)
 
                 else:
                     logging.error("[EXECUTE] New -> failed (not enough balance!) ->"
@@ -347,11 +347,11 @@ class RiskFreeArbBot2(BaseArbBot):
             self.rev_oppty_counter += 1
             if opt_rev_spread >= self.REV_SPREAD_THRESHOLD and not opt_rev_spread == 0 \
                     and rev_trading_amount >= self.MIN_COIN_TRADING_UNIT:
-                fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY)
+                fee, should_fee = BasicAnalyzer.get_fee_consideration(self.mm2.get_market_tag(), self.target_currency)
                 rev_trading_amount = rev_trading_amount + fee if should_fee else rev_trading_amount
                 if (
                             self.mm2.has_enough_coin("krw", mm2_buy_krw * self.REV_FACTOR)
-                        and self.mm1.has_enough_coin(self.TARGET_CURRENCY, rev_trading_amount * self.REV_FACTOR)
+                        and self.mm1.has_enough_coin(self.target_currency, rev_trading_amount * self.REV_FACTOR)
                 ):
                     logging.warning("[EXECUTE] Reverse ->"
                                     "Trading INFOS: Spread = %.2f, BUY_index = %d, "
@@ -365,7 +365,7 @@ class RiskFreeArbBot2(BaseArbBot):
 
                     # subtract considered fee if there was one
                     if should_fee:
-                        GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.TARGET_CURRENCY, fee)
+                        GlobalFeeAccumulator.sub_fee_consideration(self.mm2.get_market_tag(), self.target_currency, fee)
                 else:
                     logging.error("[EXECUTE] Reverse -> failed (not enough balance!) ->"
                                   "Trading INFOS: Spread in unit = %.2f, Psb Traded Spread = %.2f, MKT avail QTY = %.5f"
@@ -384,7 +384,7 @@ class RiskFreeArbBot2(BaseArbBot):
 
             # log combined balance
             combined = BasicAnalyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
-                                                     (self.TARGET_CURRENCY, "krw"))
+                                                     (self.target_currency, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

@@ -74,7 +74,7 @@ class RiskFreeArbBotV2(BaseArbBot, TradeStreamer):
             self.new_oppty_counter += 1
             if (
                     self.mm1.has_enough_coin("krw", mm1_buy_krw)
-                    and self.mm2.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
+                    and self.mm2.has_enough_coin(self.target_currency, self.COIN_TRADING_UNIT)
             ):
                 if (
                         mm1_buy_amount >= self.mm1_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
@@ -100,7 +100,7 @@ class RiskFreeArbBotV2(BaseArbBot, TradeStreamer):
             self.rev_oppty_counter += 1
             if (
                     self.mm2.has_enough_coin("krw", mm2_buy_krw)
-                    and self.mm1.has_enough_coin(self.TARGET_CURRENCY, self.COIN_TRADING_UNIT)
+                    and self.mm1.has_enough_coin(self.target_currency, self.COIN_TRADING_UNIT)
             ):
                 if (
                         mm2_buy_amount >= self.mm2_buy_coin_trading_unit + self.SLIPPAGE_HEDGE
@@ -135,7 +135,7 @@ class RiskFreeArbBotV2(BaseArbBot, TradeStreamer):
 
             # log combined balance
             combined = Analyzer.combine_balance(self.mm1.get_balance(), self.mm2.get_balance(),
-                                                (self.TARGET_CURRENCY, "krw"))
+                                                (self.target_currency, "krw"))
             for coin_name in combined.keys():
                 balance = combined[coin_name]
                 logging.info("[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %

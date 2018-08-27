@@ -1,26 +1,22 @@
 import logging
-from api.currency import Currency
 from abc import ABC, abstractmethod
+
+from api.currency import Currency
 from api.market_api import MarketApi
-from trader.market.market import Market
-from trader.market.balance import Balance
-from trader.market.order import Order, OrderType
+from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
+from trader.market.balance import Balance
+from trader.market.market import Market
+from trader.market.order import Order, OrderType
 from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 
 
 class MarketManager(ABC):
-    def __init__(self, market_tag: Market, taker_fee: float, maker_fee: float, market_api: MarketApi,
-                 is_using_taker_fee: bool):
+    def __init__(self, market_tag: Market, market_api: MarketApi):
         self.market_tag = market_tag
         self.market_api = market_api
-
-        if is_using_taker_fee:
-            self.market_fee = taker_fee
-        elif not is_using_taker_fee:
-            self.market_fee = maker_fee
-        else:
-            raise Exception("Please choose one of TAKER or MAKER fee!")
+        self.taker_fee = Global.read_market_fee(exchange_name=self.market_tag.name, is_taker_fee=True)
+        self.maker_fee = Global.read_market_fee(exchange_name=self.market_tag.name, is_taker_fee=False)
 
         # init fee accumulator
         GlobalFeeAccumulator.initialize_market(self.market_tag)
@@ -28,6 +24,7 @@ class MarketManager(ABC):
         # Note that updating balance is already included in initialization phase
         self.balance = Balance(self.get_market_name())
         self.update_balance()
+        self.min_trading_coin_dict = dict()
 
     def get_market_tag(self):
         return self.market_tag
@@ -67,9 +64,6 @@ class MarketManager(ABC):
     def get_balance(self):
         return self.balance
 
-    def calc_actual_coin_need_to_buy(self, amount):
-        return amount / (1 - self.market_fee)
-
     def has_enough_coin(self, coin_type: str, needed_amount: float):
         available_amount = self.balance.get_available_coin(coin_type.lower())
         if available_amount < needed_amount:
@@ -92,3 +86,12 @@ class MarketManager(ABC):
         balance_dic = self.get_balance().to_dict()
         balance_dic["timestamp"] = timestamp
         SharedMongoClient.async_balance_insert(balance_dic)
+
+    def is_bigger_than_min_trading_coin(self, amount: float, target_currency: str):
+        key = self.market_tag.name + "_" + target_currency
+        value = self.min_trading_coin_dict.get(key)
+        if not value:
+            # memo to eliminate the need to read from file every time
+            value = Global.read_min_trading_coin(self.market_tag.name, target_currency)
+            self.min_trading_coin_dict[key] = value
+        return amount > value

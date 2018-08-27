@@ -1,13 +1,12 @@
-import time
 import logging
+import time
 from abc import ABC, abstractmethod
-from config.global_conf import Global
-from analyzer.analyzer import BasicAnalyzer
-from trader.market.trade import TradeTag
-from pymongo.collection import Collection
-from trader.trade_manager.trade_manager import TradeManager
-from trader.trade_manager.order_watcher_stats import OrderWatcherStats
+
+from analyzer.trade_analyzer import BasicAnalyzer
+from trader.market.trade import Trade, TradeTag
 from trader.market_manager.market_manager import MarketManager
+from trader.trade_manager.order_watcher_stats import OrderWatcherStats
+from trader.trade_manager.trade_manager import TradeManager
 
 
 class BaseArbBot(ABC):
@@ -20,8 +19,8 @@ class BaseArbBot(ABC):
                  is_backtesting: bool = False,
                  start_time: int = None, end_time: int = None):
 
-        self.TARGET_CURRENCY = target_currency
-        self.TRADE_INTERVAL_IN_SEC = target_interval_in_sec
+        self.target_currency = target_currency
+        self.trade_interval_in_sec = target_interval_in_sec
 
         self.should_db_logging = should_db_logging
         self.is_backtesting = is_backtesting
@@ -38,8 +37,8 @@ class BaseArbBot(ABC):
             OrderWatcherStats.initialize()
 
         # set market currency
-        self.mm1_currency = self.mm1.get_market_currency(self.TARGET_CURRENCY)
-        self.mm2_currency = self.mm2.get_market_currency(self.TARGET_CURRENCY)
+        self.mm1_currency = self.mm1.get_market_currency(self.target_currency)
+        self.mm2_currency = self.mm2.get_market_currency(self.target_currency)
 
         self.trade_manager = TradeManager(should_db_logging=should_db_logging, is_backtesting=is_backtesting)
         self.loop_count = 0
@@ -61,7 +60,7 @@ class BaseArbBot(ABC):
         # sleep for diff between the set interval and execution time
         self.loop_end_time = time.time()
         loop_spent_time = self.loop_end_time - self.loop_start_time
-        sleep_time = self.TRADE_INTERVAL_IN_SEC - loop_spent_time
+        sleep_time = self.trade_interval_in_sec - loop_spent_time
         if sleep_time > 0:
             time.sleep(sleep_time)
 
@@ -76,10 +75,6 @@ class BaseArbBot(ABC):
 
     @abstractmethod
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
-        pass
-
-    @abstractmethod
-    def run(self, initial_setting_dict: dict):
         pass
 
     def log_common_stat(self, log_level: int = logging.INFO):
@@ -115,7 +110,7 @@ class BaseArbBot(ABC):
         logging.log(log_level, mm2_balance)
 
         # log combined balance
-        combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
+        combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.target_currency, "krw"))
         for coin_name in combined.keys():
             balance = combined[coin_name]
             logging.log(log_level, "\n[TOTAL %s]: available - %.4f, trade_in_use - %.4f, balance - %.4f" %
@@ -127,7 +122,7 @@ class BaseArbBot(ABC):
         mm2_balance = self.mm2.get_balance()
 
         # log combined balance
-        combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.TARGET_CURRENCY, "krw"))
+        combined = BasicAnalyzer.combine_balance(mm1_balance, mm2_balance, (self.target_currency, "krw"))
         return combined["KRW"]["balance"]
 
     def log_order_watcher_stats(self):
@@ -140,3 +135,16 @@ class BaseArbBot(ABC):
     def clear_oppty_counter(self):
         self.new_oppty_counter = 0
         self.rev_oppty_counter = 0
+
+    @staticmethod
+    def has_enough_coin_checker(market, coin_type: str, needed_amount: float):
+        available_amount = market.balance.get_available_coin(coin_type.lower())
+        if available_amount < needed_amount:
+            return False
+        else:
+            return True
+
+    def add_trade(self, trade: Trade):
+        if not trade:
+            return
+        self.trade_manager.add_trade(trade)
