@@ -11,7 +11,9 @@ class TradeFormulaApplied:
         """
         :return:
         fti_iyos_result_dict = {
-            "fti_exhaust_rate": flaot,
+            "fti_exhaust_rate": flot,
+            "fti_yield_sum" : float,
+            "predicted_yield_by_settle": float
             "fti_iyo_list": [iyo, iyo, iyo...]
                             ** iyo = {
                                 "fti",
@@ -41,6 +43,7 @@ class TradeFormulaApplied:
 
         fti_iyos_result_dict = dict()
         temp_iyo_list = []
+        total_krw_earned = 0
         for iyo in sliced_iyo_list:
 
             # calc need params for Predicted Trading Interval FOURMULA
@@ -66,26 +69,27 @@ class TradeFormulaApplied:
             if min_trade_interval <= calced_trade_interval <= iyo_run_time:
                 pass
             # if calced_trading_interval is less than min_trade_interval -> min_trade_interval
-            if calced_trade_interval < min_trade_interval:
+            elif calced_trade_interval < min_trade_interval:
                 calced_trade_interval = min_trade_interval
             # if calced_trading_interval is greater than iyo_run_time -> iyo_run_time
-            if iyo_run_time < calced_trade_interval < max_trade_interval_multiplier * iyo_run_time:
+            elif iyo_run_time < calced_trade_interval < max_trade_interval_multiplier * iyo_run_time:
                 calced_trade_interval = iyo_run_time
-            else:
+            elif max_trade_interval_multiplier * iyo_run_time < calced_trade_interval:
                 continue
 
             # subtract actual traded krw applied with calced_trading_interval from current krw balance
-            krw_traded = cur_end_krw_bal * act_exhaust_rate * (5 / calced_trade_interval)
+            krw_traded = iyo["total_krw_exhausted"] * (5 / (trade_ratio * calced_trade_interval))
 
             # if current_krw_bal is fully exhausted, stop current iyo_data
             if cur_end_krw_bal - krw_traded <= 0:
                 continue
 
+            # append yield updated with trading_interval_time and subtacted krw real_time balance
+            expted_yield = iyo["krw_earned"] / cur_end_krw_bal * 100
+            total_krw_earned += iyo["krw_earned"]
+
             # if current_krw_bal is still holdable, trade
             cur_end_krw_bal -= krw_traded
-
-            # append yield updated with trading_interval_time and subtacted krw real_time balance
-            expted_yield = iyo["yield"] * (5 / calced_trade_interval) * (cur_end_krw_bal / iyo["total_krw_exhausted"])
 
             # finally append them to the original s-IYO dictionary
             iyo["fti"] = calced_trade_interval
@@ -94,27 +98,12 @@ class TradeFormulaApplied:
 
         # after looping all the s-iyos, calculate PTIed KRW exhaust rate for further analysis for actual trader
         fti_iyos_result_dict["fti_exhaust_rate"] = (initial_krw_bal - cur_end_krw_bal) / initial_krw_bal
+        fti_iyos_result_dict["fti_yield_sum"] = total_krw_earned / initial_krw_bal * 100
+        fti_iyos_result_dict["predicted_yield_by_settle"] \
+            = (total_krw_earned / fti_iyos_result_dict["fti_exhaust_rate"]) / initial_krw_bal * 100
         fti_iyos_result_dict["fti_iyo_list"] = temp_iyo_list
 
         return fti_iyos_result_dict
-
-
-class TradeFormula:
-    @staticmethod
-    def formulated_trading_interval_formula(trade_ratio: float, actual_exhaust_rate: float,
-                                            remain_time_sec: int, iyo_run_time: int):
-        return (actual_exhaust_rate * remain_time_sec * 5 * trade_ratio) / iyo_run_time  # 5는 iyo 기본 trade interval
-
-    @staticmethod
-    def get_area_percent_by_histo_formula(past_data_list: list, current_data: float):
-        # use this with the 5 sec (deafault) parsed IYO yield past data list
-        histos, bin_edges = np.histogram(past_data_list, density=True)
-        area_percentage = 0
-        for histo, edge in zip(histos, bin_edges):
-            if edge > current_data:
-                break
-            area_percentage += histo * np.diff(bin_edges)[0]
-        return area_percentage
 
     @staticmethod
     def get_yield_histo_filtered_dict(sliced_iyo_list: list,
@@ -151,3 +140,21 @@ class TradeFormula:
             yield_rank_filtered_dict[yield_th_rate] = yield_histo_filtered_list
 
         return yield_rank_filtered_dict
+
+
+class TradeFormula:
+    @staticmethod
+    def formulated_trading_interval_formula(trade_ratio: float, actual_exhaust_rate: float,
+                                            remain_time_sec: int, iyo_run_time: int):
+        return (actual_exhaust_rate * remain_time_sec * 5 * trade_ratio) / iyo_run_time  # 5는 iyo 기본 trade interval
+
+    @staticmethod
+    def get_area_percent_by_histo_formula(past_data_list: list, current_data: float):
+        # use this with the 5 sec (deafault) parsed IYO yield past data list
+        histos, bin_edges = np.histogram(past_data_list, density=True)
+        area_percentage = 0
+        for histo, edge in zip(histos, bin_edges):
+            if edge > current_data:
+                break
+            area_percentage += histo * np.diff(bin_edges)[0]
+        return area_percentage

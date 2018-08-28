@@ -1,22 +1,23 @@
-import time
 import logging
-from config.global_conf import Global
-from config.config_market_manager import ConfigMarketManager
-from optimizer.base_optimizer import BaseOptimizer
-from config.trade_setting_config import TradeSettingConfig
-from collector.scheduler.otc_scheduler import OTCScheduler
+import time
 from collector.oppty_time_collector import OpptyTimeCollector
+from collector.scheduler.otc_scheduler import OTCScheduler
+from config.global_conf import Global
+from config.trade_setting_config import TradeSettingConfig
+from optimizer.base_optimizer import BaseOptimizer
 from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
-from trader.market_manager.market_manager import MarketManager
 from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
-class TradeHandler:
-    INITIATION_REWEIND_TIME = 1 * 60 * 60
+class TestTradeHandler:
     TIME_DUR_OF_SETTLEMENT = 6 * 60 * 60
+
+    INITIATION_REWEIND_TIME = 1 * 60 * 60
 
     # TODO 이쪽 활용해줘야함
     TRADING_REWIND_TIME = 5 * 60
+
+    TRADE_INTERVAL_BOOSTER = 0.2
 
     YIELD_THRESHOLD_RATE_START = 0.1
     YIELD_THRESHOLD_RATE_END = 0.5
@@ -32,24 +33,31 @@ class TradeHandler:
     MAX_TI_MULTIPLIER_END = 5
     MAX_TI_MULTIPLIER_STEP = 1
 
-    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager,
+    def __init__(self, target_currency: str, mm1_name: str, mm2_name: str,
+                 mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float,
                  is_initiation_mode: bool, is_trading_mode: bool):
 
         self.is_initiation_mode = is_initiation_mode
         self.is_trading_mode = is_trading_mode
 
-        self.mm1 = mm1
-        self.mm2 = mm2
-        self.mm1_name = mm1.get_market_name().lower()
-        self.mm2_name = mm2.get_market_name().lower()
-        self.mm1_krw_bal = float(mm1.balance.get_available_coin("krw"))
-        self.mm2_krw_bal = float(mm2.balance.get_available_coin("krw"))
-        self.mm1_coin_bal = float(mm1.balance.get_available_coin(target_currency))
-        self.mm2_coin_bal = float(mm2.balance.get_available_coin(target_currency))
+        self.mm1_name = mm1_name
+        self.mm2_name = mm2_name
+        self.target_currency = target_currency
+
+        self.mm1_krw_bal = mm1_krw_bal
+        self.mm1_coin_bal = mm1_coin_bal
+        self.mm2_krw_bal = mm2_krw_bal
+        self.mm2_coin_bal = mm2_coin_bal
         self.target_currency = target_currency
 
         self.bot_start_time = int(time.time())
         self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
+
+    """
+    =====================
+    || INITIATION MODE ||
+    =====================
+    """
 
     def launch_inner_outer_ocat(self):
         # run Inner OCAT
@@ -72,22 +80,21 @@ class TradeHandler:
         if to_proceed == "y":
             # set settings accordingly
             self.target_currency = str(input("Type target_currency:"))
-            self.mm1: MarketManager = getattr(ConfigMarketManager, input("Type mm1!! ex) BITHUMB :")).value
-            self.mm2: MarketManager = getattr(ConfigMarketManager, input("Type mm2!! ex) BITHUMB :")).value
-            self.mm1_name = self.mm1.get_market_name().lower()
-            self.mm2_name = self.mm2.get_market_name().lower()
-            self.mm1_krw_bal = float(self.mm1.balance.get_available_coin("krw"))
-            self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
-            self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
-            self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
+            self.mm1_name = str(input("Type mm1_name:"))
+            self.mm2_name = str(input("Type mm2_name:"))
+            self.mm1_krw_bal = float(input("Type mm1_krw_bal:"))
+            self.mm2_krw_bal = float(input("Type mm2_krw_bal:"))
+            self.mm1_coin_bal = float(input("Type mm1_%s_bal:" % self.target_currency))
+            self.mm2_coin_bal = float(input("Type mm2_%s_bal:" % self.target_currency))
 
             # change IYO config settings of krw, coin seq end
             Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
                                                 coin_seq_end=self.mm1_coin_bal + self.mm2_coin_bal)
+            logging.warning("Now initiating with changed settings!!")
             return True
 
         if to_proceed == "n":
-            logging.warning("Initiating with current settings!!")
+            logging.warning("Now initiating with current settings!!")
             return True
 
         else:
@@ -146,6 +153,34 @@ class TradeHandler:
                 continue
 
         return all_ocat_result_by_one_coin
+
+    def launch_oppty_sliced_iyo(self, anal_start_time: int, rewinded_time: int):
+        logging.critical("[%s-%s-%s] Sliced IYO conducting -> start_time: %s, rewinded_time: %s" % (
+            self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper(), anal_start_time, rewinded_time))
+
+        # draw iyo_config for bal & factor_setting
+        sliced_iyo_config = Global.read_sliced_iyo_setting_config(self.target_currency)
+        # set settings, bal_fact_settings, factor_settings
+        settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
+                                                   mm2_name=self.mm2_name,
+                                                   target_currency=self.target_currency,
+                                                   start_time=rewinded_time, end_time=anal_start_time,
+                                                   division=sliced_iyo_config["division"],
+                                                   depth=sliced_iyo_config["depth"],
+                                                   consecution_time=sliced_iyo_config["consecution_time"],
+                                                   is_virtual_mm=True)
+
+        bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(sliced_iyo_config["krw_seq_end"],
+                                                                       sliced_iyo_config["coin_seq_end"])
+
+        factor_settings = TradeSettingConfig.get_factor_settings(sliced_iyo_config["max_trade_coin_end"],
+                                                                 sliced_iyo_config["threshold_end"],
+                                                                 sliced_iyo_config["appx_unit_coin_price"])
+
+        slicied_iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
+                                                          is_stat_appender=False, is_slicing_dur=True,
+                                                          slicing_interval=sliced_iyo_config["slicing_interval"])
+        return slicied_iyo_result
 
     def launch_formulated_trade_interval(self, yield_histo_filted_dict: dict, rewined_time: int):
         time_of_settlement = int(rewined_time + self.TIME_DUR_OF_SETTLEMENT)
@@ -223,31 +258,3 @@ class TradeHandler:
             return Global.find_middle_of_list(min_ti_sorted_fti_iyo_list)
         else:
             return final_opted_fti_iyo_list[0]
-
-    def launch_oppty_sliced_iyo(self, anal_start_time: int, rewinded_time: int):
-        logging.critical("[%s-%s-%s] Sliced IYO conducting -> start_time: %s, rewinded_time: %s" % (
-            self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper(), anal_start_time, rewinded_time))
-
-        # draw iyo_config for bal & factor_setting
-        sliced_iyo_config = Global.read_sliced_iyo_setting_config(self.target_currency)
-        # set settings, bal_fact_settings, factor_settings
-        settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
-                                                   mm2_name=self.mm2_name,
-                                                   target_currency=self.target_currency,
-                                                   start_time=rewinded_time, end_time=anal_start_time,
-                                                   division=sliced_iyo_config["division"],
-                                                   depth=sliced_iyo_config["depth"],
-                                                   consecution_time=sliced_iyo_config["consecution_time"],
-                                                   is_virtual_mm=True)
-
-        bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(sliced_iyo_config["krw_seq_end"],
-                                                                       sliced_iyo_config["coin_seq_end"])
-
-        factor_settings = TradeSettingConfig.get_factor_settings(sliced_iyo_config["max_trade_coin_end"],
-                                                                 sliced_iyo_config["threshold_end"],
-                                                                 sliced_iyo_config["appx_unit_coin_price"])
-
-        slicied_iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
-                                                          is_stat_appender=False, is_slicing_dur=True,
-                                                          slicing_interval=sliced_iyo_config["slicing_interval"])
-        return slicied_iyo_result

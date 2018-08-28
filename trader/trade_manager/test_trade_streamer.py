@@ -1,14 +1,17 @@
 import time
 import logging
-from trader.trade_manager.trade_handler import TradeHandler
+from trader.trade_manager.test_trade_handler import TestTradeHandler
 from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
-from trader.market_manager.market_manager import MarketManager
 
 
-class TradeStreamer(TradeHandler):
+class TestTradeStreamer(TestTradeHandler):
 
-    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
-        super().__init__(target_currency, mm1, mm2, is_initiation_mode=True, is_trading_mode=False)
+    def __init__(self, target_currency: str, mm1_name: str, mm2_name: str,
+                 mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float):
+        super().__init__(target_currency, mm1_name, mm2_name, mm1_krw_bal, mm1_coin_bal, mm2_krw_bal, mm2_coin_bal,
+                         is_initiation_mode=True, is_trading_mode=False)
+
+        self.past_fti_yield_db = []
 
     def real_time_streamer(self):
         if self.is_initiation_mode:
@@ -22,16 +25,18 @@ class TradeStreamer(TradeHandler):
                                                                    self.target_currency.upper(),
                                                                    self.mm2_coin_bal))
             final_opted_fti_dict = self.run_initiation_mode()
-            # todo: post the result to MongoDB so that the Actual Trader can trigger them
             print(final_opted_fti_dict)
 
+            # todo: post the result to MongoDB so that the Actual Trader can trigger them
             self.is_initiation_mode = False
             self.is_trading_mode = True
 
-        if self.is_trading_mode:
+        elif self.is_trading_mode:
             # reset set_point_time
             self.bot_start_time = int(time.time())
             self.rewined_time = int(self.bot_start_time - self.TRADING_REWIND_TIME)
+            # Global.run_threaded(self.run_monitoring_mode())
+            # Global.run_threaded(self.run_trading_mode())
             pass
 
         elif not self.is_trading_mode:
@@ -39,7 +44,7 @@ class TradeStreamer(TradeHandler):
             pass
         else:
             raise Exception("Trade Streamer should be launched with one of 2 modes -> "
-                            "[Initiation Mode] or [Trading Mode]")
+                            "[INITIAL ANALYSIS MODE] or [TRADING MODE]")
 
     def run_initiation_mode(self):
         # run inner & outer OCAT
