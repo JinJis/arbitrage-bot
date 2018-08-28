@@ -1,52 +1,66 @@
 import time
 import logging
+from pymongo.mongo_client import MongoClient
 from trader.trade_manager.test_trade_handler import TestTradeHandler
-from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TestTradeStreamer(TestTradeHandler):
 
     def __init__(self, target_currency: str, mm1_name: str, mm2_name: str,
-                 mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float):
+                 mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float,
+                 db_client: MongoClient):
         super().__init__(target_currency, mm1_name, mm2_name, mm1_krw_bal, mm1_coin_bal, mm2_krw_bal, mm2_coin_bal,
-                         is_initiation_mode=True, is_trading_mode=False)
-
-        self.past_fti_yield_db = []
+                         db_client, is_initiation_mode=True, is_trading_mode=False)
 
     def real_time_streamer(self):
-        if self.is_initiation_mode:
-            logging.warning("==============================")
-            logging.warning("|| Trade Streamer Initiated ||")
-            logging.warning("==============================\n")
-            logging.warning("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
-                                                                 self.target_currency.upper(),
-                                                                 self.mm1_coin_bal))
-            logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
-                                                                   self.target_currency.upper(),
-                                                                   self.mm2_coin_bal))
-            final_opted_fti_dict = self.run_initiation_mode()
-            print(final_opted_fti_dict)
 
-            # todo: post the result to MongoDB so that the Actual Trader can trigger them
-            self.is_initiation_mode = False
-            self.is_trading_mode = True
+        while True:
+            if self.is_initiation_mode:
+                self.run_initiation_mode()
 
-        elif self.is_trading_mode:
-            # reset set_point_time
-            self.bot_start_time = int(time.time())
-            self.rewined_time = int(self.bot_start_time - self.TRADING_REWIND_TIME)
-            # Global.run_threaded(self.run_monitoring_mode())
-            # Global.run_threaded(self.run_trading_mode())
-            pass
+                # reset time relevant
+                self.is_initiation_mode = False
+                self.is_trading_mode = True
+                self.trading_mode_rewined_time = self.initiation_start_time
+                self.trading_mode_start_time = int(time.time())
+                self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
+                self.bot_start_time = int(time.time())
 
-        elif not self.is_trading_mode:
-            # self.run_monitoring_mode()
-            pass
-        else:
-            raise Exception("Trade Streamer should be launched with one of 2 modes -> "
-                            "[INITIAL ANALYSIS MODE] or [TRADING MODE]")
+            if self.is_trading_mode:
+
+                try:
+                    self.run_trading_mode()
+
+                # if there is no oppty, wait and loop through real_time_streamer..
+                except AssertionError:
+                    self.trading_mode_start_time = int(time.time())
+                    time.sleep(10)
+                    return self.real_time_streamer()
+
+                # sleep by Trading Mode Loop Interval
+                self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
+                                                     self.TRADING_MODE_LOOP_INTERVAL)
+
+                # reset time relevant
+                self.trading_mode_rewined_time = self.trading_mode_start_time
+                self.trading_mode_start_time = int(time.time())
+                self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
+
+            else:
+                raise Exception("Trade Streamer should be launched with one of 3 modes -> "
+                                "[INITIAL ANALYSIS MODE] / [TRADING MODE] / [OPPTY DETECTING MODE]")
 
     def run_initiation_mode(self):
+        # log initiation mode
+        logging.error("================================")
+        logging.error("|| Conducting Initiation Mode ||")
+        logging.error("================================\n")
+        logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
+                                                           self.target_currency.upper(),
+                                                           self.mm1_coin_bal))
+        logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
+                                                               self.target_currency.upper(),
+                                                               self.mm2_coin_bal))
         # run inner & outer OCAT
         self.launch_inner_outer_ocat()
 
@@ -56,38 +70,40 @@ class TestTradeStreamer(TestTradeHandler):
         except False:
             return
 
-        # run Monitoring mode (for initiation mode)
-        self.bot_start_time = int(time.time())
-        self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
-        fti_final_result_list = self.run_monitoring_mode()
+        self.initiation_start_time = int(time.time())
+        self.init_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
 
-        # loop through all fti_result and get the best one expected yield and its infos
-        final_opted_fti_iyo_list = self.get_opt_fti_set_and_final_yield(fti_final_result_list)
+        # run FTI Analysis mode (for initiation mode)
+        final_opt_iyo_dict = self.run_fti_analysis()
 
-        # finally get the best one set from fti_iyo_list
-        final_opt_iyo_dict = self.sort_final_opted_fti_iyo_list_by_min_avg_trade_interval(final_opted_fti_iyo_list)
+        # if there was no oppty, stop bot
+        if final_opt_iyo_dict is None:
+            self.is_initiation_mode = False
+            self.is_trading_mode = False
+            return
 
-        return final_opt_iyo_dict
+        # log initiation mode oppty_dur during
+        self.log_final_opt_result(final_opt_iyo_dict)
 
-    def run_monitoring_mode(self):
-        # change time info up-to-date (since some minutes passed b/c of OCAT and Balance transfer
-        if self.is_initiation_mode:
-            logging.warning("Now conducting [Monitoring] for [Initiation Mode]")
+        # finally, post to MongoDB
+        self.post_final_fti_result_to_mongodb(self.db_client, final_opt_iyo_dict)
 
-            # launch Oppty Sliced IYO
-            sliced_iyo_list = self.launch_oppty_sliced_iyo(self.bot_start_time, self.rewined_time)
+    def run_trading_mode(self):
+        logging.error("=============================")
+        logging.error("|| Conducting Trading Mode ||")
+        logging.error("=============================\n")
 
-            # get yield_histo_filtered dict
-            yield_histo_filted_dict = TradeFormulaApplied.get_yield_histo_filtered_dict(sliced_iyo_list,
-                                                                                        self.YIELD_THRESHOLD_RATE_START,
-                                                                                        self.YIELD_THRESHOLD_RATE_END,
-                                                                                        self.YIELD_THRESHOLD_RATE_STEP)
+        final_opt_iyo_dict = self.run_fti_analysis()
 
-            # launch Formulated Trade Interval (FTI)
-            fti_final_result_list = self.launch_formulated_trade_interval(yield_histo_filted_dict, self.rewined_time)
-            return fti_final_result_list
+        # if there was no oppty, wait for oppty by looping real_time_streamer...
+        if final_opt_iyo_dict is None:
+            raise AssertionError
 
-        if not self.is_initiation_mode:
-            logging.warning("Now conducting [Monitoring] for [Monitoring Mode]")
-            pass
-        return
+        # finally, post to MongoDB
+        self.post_final_fti_result_to_mongodb(self.db_client, final_opt_iyo_dict)
+
+        # log oppty duration during trading mode anal dur
+        self.log_oppty_dur_of_trading_mode_fti_anal()
+
+        # log final_opt_iyo_dict
+        self.log_final_opt_result(final_opt_iyo_dict)

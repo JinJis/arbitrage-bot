@@ -13,10 +13,9 @@ from trader.trade_manager.order_watcher_stats import OrderWatcherStats
 class RiskFreeArbBotV3(BaseArbBot):
 
     def __init__(
-            self, mm1: MarketManager, mm2: MarketManager,
-            target_currency: str, initial_settings_col: Collection,
-            trade_interval_col: Collection
-    ):
+            self, mm1: MarketManager, mm2: MarketManager, target_currency: str,
+            initial_settings_col: Collection, trade_interval_col: Collection):
+
         self.initial_settings_col = initial_settings_col
         self.trade_interval_col = trade_interval_col
         self.trade_strategy = ATSAnalyzer.actual_tradable_spread_strategy

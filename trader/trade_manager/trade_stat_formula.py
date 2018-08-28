@@ -10,16 +10,13 @@ class TradeFormulaApplied:
                                       max_trade_interval_multiplier: int):
         """
         :return:
-        fti_iyos_result_dict = {
-            "fti_exhaust_rate": flot,
-            "fti_yield_sum" : float,
-            "predicted_yield_by_settle": float
-            "fti_iyo_list": [iyo, iyo, iyo...]
-                            ** iyo = {
-                                "fti",
-                                "fti_yield"
-                            }
-        }
+        fti_iyos_result_dict = {"fti_exhaust_rate": flot,
+                                "fti_yield_sum" : float,
+                                "predicted_yield_by_settle": float
+                                "fti_iyo_list": [iyo, iyo, iyo...]
+                                                    ** iyo =
+                                                    {"fti",
+                                                    "fti_yield"}}
         """
         target_formula = TradeFormula.formulated_trading_interval_formula
 
@@ -31,10 +28,12 @@ class TradeFormulaApplied:
             rev_traded_count += iyo["rev_traded"]
 
         # set initial krw balance by attained result of NEW or REV
-        if new_traded_count > rev_traded_count:
+        if new_traded_count != 0 and rev_traded_count == 0:
             cur_end_krw_bal = mm1_krw_bal
-        else:
+        elif rev_traded_count != 0 and new_traded_count == 0:
             cur_end_krw_bal = mm2_krw_bal
+        else:
+            cur_end_krw_bal = mm1_krw_bal + mm2_krw_bal
 
         initial_krw_bal = cur_end_krw_bal
 
@@ -59,6 +58,8 @@ class TradeFormulaApplied:
 
             # get trade ratio (traded new + rev / new + rev oppty count)
             trade_ratio = (iyo["new_traded"] + iyo["rev_traded"]) / (iyo["new_oppty_count"] + iyo["rev_oppty_count"])
+            if trade_ratio == 0:
+                continue
 
             # calc trading_interval by formulated equation; Predicted Trading Interval Formula.
             # in order to opt the formula by multiplying weight
@@ -77,16 +78,17 @@ class TradeFormulaApplied:
             elif max_trade_interval_multiplier * iyo_run_time < calced_trade_interval:
                 continue
 
-            # subtract actual traded krw applied with calced_trading_interval from current krw balance
+            # calc actual krw_traded and krw_earned
             krw_traded = iyo["total_krw_exhausted"] * (5 / (trade_ratio * calced_trade_interval))
+            krw_earned = iyo["krw_earned"] * (5 / (trade_ratio * calced_trade_interval))
 
             # if current_krw_bal is fully exhausted, stop current iyo_data
             if cur_end_krw_bal - krw_traded <= 0:
                 continue
 
             # append yield updated with trading_interval_time and subtacted krw real_time balance
-            expted_yield = iyo["krw_earned"] / cur_end_krw_bal * 100
-            total_krw_earned += iyo["krw_earned"]
+            expted_yield = krw_earned / cur_end_krw_bal * 100
+            total_krw_earned += krw_earned
 
             # if current_krw_bal is still holdable, trade
             cur_end_krw_bal -= krw_traded
@@ -99,29 +101,39 @@ class TradeFormulaApplied:
         # after looping all the s-iyos, calculate PTIed KRW exhaust rate for further analysis for actual trader
         fti_iyos_result_dict["fti_exhaust_rate"] = (initial_krw_bal - cur_end_krw_bal) / initial_krw_bal
         fti_iyos_result_dict["fti_yield_sum"] = total_krw_earned / initial_krw_bal * 100
-        fti_iyos_result_dict["predicted_yield_by_settle"] \
-            = (total_krw_earned / fti_iyos_result_dict["fti_exhaust_rate"]) / initial_krw_bal * 100
+
+        # there may be some situations where no krw_earned, because of weights and multiplier..so handle
+        if fti_iyos_result_dict["fti_yield_sum"] == 0:
+            fti_iyos_result_dict["predicted_yield_by_settle"] = 0
+        else:
+            fti_iyos_result_dict["predicted_yield_by_settle"] \
+                = (total_krw_earned / fti_iyos_result_dict["fti_exhaust_rate"]) / initial_krw_bal * 100
         fti_iyos_result_dict["fti_iyo_list"] = temp_iyo_list
 
         return fti_iyos_result_dict
 
     @staticmethod
-    def get_yield_histo_filtered_dict(sliced_iyo_list: list,
+    def extract_yield_dict_from_s_iyo_list(sliced_iyo_list: list):
+        # make yield dict in list
+        s_iyo_yield_dict_list = [{"yield": x["yield"],
+                                  "start_time": x["settings"]["start_time"],
+                                  "end_time": x["settings"]["end_time"]} for x in sliced_iyo_list]
+        return s_iyo_yield_dict_list
+
+    @staticmethod
+    def get_yield_histo_filtered_dict(s_iyo_yield_dict_list: list, sliced_iyo_list: list,
                                       yield_th_rate_start, yield_th_rate_end, yield_th_rate_step):
         """
-        :param sliced_iyo_list: [s_iyo, s_iyo, s_iyo....]
-        :param yield_th_rate_start
-        :param yield_th_rate_end
-        :param yield_th_rate_step
         :return:
         yield_rank_filtered_dict =
         {"0.1": [filtered_iyo, filt_iyo, ....],
-         "0.2": [filtered_iyo, filt_iyo, ....],
-         ...
+         "0.2": [filtered_iyo, filt_iyo, ....], ...
         }
         """
-        # calculate rank_perent for each s_iyo data and append to original
-        s_iyo_yield_list = [x["yield"] for x in sliced_iyo_list]
+
+        # convert s_iyo_yield_dict in flattend list
+        s_iyo_yield_list = [x["yield"] for x in s_iyo_yield_dict_list]
+
         for s_iyo in sliced_iyo_list:
             yield_threshold_rate = TradeFormula.get_area_percent_by_histo_formula(s_iyo_yield_list, s_iyo["yield"])
             s_iyo["yield_threshold_rate"] = yield_threshold_rate

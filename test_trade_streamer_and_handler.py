@@ -9,12 +9,14 @@ def main(target_currency: str, mm1_name: str, mm2_name: str,
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
     SharedMongoClient.initialize(should_use_localhost_db=False)
 
+    db_clinet = SharedMongoClient.instance()
     trade_streamer = TestTradeStreamer(target_currency, mm1_name, mm2_name,
-                                       mm1_krw_bal, mm1_coin_bal, mm2_krw_bal, mm2_coin_bal)
+                                       mm1_krw_bal, mm1_coin_bal, mm2_krw_bal, mm2_coin_bal, db_clinet)
+
     trade_streamer.real_time_streamer()
     logging.critical("Streamer Initiation Mode result")
 
 
 if __name__ == '__main__':
-    main("eth", "bithumb", "okcoin",
+    main("tron", "bithumb", "okcoin",
          mm1_krw_bal=1000000, mm1_coin_bal=0, mm2_krw_bal=0, mm2_coin_bal=3.3)

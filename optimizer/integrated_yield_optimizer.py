@@ -3,6 +3,7 @@ import logging
 import configparser
 import numpy as np
 from pymongo.cursor import Cursor
+from config.global_conf import Global
 from analyzer.trade_analyzer import BasicAnalyzer, IBOAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from collector.oppty_time_collector import OpptyTimeCollector
@@ -34,11 +35,11 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
         # get oppty_dur dict
         oppty_dur_dict = OTC.run(settings)
-        logging.warning("Total Oppty Duration Dict: %s" % oppty_dur_dict)
+        logging.info("Total Oppty Duration Dict: %s" % oppty_dur_dict)
 
         # get oppty_dur in human date dict
         oppty_dur_human_dict = OTC.get_oppty_dur_human_time(oppty_dur_dict, timezone="kr")
-        logging.warning("Total Oppty Duration Human date Dict: %s" % oppty_dur_human_dict)
+        logging.info("Total Oppty Duration Human date Dict: %s" % oppty_dur_human_dict)
 
         # loop through oppty times
 
@@ -71,8 +72,12 @@ class IntegratedYieldOptimizer(BaseOptimizer):
                     # apply each oppty duration
                     settings_clone["start_time"] = time[0]
                     settings_clone["end_time"] = time[1]
-                    logging.critical(
-                        "Now in: [%s] start_time: %d, end_time: %d" % (trade_type.upper(), time[0], time[1]))
+
+                    # convert to local time
+                    st_local = Global.convert_epoch_to_local_datetime(time[0], timezone="kr")
+                    et_local = Global.convert_epoch_to_local_datetime(time[1], timezone="kr")
+                    logging.error(
+                        "Now in: [%s] start_time: %s, end_time: %s" % (trade_type.upper(), st_local, et_local))
 
                     # initial dry run -> get new, rev oppty count
                     new_oppty_count, rev_oppty_count = super().count_oppty_num(settings_clone,
@@ -127,13 +132,13 @@ class IntegratedYieldOptimizer(BaseOptimizer):
         if depth == 0:
             # log final Opt result yield
             final_opt_yield = optimized["yield"]
-            logging.critical("\n[IYO Final Opt Result]"
-                             "\n>>>Final Opted Yield: %.4f%%"
-                             "\n>>>Final Optimized Info: %s" % (final_opt_yield, optimized))
+            logging.info("[IYO Final Opt Result]")
+            logging.info(">>>[Final Optimized Info]: %s" % optimized)
+            logging.error(">>>[Final Opted Yield]: %.4f%%" % final_opt_yield)
 
             return optimized
 
-        logging.critical("\n<<<< Now in [IYO] depth: %d >>>>" % depth)
+        logging.info("<<<< Now in [IYO] depth: %d >>>>" % depth)
 
         # init seq for balance settings
         for market in bal_factor_settings.keys():
@@ -173,7 +178,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             optimized = cur_optimized
 
         # log current optimized yield
-        logging.critical("[IYO Depth:%d] Current Opted Yield: %.4f%%" % (depth, cur_optimized["yield"]))
+        logging.info("[IYO Depth:%d] Current Opted Yield: %.4f%%" % (depth, cur_optimized["yield"]))
 
         # reset start, end, step for both balance settings and initial settings
         division = settings["division"]
@@ -200,11 +205,11 @@ class IntegratedYieldOptimizer(BaseOptimizer):
             for init_setting in initial_settings_batch:
 
                 iyo_index += 1
-                logging.warning("Now conducting [IYO] %d out of %d" % (iyo_index, iyo_total_odds))
+                logging.info("Now conducting [IYO] %d out of %d" % (iyo_index, iyo_total_odds))
 
                 # if total invested krw is 0, skip ISO (no trade anyway)
                 if (bal_setting["mm1"]["krw_balance"] + bal_setting["mm2"]["krw_balance"]) == 0:
-                    logging.warning("Skipped [IYO] because total invested KRW was 0!")
+                    logging.info("Skipped [IYO] because total invested KRW was 0!")
                     continue
 
                 # If not invested krw is 0
