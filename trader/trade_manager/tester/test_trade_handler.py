@@ -11,14 +11,12 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TestTradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 4 * 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
 
-    INITIATION_REWEIND_TIME = 1 * 60 * 60
+    INITIATION_REWEIND_TIME = 30 * 60
 
     # recommend this to same with slicing interval!!
     TRADING_MODE_LOOP_INTERVAL = 60
-
-    TRADE_INTERVAL_BOOSTER = 0.2
 
     YIELD_THRESHOLD_RATE_START = 0.1
     YIELD_THRESHOLD_RATE_END = 0.5
@@ -210,8 +208,8 @@ class TestTradeHandler:
 
         new_percent = (total_dur_dict["new"] / self.INITIATION_REWEIND_TIME) * 100
         rev_percent = (total_dur_dict["rev"] / self.INITIATION_REWEIND_TIME) * 100
-        new_spread_strength = total_dur_dict["new_spread_ratio"] * 100
-        rev_spread_strength = total_dur_dict["rev_spread_ratio"] * 100
+        new_spread_strength = otc_result_dict["new_spread_ratio"] * 100
+        rev_spread_strength = otc_result_dict["rev_spread_ratio"] * 100
         logging.warning("\n======= [Oppty Duration Checker] =======")
         logging.warning("[Trading Mode Duration]: start_time: %s, end_time: %s" % (start_time_local, end_time_local))
         logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
@@ -244,13 +242,7 @@ class TestTradeHandler:
 
     @staticmethod
     def post_final_fti_result_to_mongodb(db_client, final_opt_iyo_dict):
-        db_client["trade"]["fti_setting"].insert(
-            {"fti_exhaust_rate": final_opt_iyo_dict["fti_exhaust_rate"],
-             "fti_yield_sum": final_opt_iyo_dict["fti_yield_sum"],
-             "predicted_yield_by_settle": final_opt_iyo_dict["predicted_yield_by_settle"],
-             "yield_threshold_rate": final_opt_iyo_dict["yield_threshold_rate"],
-             "fti_formula_weight": final_opt_iyo_dict["fti_formula_weight"],
-             "max_time_interval_multiplier": final_opt_iyo_dict["max_time_interval_multiplier"]})
+        db_client["trade"]["fti_setting"].insert(final_opt_iyo_dict)
 
     """
     ==============================

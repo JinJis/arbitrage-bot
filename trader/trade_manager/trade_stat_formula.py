@@ -20,20 +20,7 @@ class TradeFormulaApplied:
         """
         target_formula = TradeFormula.formulated_trading_interval_formula
 
-        # decide whether each IYO data was NEW or REV
-        new_traded_count = 0
-        rev_traded_count = 0
-        for iyo in sliced_iyo_list:
-            new_traded_count += iyo["new_traded"]
-            rev_traded_count += iyo["rev_traded"]
-
-        # set initial krw balance by attained result of NEW or REV
-        if new_traded_count != 0 and rev_traded_count == 0:
-            cur_end_krw_bal = mm1_krw_bal
-        elif rev_traded_count != 0 and new_traded_count == 0:
-            cur_end_krw_bal = mm2_krw_bal
-        else:
-            cur_end_krw_bal = mm1_krw_bal + mm2_krw_bal
+        cur_end_krw_bal = mm1_krw_bal + mm2_krw_bal
 
         initial_krw_bal = cur_end_krw_bal
 
@@ -135,8 +122,8 @@ class TradeFormulaApplied:
         s_iyo_yield_list = [x["yield"] for x in s_iyo_yield_dict_list]
 
         for s_iyo in sliced_iyo_list:
-            yield_threshold_rate = TradeFormula.get_area_percent_by_histo_formula(s_iyo_yield_list, s_iyo["yield"])
-            s_iyo["yield_threshold_rate"] = yield_threshold_rate
+            yield_rank_rate = TradeFormula.get_area_percent_by_histo_formula(s_iyo_yield_list, s_iyo["yield"])
+            s_iyo["yield_rank_rate"] = yield_rank_rate
 
         # create yield rank sequence to loop and analyze further down
         yield_rank_filtered_dict = dict()
@@ -145,7 +132,7 @@ class TradeFormulaApplied:
 
             yield_histo_filtered_list = []
             for s_iyo in sliced_iyo_list:
-                if s_iyo["yield_threshold_rate"] >= yield_th_rate:
+                if s_iyo["yield_rank_rate"] >= yield_th_rate:
                     yield_histo_filtered_list.append(s_iyo)
                 else:
                     continue

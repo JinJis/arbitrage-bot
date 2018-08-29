@@ -1,7 +1,7 @@
 import time
 import logging
 from pymongo.mongo_client import MongoClient
-from trader.trade_manager.test_trade_handler import TestTradeHandler
+from trader.trade_manager.tester.test_trade_handler import TestTradeHandler
 
 
 class TestTradeStreamer(TestTradeHandler):
@@ -42,8 +42,9 @@ class TestTradeStreamer(TestTradeHandler):
 
                 # if there is no oppty, wait and loop through real_time_streamer..
                 except AssertionError:
+                    self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
+                                                         self.TRADING_MODE_LOOP_INTERVAL)
                     self.trading_mode_start_time = int(time.time())
-                    time.sleep(30)
                     return self.real_time_streamer()
 
                 # sleep by Trading Mode Loop Interval
