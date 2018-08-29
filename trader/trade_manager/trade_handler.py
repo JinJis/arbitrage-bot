@@ -1,7 +1,7 @@
 import time
 import logging
 from config.global_conf import Global
-from pymongo.mongo_client import MongoClient
+from config.shared_mongo_client import SharedMongoClient
 from optimizer.base_optimizer import BaseOptimizer
 from config.trade_setting_config import TradeSettingConfig
 from collector.scheduler.otc_scheduler import OTCScheduler
@@ -34,7 +34,9 @@ class TradeHandler:
     MAX_TI_MULTIPLIER_STEP = 1
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager,
-                 is_initiation_mode: bool, is_trading_mode: bool, db_client: MongoClient):
+                 is_initiation_mode: bool, is_trading_mode: bool):
+
+        self.streamer_db = SharedMongoClient.get_streamer_db()
 
         self.is_initiation_mode = is_initiation_mode
         self.is_trading_mode = is_trading_mode
@@ -51,8 +53,6 @@ class TradeHandler:
 
         self.bot_start_time = int(time.time())
         self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
-
-        self.db_client = db_client
 
         self.initiation_start_time = int(time.time())
         self.init_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
@@ -173,6 +173,13 @@ class TradeHandler:
 
         return all_ocat_result_by_one_coin
 
+    def reset_time_relevant_before_trading_mode(self):
+        self.trading_mode_rewined_time = self.initiation_start_time
+        self.trading_mode_start_time = int(time.time())
+        self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
+        self.bot_start_time = int(time.time())
+        self.settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
+
     """
     =======================
     || TRADING MODE ONLY ||
@@ -219,11 +226,23 @@ class TradeHandler:
                         % (total_dur_dict["combination"], new_percent, rev_percent,
                            new_spread_strength, rev_spread_strength))
 
+    def no_oppty_handler_for_trading_mode(self):
+        # post empty fti_setting --> to make RFAB not to trade
+        self.post_empty_fti_setting_to_mongo_when_no_oppty()
+        self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
+                                             self.TRADING_MODE_LOOP_INTERVAL)
+        self.trading_mode_start_time = int(time.time())
+
     def post_empty_fti_setting_to_mongo_when_no_oppty(self):
-        self.db_client["trade"]["fti_setting"].insert({
+        self.streamer_db["fti_setting"].insert({
             "no_oppty": "True",
             "fti_iyo_list": []
         })
+
+    def reset_time_relevant_for_trading_mode(self):
+        self.trading_mode_rewined_time = self.trading_mode_start_time
+        self.trading_mode_start_time = int(time.time())
+        self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
 
     """
     ===========================================
@@ -249,9 +268,8 @@ class TradeHandler:
     ==========================
     """
 
-    @staticmethod
-    def post_final_fti_result_to_mongodb(db_client, final_opt_iyo_dict):
-        db_client["trade"]["fti_setting"].insert(final_opt_iyo_dict)
+    def post_final_fti_result_to_mongodb(self, final_opt_iyo_dict):
+        self.streamer_db["fti_setting"].insert(final_opt_iyo_dict)
 
     """
     ==============================
@@ -267,7 +285,7 @@ class TradeHandler:
             # launch Oppty Sliced IYO
             try:
                 sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_rewined_time)
-                self.db_client["trade"]["s_iyo"].insert_many(sliced_iyo_list)
+                self.streamer_db["s_iyo"].insert_many(sliced_iyo_list)
 
                 # extract yield only dict data from s_iyo list
                 extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
@@ -286,10 +304,10 @@ class TradeHandler:
                                                                 self.trading_mode_rewined_time)
 
                 # post this small dur s-iyo to MongoDB
-                self.db_client["trade"]["s_iyo"].insert_many(small_s_iyo_list)
+                self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
 
                 # get same amount of duration as of Initiation Mode from s_iyo DB
-                s_iyo_col = self.db_client["trade"]["s_iyo"]
+                s_iyo_col = self.streamer_db["s_iyo"]
                 s_iyo_cur_list = s_iyo_col.find({"settings.start_time": {
                     "$gte": self.trading_mode_fti_rewined_time,
                     "$lte": self.trading_mode_start_time

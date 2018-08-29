@@ -1,16 +1,14 @@
 import time
 import logging
-from pymongo.mongo_client import MongoClient
 from trader.trade_manager.tester.test_trade_handler import TestTradeHandler
 
 
 class TestTradeStreamer(TestTradeHandler):
 
     def __init__(self, target_currency: str, mm1_name: str, mm2_name: str,
-                 mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float,
-                 db_client: MongoClient):
+                 mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float):
         super().__init__(target_currency, mm1_name, mm2_name, mm1_krw_bal, mm1_coin_bal, mm2_krw_bal, mm2_coin_bal,
-                         db_client, is_initiation_mode=True, is_trading_mode=False)
+                         is_initiation_mode=True, is_trading_mode=False)
 
     def real_time_streamer(self):
 
@@ -102,7 +100,7 @@ class TestTradeStreamer(TestTradeHandler):
         self.log_final_opt_result(final_opt_iyo_dict)
 
         # finally, post to MongoDB
-        self.post_final_fti_result_to_mongodb(self.db_client, final_opt_iyo_dict)
+        self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)
 
     def run_trading_mode(self):
         logging.error("=============================")
@@ -116,7 +114,7 @@ class TestTradeStreamer(TestTradeHandler):
             raise AssertionError
 
         # finally, post to MongoDB
-        self.post_final_fti_result_to_mongodb(self.db_client, final_opt_iyo_dict)
+        self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)
 
         # log oppty duration during trading mode anal dur
         self.log_oppty_dur_of_trading_mode_fti_anal()

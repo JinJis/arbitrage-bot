@@ -9,9 +9,8 @@ def main(target_currency: str, mm1_name: str, mm2_name: str,
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
     SharedMongoClient.initialize(should_use_localhost_db=False)
 
-    db_clinet = SharedMongoClient.instance()
     trade_streamer = TestTradeStreamer(target_currency, mm1_name, mm2_name,
-                                       mm1_krw_bal, mm1_coin_bal, mm2_krw_bal, mm2_coin_bal, db_clinet)
+                                       mm1_krw_bal, mm1_coin_bal, mm2_krw_bal, mm2_coin_bal)
 
     trade_streamer.real_time_streamer()
 

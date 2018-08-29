@@ -13,6 +13,5 @@ RiskFreeArbBotV3(
     target_currency="bch",
     mm1=BithumbMarketManager(),
     mm2=CoinoneMarketManager(),
-    initial_settings_col=streamer_db["initial_settings"],
-    trade_interval_col=streamer_db["trade_interval"]
+    fti_settings_col=streamer_db["fti_setting"]
 ).run()

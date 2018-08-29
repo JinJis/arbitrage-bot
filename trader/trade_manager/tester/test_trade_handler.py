@@ -1,7 +1,7 @@
 import logging
 import time
 from config.global_conf import Global
-from pymongo.mongo_client import MongoClient
+from config.shared_mongo_client import SharedMongoClient
 from collector.oppty_time_collector import OpptyTimeCollector
 from collector.scheduler.otc_scheduler import OTCScheduler
 from config.trade_setting_config import TradeSettingConfig
@@ -34,9 +34,9 @@ class TestTradeHandler:
 
     def __init__(self, target_currency: str, mm1_name: str, mm2_name: str,
                  mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float,
-                 db_client: MongoClient, is_initiation_mode: bool, is_trading_mode: bool):
+                 is_initiation_mode: bool, is_trading_mode: bool):
 
-        self.db_client = db_client
+        self.streamer_db = SharedMongoClient.get_streamer_db()
 
         self.is_initiation_mode = is_initiation_mode
         self.is_trading_mode = is_trading_mode
@@ -217,7 +217,7 @@ class TestTradeHandler:
                            new_spread_strength, rev_spread_strength))
 
     def post_empty_fti_setting_to_mongo_when_no_oppty(self):
-        self.db_client["trade"]["fti_setting"].insert({
+        self.streamer_db["fti_setting"].insert({
             "no_oppty": "True",
             "fti_iyo_list": []
         })
@@ -246,9 +246,8 @@ class TestTradeHandler:
     ==========================
     """
 
-    @staticmethod
-    def post_final_fti_result_to_mongodb(db_client, final_opt_iyo_dict):
-        db_client["trade"]["fti_setting"].insert(final_opt_iyo_dict)
+    def post_final_fti_result_to_mongodb(self, final_opt_iyo_dict):
+        self.streamer_db["fti_setting"].insert(final_opt_iyo_dict)
 
     """
     ==============================
@@ -264,7 +263,7 @@ class TestTradeHandler:
             # launch Oppty Sliced IYO
             try:
                 sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_rewined_time)
-                self.db_client["trade"]["s_iyo"].insert_many(sliced_iyo_list)
+                self.streamer_db["s_iyo"].insert_many(sliced_iyo_list)
 
                 # extract yield only dict data from s_iyo list
                 extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
@@ -283,10 +282,10 @@ class TestTradeHandler:
                                                                 self.trading_mode_rewined_time)
 
                 # post this small dur s-iyo to MongoDB
-                self.db_client["trade"]["s_iyo"].insert_many(small_s_iyo_list)
+                self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
 
                 # get same amount of duration as of Initiation Mode from s_iyo DB
-                s_iyo_col = self.db_client["trade"]["s_iyo"]
+                s_iyo_col = self.streamer_db["s_iyo"]
                 s_iyo_cur_list = s_iyo_col.find({"settings.start_time": {
                     "$gte": self.trading_mode_fti_rewined_time,
                     "$lte": self.trading_mode_start_time

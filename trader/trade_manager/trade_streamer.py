@@ -1,19 +1,25 @@
 import time
 import logging
-from pymongo.mongo_client import MongoClient
 from trader.trade_manager.trade_handler import TradeHandler
 from trader.market_manager.market_manager import MarketManager
 
 
 class TradeStreamer(TradeHandler):
 
-    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager, db_client: MongoClient):
-        super().__init__(target_currency, mm1, mm2, is_initiation_mode=True, is_trading_mode=False, db_client=db_client)
+    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
+        super().__init__(target_currency, mm1, mm2, is_initiation_mode=True, is_trading_mode=False)
 
     def real_time_streamer(self):
 
         while True:
+
+            """ INITIATION MODE """
             if self.is_initiation_mode:
+
+                # first, make Actual Trader not to trade before Analysis
+                self.post_empty_fti_setting_to_mongo_when_no_oppty()
+
+                # run initiation mode
                 self.run_initiation_mode()
 
                 # reset mode relevant
@@ -21,12 +27,9 @@ class TradeStreamer(TradeHandler):
                 self.is_trading_mode = True
 
                 # reset time relevant
-                self.trading_mode_rewined_time = self.initiation_start_time
-                self.trading_mode_start_time = int(time.time())
-                self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
-                self.bot_start_time = int(time.time())
-                self.settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
+                self.reset_time_relevant_before_trading_mode()
 
+            """ TRADING MODE """
             if self.is_trading_mode:
 
                 # check if reached settlement time
@@ -34,19 +37,13 @@ class TradeStreamer(TradeHandler):
                     logging.critical("Bot reached settlement time!! closing trade...")
                     return False
 
-                # check whether RFAB Actual Trader initiated
-
                 # run trading_mode
                 try:
                     self.run_trading_mode()
 
                 # if no oppty
                 except AssertionError:
-                    # post empty fti_setting --> to make RFAB not to trade
-                    self.post_empty_fti_setting_to_mongo_when_no_oppty()
-                    self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
-                                                         self.TRADING_MODE_LOOP_INTERVAL)
-                    self.trading_mode_start_time = int(time.time())
+                    self.no_oppty_handler_for_trading_mode()
                     return self.real_time_streamer()
 
                 # sleep by Trading Mode Loop Interval
@@ -54,9 +51,7 @@ class TradeStreamer(TradeHandler):
                                                      self.TRADING_MODE_LOOP_INTERVAL)
 
                 # reset time relevant
-                self.trading_mode_rewined_time = self.trading_mode_start_time
-                self.trading_mode_start_time = int(time.time())
-                self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
+                self.reset_time_relevant_for_trading_mode()
 
             else:
                 raise Exception("Trade Streamer should be launched with one of 3 modes -> "
@@ -102,7 +97,7 @@ class TradeStreamer(TradeHandler):
         self.log_final_opt_result(final_opt_iyo_dict)
 
         # finally, post to MongoDB
-        self.post_final_fti_result_to_mongodb(self.db_client, final_opt_iyo_dict)
+        self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)
 
     def run_trading_mode(self):
         logging.error("=============================")
@@ -116,7 +111,7 @@ class TradeStreamer(TradeHandler):
             raise AssertionError
 
         # finally, post to MongoDB
-        self.post_final_fti_result_to_mongodb(self.db_client, final_opt_iyo_dict)
+        self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)
 
         # log oppty duration during trading mode anal dur
         self.log_oppty_dur_of_trading_mode_fti_anal()
