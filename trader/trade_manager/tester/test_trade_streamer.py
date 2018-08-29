@@ -40,8 +40,10 @@ class TestTradeStreamer(TestTradeHandler):
                 try:
                     self.run_trading_mode()
 
-                # if there is no oppty, wait and loop through real_time_streamer..
+                # if no oppty
                 except AssertionError:
+                    # post empty fti_setting --> to make RFAB not to trade
+                    self.post_empty_fti_setting_to_mongo_when_no_oppty()
                     self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
                                                          self.TRADING_MODE_LOOP_INTERVAL)
                     self.trading_mode_start_time = int(time.time())

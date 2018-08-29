@@ -216,6 +216,12 @@ class TestTradeHandler:
                         % (total_dur_dict["combination"], new_percent, rev_percent,
                            new_spread_strength, rev_spread_strength))
 
+    def post_empty_fti_setting_to_mongo_when_no_oppty(self):
+        self.db_client["trade"]["fti_setting"].insert({
+            "no_oppty": "True",
+            "fti_iyo_list": []
+        })
+
     """
     ===========================================
     || INITIATION & TRADING MODE (UNIVERSAL) ||

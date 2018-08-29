@@ -27,7 +27,7 @@ class TradeHandler:
     FTI_FORMULA_WEIGHT_END = 1.0
     FTI_FORMULA_WEIGHT_STEP = 0.05
 
-    FTI_MIN_INTERVAL = 1
+    FTI_MIN_INTERVAL = 5
 
     MAX_TI_MULTIPLIER_START = 1
     MAX_TI_MULTIPLIER_END = 5
@@ -218,6 +218,12 @@ class TradeHandler:
         logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
                         % (total_dur_dict["combination"], new_percent, rev_percent,
                            new_spread_strength, rev_spread_strength))
+
+    def post_empty_fti_setting_to_mongo_when_no_oppty(self):
+        self.db_client["trade"]["fti_setting"].insert({
+            "no_oppty": "True",
+            "fti_iyo_list": []
+        })
 
     """
     ===========================================
