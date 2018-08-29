@@ -11,9 +11,9 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TestTradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 4 * 60 * 60
 
-    INITIATION_REWEIND_TIME = 30 * 60
+    INITIATION_REWEIND_TIME = 1 * 60 * 60
 
     # recommend this to same with slicing interval!!
     TRADING_MODE_LOOP_INTERVAL = 60
@@ -61,6 +61,7 @@ class TestTradeHandler:
         self.trading_mode_rewined_time = None
 
         self.bot_start_time = None
+        self.settlement_time = None
 
     """
     ==========================
@@ -108,7 +109,12 @@ class TestTradeHandler:
         for result in top_ten_descend_order_result:
             new_percent = (result["new"] / self.INITIATION_REWEIND_TIME) * 100
             rev_percent = (result["rev"] / self.INITIATION_REWEIND_TIME) * 100
-            logging.warning("[%s] NEW: %.2f%%, REV: %.2f%%" % (result["combination"], new_percent, rev_percent))
+            new_spread_strength = result["new_spread_ratio"] * 100
+            rev_spread_strength = result["rev_spread_ratio"] * 100
+
+            logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
+                            % (result["combination"], new_percent, rev_percent,
+                               new_spread_strength, rev_spread_strength))
 
     def to_proceed_handler_for_initiation_mode(self):
 
@@ -155,6 +161,8 @@ class TestTradeHandler:
             try:
                 otc_result_dict = OpptyTimeCollector.run(settings=settings)
                 total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
+                total_dur_dict["new_spread_ratio"] = otc_result_dict["new_spread_ratio"]
+                total_dur_dict["rev_spread_ratio"] = otc_result_dict["rev_spread_ratio"]
                 total_dur_dict["combination"] = \
                     "%s-%s-%s" % (target_currency.upper(), str(_combi[0]).upper(), str(_combi[1]).upper())
                 all_ocat_result_by_one_coin.append(total_dur_dict)
@@ -202,9 +210,13 @@ class TestTradeHandler:
 
         new_percent = (total_dur_dict["new"] / self.INITIATION_REWEIND_TIME) * 100
         rev_percent = (total_dur_dict["rev"] / self.INITIATION_REWEIND_TIME) * 100
+        new_spread_strength = total_dur_dict["new_spread_ratio"] * 100
+        rev_spread_strength = total_dur_dict["rev_spread_ratio"] * 100
         logging.warning("\n======= [Oppty Duration Checker] =======")
         logging.warning("[Trading Mode Duration]: start_time: %s, end_time: %s" % (start_time_local, end_time_local))
-        logging.warning("[%s] NEW: %.2f%%, REV: %.2f%%" % (total_dur_dict["combination"], new_percent, rev_percent))
+        logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
+                        % (total_dur_dict["combination"], new_percent, rev_percent,
+                           new_spread_strength, rev_spread_strength))
 
     """
     ===========================================
@@ -222,7 +234,7 @@ class TestTradeHandler:
         logging.warning("\n========= [FTI Analysis Report] =========")
         logging.warning("yield_threshold_rate: %.2f" % final_opt_iyo_dict["yield_threshold_rate"])
         logging.warning("fti_formula_weight: %.2f" % final_opt_iyo_dict["fti_formula_weight"])
-        logging.warning("max_time_interval_multiplier: %.2f" % final_opt_iyo_dict["max_time_interval_multiplier"])
+        logging.warning("max_time_interval_multiplier: %.2f\n" % final_opt_iyo_dict["max_time_interval_multiplier"])
 
     """
     ==========================
@@ -287,6 +299,9 @@ class TestTradeHandler:
                     sliced_iyo_list.append(iyo)
 
                 extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
+
+                # analysis target is small_s_iyo_list (which is the most recent set), so change
+                sliced_iyo_list = small_s_iyo_list
 
                 bot_start_time = self.bot_start_time
             except TypeError:

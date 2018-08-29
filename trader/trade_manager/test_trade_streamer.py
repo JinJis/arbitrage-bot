@@ -18,23 +18,32 @@ class TestTradeStreamer(TestTradeHandler):
             if self.is_initiation_mode:
                 self.run_initiation_mode()
 
-                # reset time relevant
+                # reset mode relevant
                 self.is_initiation_mode = False
                 self.is_trading_mode = True
+
+                # reset time relevant
                 self.trading_mode_rewined_time = self.initiation_start_time
                 self.trading_mode_start_time = int(time.time())
                 self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
                 self.bot_start_time = int(time.time())
+                self.settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
 
             if self.is_trading_mode:
 
+                # check if reached settlement time
+                if self.trading_mode_start_time > self.settlement_time:
+                    logging.critical("Bot reached settlement time!! closing trade...")
+                    return False
+
+                # run trading_mode
                 try:
                     self.run_trading_mode()
 
                 # if there is no oppty, wait and loop through real_time_streamer..
                 except AssertionError:
                     self.trading_mode_start_time = int(time.time())
-                    time.sleep(10)
+                    time.sleep(30)
                     return self.real_time_streamer()
 
                 # sleep by Trading Mode Loop Interval
@@ -53,7 +62,7 @@ class TestTradeStreamer(TestTradeHandler):
     def run_initiation_mode(self):
         # log initiation mode
         logging.error("================================")
-        logging.error("|| Conducting Initiation Mode ||")
+        logging.error("|| Trade Streamer Launched!!! ||")
         logging.error("================================\n")
         logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
                                                            self.target_currency.upper(),
@@ -69,6 +78,10 @@ class TestTradeStreamer(TestTradeHandler):
             self.to_proceed_handler_for_initiation_mode()
         except False:
             return
+
+        logging.error("================================")
+        logging.error("|| Conducting Initiation Mode ||")
+        logging.error("================================\n")
 
         self.initiation_start_time = int(time.time())
         self.init_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)

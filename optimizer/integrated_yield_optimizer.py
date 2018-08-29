@@ -301,7 +301,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
     @staticmethod
     def get_sliced_oppty_dur_dict(oppty_dur_dict: dict, slicing_interval: int):
         parsed_oppty_dur_dict = dict()
-        for trade_type in oppty_dur_dict.keys():
+        for trade_type in ["new", "rev"]:
             result_list = []
             for time_list in oppty_dur_dict[trade_type]:
                 start = None

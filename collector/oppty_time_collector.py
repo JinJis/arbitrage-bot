@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 from config.global_conf import Global
 from analyzer.trade_analyzer import BasicAnalyzer
 from config.shared_mongo_client import SharedMongoClient
@@ -17,7 +18,7 @@ class OpptyTimeCollector:
         mm1, mm2, mm1_data_cursor, mm2_data_cursor = cls.initiate_market_mongo_settings(settings)
 
         # loop through history data
-        raw_rq_time_dict = dict(new=[], rev=[])
+        raw_rq_time_dict = dict(new=[], rev=[], new_spread_ratio=[], rev_spread_ratio=[])
         for mm1_data, mm2_data in zip(mm1_data_cursor, mm2_data_cursor):
             # skip if either of orderbook data is empty
             if (not mm1_data) or (not mm1_data["asks"]) or (not mm1_data["bids"]):
@@ -30,20 +31,33 @@ class OpptyTimeCollector:
                 continue
 
             # get spread
-            new_unit_spread, rev_unit_spread = cls.get_spread_info(mm1_data, mm2_data, mm1.taker_fee, mm2.taker_fee)
+            new_unit_spread, rev_unit_spread, new_spread_ratio, rev_spread_ratio \
+                = cls.get_spread_info(mm1_data, mm2_data, mm1.taker_fee, mm2.taker_fee)
             # collect requestTime when NEW
             if new_unit_spread > 0:
                 raw_rq_time_dict["new"].append(mm1_data["requestTime"])
+                raw_rq_time_dict["new_spread_ratio"].append(new_spread_ratio)
 
             # collect requestTime when NEW
             if rev_unit_spread > 0:
                 raw_rq_time_dict["rev"].append(mm1_data["requestTime"])
+                raw_rq_time_dict["rev_spread_ratio"].append(rev_spread_ratio)
 
         # sort raw rq time into duration
         new_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["new"])
         rev_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["rev"])
 
-        final_result = dict(new=new_oppty_duration, rev=rev_oppty_duration)
+        # avg new & rev spread ratio
+        avg_new_spread_ratio = 0
+        avg_rev_spread_ratio = 0
+
+        if len(raw_rq_time_dict["new_spread_ratio"]) > 0:
+            avg_new_spread_ratio = np.average(raw_rq_time_dict["new_spread_ratio"])
+        if len(raw_rq_time_dict["rev_spread_ratio"]) > 0:
+            avg_rev_spread_ratio = np.average(raw_rq_time_dict["rev_spread_ratio"])
+
+        final_result = dict(new=new_oppty_duration, rev=rev_oppty_duration,
+                            new_spread_ratio=avg_new_spread_ratio, rev_spread_ratio=avg_rev_spread_ratio)
 
         # log opprt_dur in hour & minute
         cls.log_hour_min_oppty_dur(cls.get_total_duration_time(final_result))
@@ -77,7 +91,10 @@ class OpptyTimeCollector:
         # rev => buy in mm2, sell in mm1
         rev_unit_spread = cls.get_unit_spread_info(mm2_minask_price, mm2_taker_fee, mm1_maxbid_price, mm1_taker_fee)
 
-        return new_unit_spread, rev_unit_spread
+        new_spread_ratio = new_unit_spread / np.average([mm1_minask_price, mm2_maxbid_price])
+        rev_spread_ratio = rev_unit_spread / np.average([mm1_maxbid_price, mm2_minask_price])
+
+        return new_unit_spread, rev_unit_spread, new_spread_ratio, rev_spread_ratio
 
     @staticmethod  # avail_amount = total amount of coin that specific mkt provides
     def get_unit_spread_info(buy_unit_price: int, buy_fee: float, sell_unit_price: int, sell_fee: float):
@@ -108,7 +125,7 @@ class OpptyTimeCollector:
     @staticmethod
     def get_total_duration_time(result_dict: dict):
         total_duration = dict(new=0, rev=0)
-        for key in result_dict.keys():
+        for key in ["new", "rev"]:
             for time in result_dict[key]:
                 diff = (time[1] - time[0])
                 total_duration[key] += diff
@@ -117,7 +134,7 @@ class OpptyTimeCollector:
     @staticmethod
     def get_oppty_dur_human_time(oppty_dur_dict: dict, timezone: str):
         final_dict = dict()
-        for key in oppty_dur_dict.keys():
+        for key in ["new", "rev"]:
             result_list = []
             for time_dur in oppty_dur_dict[key]:
                 human_st = Global.convert_epoch_to_local_datetime(time_dur[0], timezone=timezone)
