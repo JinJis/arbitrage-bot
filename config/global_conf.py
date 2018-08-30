@@ -75,6 +75,12 @@ class Global:
         return float(config[exchange_name.upper()][coin_name])
 
     @staticmethod
+    def read_min_order_digit(exchange_name: str):
+        config = configparser.ConfigParser()
+        config.read(Global.MIN_TRADING_COIN)
+        return int(config[exchange_name.upper()]["min_digit"])
+
+    @staticmethod
     def read_iyo_setting_config(target_currency: str):
         config = configparser.ConfigParser()
         config.read(Global.IYO_CONFIG_LOCATION)

@@ -17,7 +17,6 @@ class TradeStreamer(TradeHandler):
 
             """ INITIATION MODE """
             if self.is_initiation_mode:
-
                 # remove documents in MongoDB streamer
 
                 # first, make Actual Trader not to trade before Analysis
@@ -34,7 +33,8 @@ class TradeStreamer(TradeHandler):
                 self.reset_time_relevant_before_trading_mode()
 
                 # run RFAB v3
-                Global.run_threaded(RiskFreeArbBotV3(self.mm1, self.mm2, self.target_currency, self.streamer_db).run())
+                Global.run_threaded(
+                    RiskFreeArbBotV3(self.mm1, self.mm2, self.target_currency, self.streamer_db["fti_setting"]).run())
 
             """ TRADING MODE """
             if self.is_trading_mode:

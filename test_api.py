@@ -15,6 +15,6 @@ co_api = CoinoneApi.instance(is_public_access_only=False)
 # cn_api = CoinnestApi.instance()
 
 # order = Order(Market.COINONE, CoinoneCurrency.TRON, OrderType.LIMIT_BUY, "70862443", 344300, 0.01)
-result = co_api.get_orderbook(CoinoneCurrency.XRP)
+result = co_api.order_limit_buy(CoinoneCurrency.XRP, 20, 1000)
 # result = bt_api.order_limit_buy(BithumbCurrency.ETH, 343000, 0.01)
 print(result)
