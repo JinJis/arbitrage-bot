@@ -16,7 +16,7 @@ class Balance:
         for coin in self._balance_dict.keys():
             val = self._balance_dict[coin]
             repr_str += "\n %s { %f available, %f trade_in_use, %f in total }" % \
-                        (coin, val["available"], val["trade_in_use"], val["balance"])
+                        (coin, float(val["available"]), float(val["trade_in_use"]), float(val["balance"]))
 
         return repr_str
 

@@ -59,6 +59,7 @@ class RiskFreeArbBotV3(BaseArbBot):
                 logging.error("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
             if fti_set["settlement"] == "True":
                 raise KeyboardInterrupt
+            logging.error("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
             return
 
         # if data in fti_iyo_list, read latest init_setting & trade_interval
@@ -157,8 +158,11 @@ class RiskFreeArbBotV3(BaseArbBot):
             return None
 
         # make buy & sell order
-        print(buying_currency)
-        print(spread_info.buy_unit_price, spread_info.buy_order_amt)
+        logging.critical("Buying Price: %.5f" % spread_info.buy_unit_price)
+        logging.critical("Buying Amount: %.5f" % spread_info.buy_order_amt)
+        logging.critical("Selling Price: %.5f" % spread_info.sell_unit_price)
+        logging.critical("Selling Price: %.5f" % spread_info.sell_order_amt)
+        # FIxme: 여기에서 트론이 주문이 안먹힘..
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
         return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))

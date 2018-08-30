@@ -138,7 +138,7 @@ class BaseArbBot(ABC):
     @staticmethod
     def has_enough_coin_checker(market, coin_type: str, needed_amount: float):
         available_amount = market.balance.get_available_coin(coin_type.lower())
-        if available_amount < needed_amount:
+        if float(available_amount) < float(needed_amount):
             return False
         else:
             return True

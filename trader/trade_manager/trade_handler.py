@@ -13,9 +13,9 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 7 * 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 6 * 60 * 60
 
-    INITIATION_REWEIND_TIME = 60 * 60
+    INITIATION_REWEIND_TIME = 30 * 60
 
     # recommend this to same with slicing interval!!
     TRADING_MODE_LOOP_INTERVAL = 60
@@ -148,6 +148,8 @@ class TradeHandler:
 
         if to_proceed == "n":
             logging.error("Now initiating with current settings!!")
+            Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
+                                                coin_seq_end=self.mm1_coin_bal + self.mm2_coin_bal)
             return True
 
         else:
