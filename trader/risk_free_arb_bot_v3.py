@@ -28,6 +28,11 @@ class RiskFreeArbBotV3(BaseArbBot):
         while True:
             try:
                 self.execute_trade_loop()
+            except KeyboardInterrupt:
+                logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
+                # stop order watcher stats thread
+                OrderWatcherStats.instance().tear_down()
+
             except Exception as e:
                 Global.send_to_slack_channel("Something happened to RFAB! Now it's dying from ... %s" % e)
                 # stop order watcher stats thread
@@ -41,10 +46,15 @@ class RiskFreeArbBotV3(BaseArbBot):
             sort=[('_id', pymongo.DESCENDING)]
         )
 
-        # if no data in fti_iyo_list, no trade
+        # if no data in fti_iyo_list,
         if len(fti_set["fti_iyo_list"]) == 0:
-            self.trade_interval_in_sec = 5
-            # fixme: 이렇게 하는거 맞나...?
+
+            # if no oppty,
+            if fti_set["no_oppty"] == "True":
+                self.trade_interval_in_sec = 10
+                logging.error("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
+            if fti_set["settlement"] == "True":
+                raise KeyboardInterrupt
             return
 
         # if data in fti_iyo_list, read latest init_setting & trade_interval

@@ -34,13 +34,12 @@ class TradeStreamer(TradeHandler):
 
                 # check if reached settlement time
                 if self.trading_mode_start_time > self.settlement_time:
-                    logging.critical("Bot reached settlement time!! closing trade...")
+                    self.trade_handler_when_settlement_reached()
                     return False
 
                 # run trading_mode
                 try:
                     self.run_trading_mode()
-
                 # if no oppty
                 except AssertionError:
                     self.no_oppty_handler_for_trading_mode()

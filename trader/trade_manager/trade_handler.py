@@ -2,6 +2,7 @@ import time
 import logging
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
+from config.config_market_manager import ConfigMarketManager
 from optimizer.base_optimizer import BaseOptimizer
 from config.trade_setting_config import TradeSettingConfig
 from collector.scheduler.otc_scheduler import OTCScheduler
@@ -123,12 +124,21 @@ class TradeHandler:
         if to_proceed == "y":
             # set settings accordingly
             self.target_currency = str(input("Type target_currency:"))
-            self.mm1_name = str(input("Type mm1_name:"))
-            self.mm2_name = str(input("Type mm2_name:"))
-            self.mm1_krw_bal = float(input("Type mm1_krw_bal:"))
-            self.mm2_krw_bal = float(input("Type mm2_krw_bal:"))
-            self.mm1_coin_bal = float(input("Type mm1_%s_bal:" % self.target_currency))
-            self.mm2_coin_bal = float(input("Type mm2_%s_bal:" % self.target_currency))
+            self.mm1: MarketManager = getattr(ConfigMarketManager, input("Type MM1!! ex) bithumb :").upper()).value
+            self.mm2: MarketManager = getattr(ConfigMarketManager, input("Type MM2!! ex) BITHUMB :").upper()).value
+            self.mm1_name = self.mm1.get_market_name().lower()
+            self.mm2_name = self.mm2.get_market_name().lower()
+            self.mm1_krw_bal = float(self.mm1.balance.get_available_coin("krw"))
+            self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
+            self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
+            self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
+            logging.error("Balance Updated!!\n")
+            logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
+                                                               self.target_currency.upper(),
+                                                               self.mm1_coin_bal))
+            logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
+                                                                   self.target_currency.upper(),
+                                                                   self.mm2_coin_bal))
 
             # change IYO config settings of krw, coin seq end
             Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
@@ -231,11 +241,14 @@ class TradeHandler:
         self.post_empty_fti_setting_to_mongo_when_no_oppty()
         self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
                                              self.TRADING_MODE_LOOP_INTERVAL)
-        self.trading_mode_start_time = int(time.time())
+
+        # reset time relevant
+        self.reset_time_relevant_for_trading_mode()
 
     def post_empty_fti_setting_to_mongo_when_no_oppty(self):
         self.streamer_db["fti_setting"].insert({
             "no_oppty": "True",
+            "settlement": "False",
             "fti_iyo_list": []
         })
 
@@ -243,6 +256,16 @@ class TradeHandler:
         self.trading_mode_rewined_time = self.trading_mode_start_time
         self.trading_mode_start_time = int(time.time())
         self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
+
+    def trade_handler_when_settlement_reached(self):
+        logging.critical("Bot reached settlement time!! closing trade...")
+        self.streamer_db["fti_setting"].insert({
+            "no_oppty": "False",
+            "settlement": "True",
+            "fti_iyo_list": []
+        })
+        Global.send_to_slack_channel("Settlement reached for [%s-%s-%s] RFAB! Closing Trade Streamer.."
+                                     % (self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper()))
 
     """
     ===========================================
