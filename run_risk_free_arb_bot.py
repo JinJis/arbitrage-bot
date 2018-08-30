@@ -2,8 +2,6 @@ import logging
 from config.global_conf import Global
 from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
-from trader.market_manager.bithumb_market_manager import BithumbMarketManager
-from trader.market_manager.gopax_market_manager import GopaxMarketManager
 from config.shared_mongo_client import SharedMongoClient
 from trader.risk_free_arb_bot_v3 import RiskFreeArbBotV3
 

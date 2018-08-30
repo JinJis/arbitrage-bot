@@ -1,12 +1,10 @@
 import logging
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
-from trader.trade_manager.trade_streamer import TradeStreamer
-from trader.market_manager.market_manager import MarketManager
-from trader.market_manager.bithumb_market_manager import BithumbMarketManager
-from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
 from trader.market_manager.coinone_market_manager import CoinoneMarketManager
-from trader.market_manager.gopax_market_manager import GopaxMarketManager
+from trader.market_manager.market_manager import MarketManager
+from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
+from trader.trade_manager.trade_streamer import TradeStreamer
 
 
 def main(mm1: MarketManager, mm2: MarketManager, target_currency: str):
