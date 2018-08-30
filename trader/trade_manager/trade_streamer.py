@@ -32,10 +32,6 @@ class TradeStreamer(TradeHandler):
                 # reset time relevant
                 self.reset_time_relevant_before_trading_mode()
 
-                # run RFAB v3
-                Global.run_threaded(
-                    RiskFreeArbBotV3(self.mm1, self.mm2, self.target_currency, self.streamer_db["fti_setting"]).run())
-
             """ TRADING MODE """
             if self.is_trading_mode:
 

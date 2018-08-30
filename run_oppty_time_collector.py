@@ -27,6 +27,6 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time_local: str, en
 
 
 if __name__ == '__main__':
-    st_local = "2018.08.30 06:00:00"
-    et_local = "2018.08.30 07:12:00"
+    st_local = "2018.08.30 23:00:00"
+    et_local = "2018.08.30 23:17:00"
     main("xrp", "coinone", "okcoin", st_local, et_local)
