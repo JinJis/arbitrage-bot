@@ -1,5 +1,7 @@
 import time
 import logging
+from config.global_conf import Global
+from trader.risk_free_arb_bot_v3 import RiskFreeArbBotV3
 from trader.trade_manager.trade_handler import TradeHandler
 from trader.market_manager.market_manager import MarketManager
 
@@ -30,6 +32,9 @@ class TradeStreamer(TradeHandler):
 
                 # reset time relevant
                 self.reset_time_relevant_before_trading_mode()
+
+                # run RFAB v3
+                Global.run_threaded(RiskFreeArbBotV3(self.mm1, self.mm2, self.target_currency, self.streamer_db).run())
 
             """ TRADING MODE """
             if self.is_trading_mode:
