@@ -30,6 +30,10 @@ class RiskFreeArbBotV3(BaseArbBot):
                 self.execute_trade_loop()
             except KeyboardInterrupt:
                 logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
+                logging.info(
+                    "========== [  SETTLEMENT BALANCE  ] ========================================================")
+                logging.info(self.mm1.get_balance())
+                logging.info(self.mm2.get_balance())
                 # stop order watcher stats thread
                 OrderWatcherStats.instance().tear_down()
 
@@ -64,8 +68,8 @@ class RiskFreeArbBotV3(BaseArbBot):
         self.trade_interval_in_sec = trade_interval
 
         # get orderbook data
-        mm1_data = self.mm1.get_orderbook(self.target_currency)
-        mm2_data = self.mm2.get_orderbook(self.target_currency)
+        mm1_data = self.mm1.get_orderbook(self.mm1_currency)
+        mm2_data = self.mm2.get_orderbook(self.mm2_currency)
 
         # get spread info from given trade strategy
         result = self.trade_strategy(
@@ -124,16 +128,9 @@ class RiskFreeArbBotV3(BaseArbBot):
         # check condition
         threshold_cond = spread_info.spread_to_trade >= ini_set[trade_type]["threshold"]
 
-        buy_min_cond = (spread_info.buy_order_amt >= buying_mkt.min_trading_coin)
-        sell_min_cond = (spread_info.sell_order_amt >= selling_mkt.min_trading_coin)
-        min_coin_cond = (buy_min_cond and sell_min_cond)
-
         # quit if conditions don't meet
         if not threshold_cond:
             logging.info("spread threshold condition not met!")
-            return None
-        if not min_coin_cond:
-            logging.info("min coin condition not met!")
             return None
 
         # balance check
@@ -155,5 +152,4 @@ class RiskFreeArbBotV3(BaseArbBot):
         # make buy & sell order
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
-
         return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))

@@ -292,6 +292,8 @@ class TradeHandler:
     """
 
     def post_final_fti_result_to_mongodb(self, final_opt_iyo_dict):
+        final_opt_iyo_dict["no_oppty"] = "False"
+        final_opt_iyo_dict["settlement"] = "False"
         self.streamer_db["fti_setting"].insert(final_opt_iyo_dict)
 
     """

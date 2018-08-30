@@ -16,6 +16,8 @@ class TradeStreamer(TradeHandler):
             """ INITIATION MODE """
             if self.is_initiation_mode:
 
+                # remove documents in MongoDB streamer
+
                 # first, make Actual Trader not to trade before Analysis
                 self.post_empty_fti_setting_to_mongo_when_no_oppty()
 
@@ -92,11 +94,11 @@ class TradeStreamer(TradeHandler):
             self.is_trading_mode = False
             return
 
-        # log initiation mode oppty_dur during
-        self.log_final_opt_result(final_opt_iyo_dict)
-
         # finally, post to MongoDB
         self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)
+
+        # log initiation mode oppty_dur during
+        self.log_final_opt_result(final_opt_iyo_dict)
 
     def run_trading_mode(self):
         logging.error("=============================")
