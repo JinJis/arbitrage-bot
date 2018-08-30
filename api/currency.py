@@ -10,7 +10,6 @@ class BithumbCurrency(Currency):
     BCH = "BCH"
     ETH = "ETH"
     QTUM = "QTUM"
-
     TRON = "TRX"
     XRP = "XRP"
 

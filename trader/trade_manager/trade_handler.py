@@ -13,9 +13,9 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 7 * 60 * 60
 
-    INITIATION_REWEIND_TIME = 30 * 60
+    INITIATION_REWEIND_TIME = 60 * 60
 
     # recommend this to same with slicing interval!!
     TRADING_MODE_LOOP_INTERVAL = 60

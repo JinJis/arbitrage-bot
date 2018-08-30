@@ -1,7 +1,5 @@
 import time
 import logging
-from config.global_conf import Global
-from trader.risk_free_arb_bot_v3 import RiskFreeArbBotV3
 from trader.trade_manager.trade_handler import TradeHandler
 from trader.market_manager.market_manager import MarketManager
 
