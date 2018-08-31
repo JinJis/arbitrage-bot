@@ -38,7 +38,8 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
                                                              iyo_config["threshold_end"],
                                                              iyo_config["appx_unit_coin_price"])
 
-    iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings)
+    iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
+                                              is_stat_appender=False, is_slicing_dur=False)
     logging.critical("Final IYO result: %s" % iyo_result)
     return iyo_result
 
@@ -46,6 +47,6 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
 if __name__ == '__main__':
     # for short term (=< one day)
     st_local = "2018.08.27 18:00:10"
-    et_local = "2018.08.27 20:00:10"
+    et_local = "2018.08.27 19:30:10"
 
-    main("eth", "coinone", "okcoin", st_local, et_local)
+    main("trx", "bithumb", "okcoin", st_local, et_local)

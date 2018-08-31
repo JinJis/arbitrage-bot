@@ -295,7 +295,6 @@ class RiskFreeArbBot2(BaseArbBot):
             mm2_data = self.mm2.apply_history_to_orderbook(mm2_data)
 
         # get optimized spread infos by using OTS strategy
-        # FIXME: 이쪽 부분 코드 재정리 해야함
         (new_spread_in_unit, rev_spread_in_unit, opt_new_spread, opt_rev_spread,
          new_buy_price, new_buy_idx, new_sell_price, new_sell_idx, new_trading_amount,
          rev_buy_price, rev_buy_idx, rev_sell_price, rev_sell_idx, rev_trading_amount,

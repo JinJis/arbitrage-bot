@@ -310,12 +310,58 @@ class IBOAnalyzer:
                     min_invested_krw_pair = pair
                     same_invested_krw.append(pair)
                     continue
-                if pair["total_krw_exhausted"] < min_invested_krw_pair["total_krw_exhausted"]:
+                if pair["total_krw_invested"] < min_invested_krw_pair["total_krw_invested"]:
                     min_invested_krw_pair = pair
                     same_invested_krw.clear()
                     same_invested_krw.append(pair)
-                elif pair["total_krw_exhausted"] == min_invested_krw_pair["total_krw_exhausted"]:
+                elif pair["total_krw_invested"] == min_invested_krw_pair["total_krw_invested"]:
                     same_invested_krw.append(pair)
             return same_invested_krw[0]
+        else:
+            raise Exception("There is no item in same_yield_list!!! Check for solution")
+
+
+"""Integrated Yield Optimizer Analyzer"""
+
+
+class IYOAnalyzer:
+
+    @classmethod
+    def get_iyo_opt_yield_pair(cls, result: list):
+        highest_yield_pair = None
+        same_yield_list = []
+        for pair in result:
+            # first setup
+            if highest_yield_pair is None:
+                highest_yield_pair = pair
+                same_yield_list.append(highest_yield_pair)
+                continue
+
+            # compare
+            if highest_yield_pair["yield"] < pair["yield"]:
+                highest_yield_pair = pair
+                same_yield_list.clear()
+                same_yield_list.append(highest_yield_pair)
+            elif highest_yield_pair["yield"] == pair["yield"]:
+                same_yield_list.append(pair)
+
+        # get the best pair within same_yield_list
+        if len(same_yield_list) == 1:
+            return same_yield_list[0]  # pair 하나 리턴
+        elif len(same_yield_list) > 1:
+            min_invested_krw_pair = None
+            same_exhausted_krw = []
+            for pair in same_yield_list:
+                if min_invested_krw_pair is None:
+                    min_invested_krw_pair = pair
+                    same_exhausted_krw.append(pair)
+                    continue
+                if pair["total_krw_exhausted"] < min_invested_krw_pair["total_krw_exhausted"]:
+                    min_invested_krw_pair = pair
+                    same_exhausted_krw.clear()
+                    same_exhausted_krw.append(pair)
+                elif pair["total_krw_exhausted"] == min_invested_krw_pair["total_krw_exhausted"]:
+                    same_exhausted_krw.append(pair)
+            return same_exhausted_krw[0]
         else:
             raise Exception("There is no item in same_yield_list!!! Check for solution")

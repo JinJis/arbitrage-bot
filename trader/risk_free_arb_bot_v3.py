@@ -161,7 +161,7 @@ class RiskFreeArbBotV3(BaseArbBot):
         logging.critical("Buying Amount: %.5f" % spread_info.buy_order_amt)
         logging.critical("Selling Price: %.5f" % spread_info.sell_unit_price)
         logging.critical("Selling Price: %.5f" % spread_info.sell_order_amt)
-        # FIxme: 여기에서 트론이 주문이 안먹힘..
+        # FIxme: 여기에서 트론이 주문이 안먹힘.. 코인네스트, 오케이코인은 price가 소수점 한자리까지 가능, 비썸은 불가능
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
         return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))

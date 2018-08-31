@@ -7,9 +7,9 @@ from optimizer.initial_balance_optimizer import InitialBalanceOptimizer
 
 def main(coin_name: str, mm1_name: str, mm2_name: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
-    start_time = Global.convert_local_datetime_to_epoch("2018.07.11 09:00:00", timezone="kr")
-    end_time = Global.convert_local_datetime_to_epoch("2018.07.11 13:00:00", timezone="kr")
+    SharedMongoClient.initialize(should_use_localhost_db=False)
+    start_time = Global.convert_local_datetime_to_epoch("2018.08.20 09:00:00", timezone="kr")
+    end_time = Global.convert_local_datetime_to_epoch("2018.08.20 13:00:00", timezone="kr")
 
     iyo_config = Global.read_iyo_setting_config(coin_name)
 
@@ -31,4 +31,4 @@ def main(coin_name: str, mm1_name: str, mm2_name: str):
 
 
 if __name__ == '__main__':
-    main("bch", "coinone", "gopax")
+    main("trx", "bithumb", "okcoin")

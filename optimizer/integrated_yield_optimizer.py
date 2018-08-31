@@ -4,7 +4,7 @@ import configparser
 import numpy as np
 from pymongo.cursor import Cursor
 from config.global_conf import Global
-from analyzer.trade_analyzer import BasicAnalyzer, IBOAnalyzer
+from analyzer.trade_analyzer import BasicAnalyzer, IYOAnalyzer
 from config.shared_mongo_client import SharedMongoClient
 from collector.oppty_time_collector import OpptyTimeCollector
 from optimizer.base_optimizer import BaseOptimizer
@@ -61,7 +61,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
     @classmethod
     def run_iyo(cls, settings: dict, bal_factor_settings: dict, factor_settings: dict, oppty_dur_dict: dict):
         db_result = []
-        for trade_type in oppty_dur_dict.keys():
+        for trade_type in ["new", "rev"]:
             for time in oppty_dur_dict[trade_type]:
                 try:
                     # clone settings, balance factor settings, factor settings with original one
@@ -153,24 +153,10 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
         # execute tests with seq
         result = cls.test_trade_result_in_seq(settings, bal_factor_settings, factor_settings)
-        """
-            <data structure>
-            1)  result = [combined_dict, combined_dict, combined_dict, ... ]
-            2)  combined_dict or cur_optimized = {                  
-                    "total_krw_invested: float,
-                    "krw_earned": float,                
-                    "yield" : float,
-                    "new_traded": int, 
-                    "rev_traded": int,
-                    "end_balance": dict,
-                    "settings": dict,
-                    "initial_setting": dict,
-                    "balance_setting": dict
-                }
-        """
+
         # get opt
         # optimize in terms of yield
-        cur_optimized = IBOAnalyzer.get_opt_yield_pair(result)
+        cur_optimized = IYOAnalyzer.get_iyo_opt_yield_pair(result)
 
         if optimized is None:
             optimized = cur_optimized
