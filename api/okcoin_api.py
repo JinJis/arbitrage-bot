@@ -119,9 +119,6 @@ class OkcoinApi(MarketApi):
             available = float(my_balance["free"][coin_name])
             trade_in_use = float(my_balance["freezed"][coin_name])
 
-            # fixme: 여기 일반화 하자... ㅠㅠㅠ
-            if coin_name == "trx":
-                coin_name = "tron"
             result[coin_name] = {
                 "available": available,
                 "trade_in_use": trade_in_use,

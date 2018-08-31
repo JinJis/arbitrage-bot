@@ -23,6 +23,9 @@ class TradeStreamer(TradeHandler):
                 # run initiation mode
                 self.run_initiation_mode()
 
+                # post rev_ledger to MongoDB
+                self.post_updated_revenue_ledger()
+
                 # reset mode relevant
                 self.is_initiation_mode = False
                 self.is_trading_mode = True
@@ -30,16 +33,24 @@ class TradeStreamer(TradeHandler):
                 # reset time relevant
                 self.reset_time_relevant_before_trading_mode()
 
+                # run exhaust rate stage controller
+
             """ TRADING MODE """
             if self.is_trading_mode:
-
-                # update balance
-                self.update_balance()
 
                 # check if reached settlement time
                 if self.trading_mode_start_time > self.settlement_time:
                     self.trade_handler_when_settlement_reached()
                     return False
+
+                # update balance
+                self.update_balance()
+
+                # post rev_ledger to MongoDB
+                self.post_updated_revenue_ledger()
+
+                # update bal seq by exhaust rate ctrl algorithm
+                self.update_bal_seq_end_by_recent_bal_and_exhaust_ctrl()
 
                 # run trading_mode
                 try:
@@ -95,6 +106,8 @@ class TradeStreamer(TradeHandler):
             self.is_initiation_mode = False
             self.is_trading_mode = False
             return
+
+        # decide exhaust_ctrl_currency and save initial exhaust_ctrl_balance
 
         # finally, post to MongoDB
         self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)

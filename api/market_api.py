@@ -82,11 +82,11 @@ class MarketApi(ABC):
         pass
 
     @abstractmethod
-    def order_limit_buy(self, currency: Currency, price: int, amount: float):
+    def order_limit_buy(self, currency: Currency, price: (int or float), amount: float):
         pass
 
     @abstractmethod
-    def order_limit_sell(self, currency: Currency, price: int, amount: float):
+    def order_limit_sell(self, currency: Currency, price: (int or float), amount: float):
         pass
 
     @abstractmethod

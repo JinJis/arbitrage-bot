@@ -10,7 +10,7 @@ SharedMongoClient.initialize(should_use_localhost_db=False)
 streamer_db = SharedMongoClient.get_streamer_db()
 
 RiskFreeArbBotV3(
-    target_currency="btc",
+    target_currency="xrp",
     mm1=BithumbMarketManager(),
     mm2=OkcoinMarketManager(),
     fti_settings_col=streamer_db["fti_setting"]

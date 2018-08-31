@@ -1,7 +1,10 @@
 import time
 import logging
+import pymongo
+from pymongo.collection import Collection
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
+from analyzer.trade_analyzer import BasicAnalyzer
 from config.config_market_manager import ConfigMarketManager
 from optimizer.base_optimizer import BaseOptimizer
 from config.trade_setting_config import TradeSettingConfig
@@ -14,11 +17,11 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 class TradeHandler:
     TIME_DUR_OF_SETTLEMENT = 6 * 60 * 60
+    INITIATION_REWEIND_TIME = 60 * 60
 
-    INITIATION_REWEIND_TIME = 30 * 60
+    TRADING_MODE_LOOP_INTERVAL = 2
 
-    # recommend this to same with slicing interval!!
-    TRADING_MODE_LOOP_INTERVAL = 60
+    EXHAUST_CTRL_DIVISION = 10
 
     YIELD_THRESHOLD_RATE_START = 0.1
     YIELD_THRESHOLD_RATE_END = 0.5
@@ -52,6 +55,8 @@ class TradeHandler:
         self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(target_currency))
         self.target_currency = target_currency
 
+        self.slicing_interval = Global.read_sliced_iyo_setting_config(self.target_currency)["slicing_interval"]
+
         self.bot_start_time = int(time.time())
         self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
 
@@ -64,6 +69,12 @@ class TradeHandler:
 
         self.bot_start_time = None
         self.settlement_time = None
+
+        self.exhaust_booster = 2
+        self.exhaust_inhibitor = 0.5
+        self.cur_exhaust_ctrl_stage = None
+        self.init_exhaust_ctrl_currency_bal = None
+        self.cur_exhaust_ctrl_currency_bal = None
 
     """
     ==========================
@@ -139,13 +150,13 @@ class TradeHandler:
                                                                    self.mm2_coin_bal))
 
             # change IYO config settings of krw, coin seq end
-            self.update_krw_coin_seq_end_by_latest_bal()
+            self.update_bal_seq_end_by_recent_bal()
             logging.error("Now initiating with changed settings!!")
             return True
 
         if to_proceed == "n":
+            self.update_bal_seq_end_by_recent_bal()
             logging.error("Now initiating with current settings!!")
-            self.update_krw_coin_seq_end_by_latest_bal()
             return True
 
         else:
@@ -181,6 +192,13 @@ class TradeHandler:
 
         return all_ocat_result_by_one_coin
 
+    # Fixme: 이거 init 모드에서는 어떻게해야 되나??? exhaust rate 반영하고 말고를 떠나서 trading mode에서 이 데이터들이 쓸모있나?
+    def update_bal_seq_end_by_recent_bal(self):
+        rough_exhaust_divider = self.INITIATION_REWEIND_TIME / self.TIME_DUR_OF_SETTLEMENT * self.EXHAUST_CTRL_DIVISION
+        Global.write_balance_seq_end_to_ini(
+            krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal / rough_exhaust_divider),
+            coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / rough_exhaust_divider)
+
     def reset_time_relevant_before_trading_mode(self):
         self.trading_mode_rewined_time = self.initiation_start_time
         self.trading_mode_start_time = int(time.time())
@@ -193,6 +211,86 @@ class TradeHandler:
     || TRADING MODE ONLY ||
     =======================
     """
+
+    def update_bal_seq_end_by_recent_bal_and_exhaust_ctrl(self):
+
+        # update exhaust_ctrl_currency
+        self.update_exhaust_ctrl_target_currency()
+
+        # update exhaust_ctrl_stage
+        self.update_exhaust_stage()
+
+        # evaluate current exhaust rate and decide whether to boost or inhibit
+        current_exhaust_rate = 1 - (self.cur_exhaust_ctrl_currency_bal / self.init_exhaust_ctrl_currency_bal)
+
+        if current_exhaust_rate <= self.cur_exhaust_ctrl_stage / self.EXHAUST_CTRL_DIVISION:
+            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.exhaust_booster
+        else:
+            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.exhaust_inhibitor
+
+        # finally, create seq with initial bal and evaluated divider
+        latest_rev_ledger = self.streamer_db["revenue_ledger"].find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+        initial_total_krw = latest_rev_ledger["initial_bal"]["krw"]["total"]
+        initial_total_coin = latest_rev_ledger["initial_bal"]["coin"]["total"]
+
+        Global.write_balance_seq_end_to_ini(krw_seq_end=initial_total_krw / exhaust_rate_divider,
+                                            coin_seq_end=initial_total_coin / exhaust_rate_divider)
+
+    def update_exhaust_stage(self):
+
+        stage_length = int((self.settlement_time - self.bot_start_time) / self.EXHAUST_CTRL_DIVISION)
+        if self.cur_exhaust_ctrl_stage is None:
+            self.cur_exhaust_ctrl_stage = 1
+        else:
+            if int(time.time()) >= self.cur_exhaust_ctrl_stage * stage_length + self.bot_start_time:
+                self.cur_exhaust_ctrl_stage += 1
+
+    def update_exhaust_ctrl_target_currency(self):
+        # retrieve latest s_iyo from MongoDB and decide b/t NEW and REV
+        latest_s_iyo = self.streamer_db["s_iyo"].find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+
+        latest_rev_ledger = self.streamer_db["revenue_ledger"].find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+
+        mm1_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(
+            self.mm1.get_orderbook(self.mm1.get_market_currency(self.target_currency)))
+        mm2_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(
+            self.mm2.get_orderbook(self.mm2.get_market_currency(self.target_currency)))
+
+        mid_price = (mm1_mid_price + mm2_mid_price) / 2
+
+        # IF NEW
+        if latest_s_iyo["new_oppty_count"] >= latest_s_iyo["rev_oppty_count"]:
+            krw_to_exhaust = latest_rev_ledger["current_bal"]["krw"]["mm1"]
+            coin_to_exhaust = latest_rev_ledger["current_bal"]["coin"]["mm2"] * mid_price
+
+            # if krw bal is larger than coin converted to krw by real exchange rate,
+            if krw_to_exhaust >= coin_to_exhaust:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["coin"]["mm2"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["coin"]["mm2"]
+            # if not,
+            else:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["krw"]["mm1"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["krw"]["mm1"]
+
+        # IF REV
+        else:
+            krw_to_exhaust = latest_rev_ledger["current_bal"]["krw"]["mm2"]
+            coin_to_exhaust = latest_rev_ledger["current_bal"]["coin"]["mm1"] * mid_price
+
+            # if krw bal is larger than coin converted to krw by real exchange rate,
+            if krw_to_exhaust >= coin_to_exhaust:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["coin"]["mm1"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["coin"]["mm1"]
+            # if not,
+            else:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["krw"]["mm2"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["krw"]["mm2"]
 
     @staticmethod
     def trading_mode_loop_sleep_handler(mode_start_time: int, mode_end_time: int, mode_loop_interval: int):
@@ -251,8 +349,8 @@ class TradeHandler:
         })
 
     def reset_time_relevant_for_trading_mode(self):
-        self.trading_mode_rewined_time = self.trading_mode_start_time
         self.trading_mode_start_time = int(time.time())
+        self.trading_mode_rewined_time = self.trading_mode_start_time - self.slicing_interval
         self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
 
     def trade_handler_when_settlement_reached(self):
@@ -289,11 +387,6 @@ class TradeHandler:
         self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
         self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
 
-    # fixme: 일단 처음부터 너무 거래 많이 안되게 이렇게 하는데... 더 flexible하게 바꿔주기
-    def update_krw_coin_seq_end_by_latest_bal(self):
-        Global.write_balance_seq_end_to_ini(krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal) / 5,
-                                            coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / 5)
-
     """
     ==========================
     || MONGO DB (UNIVERSAL) ||
@@ -304,6 +397,38 @@ class TradeHandler:
         final_opt_iyo_dict["no_oppty"] = "False"
         final_opt_iyo_dict["settlement"] = "False"
         self.streamer_db["fti_setting"].insert(final_opt_iyo_dict)
+
+    def post_updated_revenue_ledger(self):
+
+        # get recent bal to append
+        bal_to_append = {
+            "krw": {
+                "mm1": self.mm1_krw_bal,
+                "mm2": self.mm2_krw_bal,
+                "total": self.mm1_krw_bal + self.mm2_krw_bal
+            },
+            "coin": {
+                "mm1": self.mm1_coin_bal,
+                "mm2": self.mm2_coin_bal,
+                "total": self.mm1_coin_bal + self.mm2_coin_bal
+            }
+        }
+
+        # if initiation mdoe, append bal to initial, current balance
+        if self.is_initiation_mode:
+            self.streamer_db["revenue_ledger"].insert({
+                "target_currency": self.target_currency,
+                "mm1_name": self.mm1_name,
+                "mm2_name": self.mm2_name,
+                "initial_bal": bal_to_append,
+                "current_bal": bal_to_append
+            })
+
+        # if initiation mdoe, only append to current balance
+        if self.is_trading_mode:
+            latest_rev_ledger: Collection = self.streamer_db["revenue_ledger"].find_one(
+                sort=[('_id', pymongo.DESCENDING)])
+            latest_rev_ledger["current_bal"] = bal_to_append
 
     """
     ==============================
