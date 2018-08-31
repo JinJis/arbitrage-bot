@@ -12,11 +12,11 @@ class OTCScheduler(BaseScheduler):
     interval_time_sec = 10
     time_dur_to_anal = 3 * 60 * 60
     publishing_time_set = ["07:00:00", "10:00:00", "13:00:00", "16:00:00",
-                           "19:00:00", "23:00:00", "02:34:00", "04:00:00"]
+                           "19:00:00", "23:00:00", "01:00:00", "04:00:00"]
 
     def __init__(self):
-        Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.CRITICAL)
-        SharedMongoClient.initialize(should_use_localhost_db=False)
+        Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.CRITICAL)
+        SharedMongoClient.initialize(should_use_localhost_db=True)
         super().__init__()
 
     @BaseScheduler.interval_waiter(interval_time_sec)
