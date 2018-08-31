@@ -25,4 +25,4 @@ class TickerOrderbookScheduler(ApiScheduler):
 
 
 if __name__ == "__main__":
-    TickerOrderbookScheduler(sys.argv[1]).run()
+    TickerOrderbookScheduler("trx").run()
