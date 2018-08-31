@@ -128,10 +128,8 @@ class TradeHandler:
             self.mm2: MarketManager = getattr(ConfigMarketManager, input("Type MM2!! ex) BITHUMB :").upper()).value
             self.mm1_name = self.mm1.get_market_name().lower()
             self.mm2_name = self.mm2.get_market_name().lower()
-            self.mm1_krw_bal = float(self.mm1.balance.get_available_coin("krw"))
-            self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
-            self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
-            self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
+            self.update_balance()
+
             logging.error("Balance Updated!!\n")
             logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
                                                                self.target_currency.upper(),
@@ -141,15 +139,13 @@ class TradeHandler:
                                                                    self.mm2_coin_bal))
 
             # change IYO config settings of krw, coin seq end
-            Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
-                                                coin_seq_end=self.mm1_coin_bal + self.mm2_coin_bal)
+            self.update_krw_coin_seq_end_by_latest_bal()
             logging.error("Now initiating with changed settings!!")
             return True
 
         if to_proceed == "n":
             logging.error("Now initiating with current settings!!")
-            Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
-                                                coin_seq_end=self.mm1_coin_bal + self.mm2_coin_bal)
+            self.update_krw_coin_seq_end_by_latest_bal()
             return True
 
         else:
@@ -286,6 +282,17 @@ class TradeHandler:
         logging.warning("yield_threshold_rate: %.2f" % final_opt_iyo_dict["yield_threshold_rate"])
         logging.warning("fti_formula_weight: %.2f" % final_opt_iyo_dict["fti_formula_weight"])
         logging.warning("max_time_interval_multiplier: %.2f\n" % final_opt_iyo_dict["max_time_interval_multiplier"])
+
+    def update_balance(self):
+        self.mm1_krw_bal = float(self.mm1.balance.get_available_coin("krw"))
+        self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
+        self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
+        self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
+
+    # fixme: 일단 처음부터 너무 거래 많이 안되게 이렇게 하는데... 더 flexible하게 바꿔주기
+    def update_krw_coin_seq_end_by_latest_bal(self):
+        Global.write_balance_seq_end_to_ini(krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal) / 5,
+                                            coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / 5)
 
     """
     ==========================

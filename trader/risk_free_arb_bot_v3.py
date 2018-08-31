@@ -126,7 +126,6 @@ class RiskFreeArbBotV3(BaseArbBot):
             logging.info("sell amount smaller than min trading coin: %d" % spread_info.sell_order_amt)
             return None
 
-        # FIXME: 일단 이렇게 하긴했는데.. 맞는지 모르겠네 여기에 넣는게
         # obey each order amount to exchange min order digit
         spread_info.buy_order_amt = round(spread_info.buy_order_amt,
                                           Global.read_min_order_digit(buying_mkt.get_market_name()))

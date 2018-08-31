@@ -106,3 +106,6 @@ class MarketApi(ABC):
     @abstractmethod
     def get_past_trades(self, currency: Currency):
         pass
+
+    @staticmethod
+    def

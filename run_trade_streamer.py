@@ -16,4 +16,4 @@ def main(mm1: MarketManager, mm2: MarketManager, target_currency: str):
 
 
 if __name__ == '__main__':
-    main(BithumbMarketManager(), OkcoinMarketManager(), "tron")
+    main(BithumbMarketManager(), OkcoinMarketManager(), "btc")

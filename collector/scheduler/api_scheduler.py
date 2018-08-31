@@ -22,9 +22,9 @@ class ApiScheduler(BaseScheduler):
         mongodb_uri = Global.read_mongodb_uri(should_use_localhost_db)
         db_client = MongoClient(mongodb_uri)
         bithumb_db = db_client["bithumb"]
-        coinone_db = db_client["coinone"]
-        korbit_db = db_client["korbit"]
-        gopax_db = db_client["gopax"]
+        # coinone_db = db_client["coinone"]
+        # korbit_db = db_client["korbit"]
+        # gopax_db = db_client["gopax"]
         okcoin_db = db_client["okcoin"]
         coinnest_db = db_client["coinnest"]
 
@@ -48,15 +48,15 @@ class ApiScheduler(BaseScheduler):
         self.bt_collector = Collector(
             bithumb_api, bithumb_currency, bithumb_db
         )
-        self.co_collector = Collector(
-            coinone_api, coinone_currency, coinone_db
-        )
-        self.kb_collector = Collector(
-            korbit_api, korbit_currency, korbit_db
-        )
-        self.go_collector = Collector(
-            gopax_api, goapx_currency, gopax_db
-        )
+        # self.co_collector = Collector(
+        #     coinone_api, coinone_currency, coinone_db
+        # )
+        # self.kb_collector = Collector(
+        #     korbit_api, korbit_currency, korbit_db
+        # )
+        # self.go_collector = Collector(
+        #     gopax_api, goapx_currency, gopax_db
+        # )
         self.oc_collector = Collector(
             okcoin_api, okcoin_currency, okcoin_db
         )

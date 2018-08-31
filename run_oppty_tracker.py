@@ -6,7 +6,7 @@ from trader.trade_manager.trade_handler import TradeHandler
 from trader.market_manager.bithumb_market_manager import BithumbMarketManager
 from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
 
-target_currency = "tron"
+target_currency = "btc"
 mm1 = BithumbMarketManager()
 mm2 = OkcoinMarketManager()
 

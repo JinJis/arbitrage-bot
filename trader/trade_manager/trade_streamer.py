@@ -33,6 +33,9 @@ class TradeStreamer(TradeHandler):
             """ TRADING MODE """
             if self.is_trading_mode:
 
+                # update balance
+                self.update_balance()
+
                 # check if reached settlement time
                 if self.trading_mode_start_time > self.settlement_time:
                     self.trade_handler_when_settlement_reached()

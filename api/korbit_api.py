@@ -185,9 +185,6 @@ class KorbitApi(MarketApi):
 
         result = dict()
         for coin_name in res_json.keys():
-            # fixme: 죄다 일반화하자...
-            if coin_name == "trx":
-                coin_name = "tron"
             coin_balance = res_json[coin_name]
             available = float(coin_balance["available"])
             trade_in_use = float(coin_balance["trade_in_use"])
