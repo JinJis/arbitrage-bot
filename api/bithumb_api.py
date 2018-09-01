@@ -140,13 +140,6 @@ class BithumbApi(MarketApi):
             if "total_" in str(key):
 
                 currency_name = str(key).replace("total_", "")
-                # Fixme: 이거 일반화하자 ㅠㅠ
-                if currency_name == "trx":
-                    result["tron"] = {
-                        "available": all_res_json["data"]["available_%s" % currency_name],
-                        "trade_in_use": all_res_json["data"]["in_use_%s" % currency_name],
-                        "balance": all_res_json["data"][key]
-                    }
                 result[currency_name] = {
                     "available": all_res_json["data"]["available_%s" % currency_name],
                     "trade_in_use": all_res_json["data"]["in_use_%s" % currency_name],

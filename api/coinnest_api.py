@@ -1,18 +1,12 @@
 import configparser
+import logging
 from bson import Decimal128
 from requests import Response
 from config.global_conf import Global
 from trader.market.order import Order
+from .coinnest_error import CoinnestError
 from .currency import CoinnestCurrency
 from .market_api import MarketApi
-from trader.market.order import OrderStatus
-from .coinnest_error import CoinnestError
-import logging
-import hashlib
-import base64
-import json
-import time
-import hmac
 
 
 class CoinnestApi(MarketApi):

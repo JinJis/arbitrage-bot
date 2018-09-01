@@ -24,7 +24,7 @@ class Global:
     IYO_CONFIG_LOCATION = "config/conf_iyo_market.ini"
     SLICED_IYO_CONFIG_LOCATION = "config/conf_sliced_iyo_market.ini"
     RFAB_COMBINATION_CONFIG_LOCATION = "config/conf_rfab_combi.ini"
-    COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "trx", "krw")
+    COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "trx", "eos", "krw")
 
     @staticmethod
     def read_mongodb_uri(should_use_localhost_db: bool = True):

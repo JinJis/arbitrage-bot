@@ -12,10 +12,10 @@ class BithumbCurrency(Currency):
     QTUM = "QTUM"
     TRX = "TRX"
     XRP = "XRP"
+    EOS = "EOS"
 
     ETC = "ETC"
     BTG = "BTG"
-    EOS = "EOS"
 
 
 class CoinoneCurrency(Currency):
@@ -23,6 +23,7 @@ class CoinoneCurrency(Currency):
     BCH = "bch"
     ETH = "eth"
     QTUM = "qtum"
+    EOS = "eos"
 
     XRP = "xrp"
 
@@ -36,6 +37,7 @@ class KorbitCurrency(Currency):
     BCH = "bch_krw"
     ETH = "eth_krw"
     QTUM = "qtum_krw"
+    EOS = "eos_krw"
 
     XRP = "xrp_krw"
 
@@ -49,7 +51,7 @@ class GopaxCurrency(Currency):
     BCH = "BCH-KRW"
     ETH = "ETH-KRW"
     QTUM = "QTUM-KRW"
-
+    EOS = "EOS-KRW"
     XRP = "XRP-KRW"
 
     TRX = "TRX-KRW"
@@ -61,8 +63,9 @@ class OkcoinCurrency(Currency):
     BCH = "bch_krw"
     ETH = "eth_krw"
     QTUM = "qtum_krw"
-
     XRP = "xrp_krw"
+    EOS = "eos_krw"
+
     TRX = "trx_krw"
 
     ETC = "etc_krw"
