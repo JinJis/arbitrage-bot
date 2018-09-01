@@ -16,8 +16,8 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 6 * 60 * 60
-    INITIATION_REWEIND_TIME = 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
+    INITIATION_REWEIND_TIME = 30 * 60
 
     TRADING_MODE_LOOP_INTERVAL = 2
 
@@ -64,7 +64,6 @@ class TradeHandler:
         self.init_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
 
         self.trading_mode_start_time = None
-        self.trading_mode_fti_rewined_time = None
         self.trading_mode_rewined_time = None
 
         self.bot_start_time = None
@@ -72,7 +71,7 @@ class TradeHandler:
 
         self.exhaust_booster = 2
         self.exhaust_inhibitor = 0.5
-        self.cur_exhaust_ctrl_stage = None
+        self.cur_exhaust_ctrl_stage = 0
         self.init_exhaust_ctrl_currency_bal = None
         self.cur_exhaust_ctrl_currency_bal = None
 
@@ -141,7 +140,10 @@ class TradeHandler:
             self.mm2_name = self.mm2.get_market_name().lower()
             self.update_balance()
 
-            logging.error("Balance Updated!!\n")
+            # update balance
+            self.update_balance()
+
+            logging.error("========== [INITIAL BALANCE] ================")
             logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
                                                                self.target_currency.upper(),
                                                                self.mm1_coin_bal))
@@ -150,12 +152,25 @@ class TradeHandler:
                                                                    self.mm2_coin_bal))
 
             # change IYO config settings of krw, coin seq end
-            self.update_bal_seq_end_by_recent_bal()
+            self.update_bal_seq_end_by_recent_bal_init_mode()
             logging.error("Now initiating with changed settings!!")
             return True
 
         if to_proceed == "n":
-            self.update_bal_seq_end_by_recent_bal()
+
+            # update balance
+            self.update_balance()
+
+            logging.error("========== [INITIAL BALANCE] ================")
+            logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
+                                                               self.target_currency.upper(),
+                                                               self.mm1_coin_bal))
+            logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
+                                                                   self.target_currency.upper(),
+                                                                   self.mm2_coin_bal))
+
+            # change IYO config settings of krw, coin seq end
+            self.update_bal_seq_end_by_recent_bal_init_mode()
             logging.error("Now initiating with current settings!!")
             return True
 
@@ -192,8 +207,8 @@ class TradeHandler:
 
         return all_ocat_result_by_one_coin
 
-    # Fixme: 이거 init 모드에서는 어떻게해야 되나??? exhaust rate 반영하고 말고를 떠나서 trading mode에서 이 데이터들이 쓸모있나?
-    def update_bal_seq_end_by_recent_bal(self):
+    def update_bal_seq_end_by_recent_bal_init_mode(self):
+
         rough_exhaust_divider = self.INITIATION_REWEIND_TIME / self.TIME_DUR_OF_SETTLEMENT * self.EXHAUST_CTRL_DIVISION
         Global.write_balance_seq_end_to_ini(
             krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal / rough_exhaust_divider),
@@ -202,7 +217,6 @@ class TradeHandler:
     def reset_time_relevant_before_trading_mode(self):
         self.trading_mode_rewined_time = self.initiation_start_time
         self.trading_mode_start_time = int(time.time())
-        self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
         self.bot_start_time = int(time.time())
         self.settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
 
@@ -235,8 +249,18 @@ class TradeHandler:
         initial_total_krw = latest_rev_ledger["initial_bal"]["krw"]["total"]
         initial_total_coin = latest_rev_ledger["initial_bal"]["coin"]["total"]
 
-        Global.write_balance_seq_end_to_ini(krw_seq_end=initial_total_krw / exhaust_rate_divider,
-                                            coin_seq_end=initial_total_coin / exhaust_rate_divider)
+        krw_seq_end = initial_total_krw / exhaust_rate_divider
+        coin_seq_end = initial_total_coin / exhaust_rate_divider
+
+        Global.write_balance_seq_end_to_ini(krw_seq_end=krw_seq_end,
+                                            coin_seq_end=coin_seq_end)
+
+        # log its result in order to analyze deeper
+        logging.warning("\n========= [EXHAUSTION INFO Report] =========")
+        logging.warning("Current Exhst rate: %.4f" % current_exhaust_rate)
+        logging.warning("Current Exhst Ctrl Stage: %d" % self.cur_exhaust_ctrl_stage)
+        logging.warning("[KRW] seq end: %.5f" % krw_seq_end)
+        logging.warning("[%s] seq end: %.5f\n" % (self.target_currency.upper(), coin_seq_end))
 
     def update_exhaust_stage(self):
 
@@ -299,45 +323,11 @@ class TradeHandler:
         if time_to_wait > 0:
             time.sleep(time_to_wait)
 
-    def log_oppty_dur_of_trading_mode_fti_anal(self):
-
-        start_time = self.trading_mode_fti_rewined_time
-        end_time = self.trading_mode_start_time
-        start_time_local = Global.convert_epoch_to_local_datetime(start_time, timezone="kr")
-        end_time_local = Global.convert_epoch_to_local_datetime(end_time, timezone="kr")
-
-        iyo_config = Global.read_iyo_setting_config(self.target_currency)
-        settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
-                                                   mm2_name=self.mm2_name,
-                                                   target_currency=self.target_currency,
-                                                   start_time=start_time,
-                                                   end_time=end_time,
-                                                   division=iyo_config["division"],
-                                                   depth=iyo_config["depth"],
-                                                   consecution_time=iyo_config["consecution_time"],
-                                                   is_virtual_mm=True)
-
-        otc_result_dict = OpptyTimeCollector.run(settings=settings)
-        total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
-        total_dur_dict["combination"] = \
-            "%s-%s-%s" % (self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper())
-
-        new_percent = (total_dur_dict["new"] / self.INITIATION_REWEIND_TIME) * 100
-        rev_percent = (total_dur_dict["rev"] / self.INITIATION_REWEIND_TIME) * 100
-        new_spread_strength = otc_result_dict["new_spread_ratio"] * 100
-        rev_spread_strength = otc_result_dict["rev_spread_ratio"] * 100
-        logging.warning("\n======= [Oppty Duration Checker] =======")
-        logging.warning("[Trading Mode Duration]: start_time: %s, end_time: %s" % (start_time_local, end_time_local))
-        logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
-                        % (total_dur_dict["combination"], new_percent, rev_percent,
-                           new_spread_strength, rev_spread_strength))
-
     def no_oppty_handler_for_trading_mode(self):
         # post empty fti_setting --> to make RFAB not to trade
         self.post_empty_fti_setting_to_mongo_when_no_oppty()
         self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
                                              self.TRADING_MODE_LOOP_INTERVAL)
-
         # reset time relevant
         self.reset_time_relevant_for_trading_mode()
 
@@ -351,7 +341,6 @@ class TradeHandler:
     def reset_time_relevant_for_trading_mode(self):
         self.trading_mode_start_time = int(time.time())
         self.trading_mode_rewined_time = self.trading_mode_start_time - self.slicing_interval
-        self.trading_mode_fti_rewined_time = self.trading_mode_start_time - self.INITIATION_REWEIND_TIME
 
     def trade_handler_when_settlement_reached(self):
         logging.critical("Bot reached settlement time!! closing trade...")
@@ -437,54 +426,59 @@ class TradeHandler:
     """
 
     def run_fti_analysis(self):
+
         # change time info up-to-date (since some minutes passed b/c of OCAT and Balance transfer
         if self.is_initiation_mode:
             logging.error("Now conducting [Initiation Mode >> FTI Analysis]")
 
             # launch Oppty Sliced IYO
-            try:
-                sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_rewined_time)
-                self.streamer_db["s_iyo"].insert_many(sliced_iyo_list)
+            sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_rewined_time)
 
-                # extract yield only dict data from s_iyo list
-                extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
+            # if no s_iyo data b/c of no oppty
+            if len(sliced_iyo_list) == 0:
+                logging.error("There was no oppty.. must have some oppty time when in Initiation Mode!!")
+                return
 
-                bot_start_time = self.init_rewined_time
-            except TypeError:
-                logging.error("There was no oppty time.. must have some oppty time when Initiation Mode!!")
-                return None
+            # post result to MongoDb
+            self.streamer_db["s_iyo"].insert_many(sliced_iyo_list)
+
+            # extract yield only dict data from s_iyo list
+            extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
+
+            bot_start_time = self.init_rewined_time
 
         elif self.is_trading_mode:
             logging.error("Now conducting [Trading Mode >> FTI Analysis]")
 
-            try:
-                # launch Oppty Sliced IYO
-                small_s_iyo_list = self.launch_oppty_sliced_iyo(self.trading_mode_start_time,
-                                                                self.trading_mode_rewined_time)
+            # launch Oppty Sliced IYO
+            small_s_iyo_list = self.launch_oppty_sliced_iyo(self.trading_mode_start_time,
+                                                            self.trading_mode_rewined_time)
 
-                # post this small dur s-iyo to MongoDB
-                self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
+            # if no s_iyo data b/c of no oppty
+            if len(small_s_iyo_list) == 0:
+                logging.error(">>> There is no oppty time now...Waiting for oppty..")
+                return
 
-                # get same amount of duration as of Initiation Mode from s_iyo DB
-                s_iyo_col = self.streamer_db["s_iyo"]
-                s_iyo_cur_list = s_iyo_col.find({"settings.start_time": {
-                    "$gte": self.trading_mode_fti_rewined_time,
-                    "$lte": self.trading_mode_start_time
-                }}).sort([("start_time", 1)])
+            # post this small dur s-iyo to MongoDB
+            self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
 
-                sliced_iyo_list = []
-                for iyo in s_iyo_cur_list:
-                    sliced_iyo_list.append(iyo)
+            # get same amount of duration as of Initiation Mode from s_iyo DB
+            s_iyo_col = self.streamer_db["s_iyo"]
+            s_iyo_cur_list = s_iyo_col.find({"settings.start_time": {
+                "$gte": self.bot_start_time,
+                "$lte": self.trading_mode_start_time
+            }}).sort([("start_time", 1)])
 
-                extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
+            sliced_iyo_list = []
+            for iyo in s_iyo_cur_list:
+                sliced_iyo_list.append(iyo)
 
-                # analysis target is small_s_iyo_list (which is the most recent set), so change
-                sliced_iyo_list = small_s_iyo_list
+            extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
 
-                bot_start_time = self.bot_start_time
-            except TypeError:
-                logging.error("There was no oppty time...Waiting for oppty..")
-                return None
+            # analysis target is small_s_iyo_list (which is the most recent set), so change
+            sliced_iyo_list = small_s_iyo_list
+
+            bot_start_time = self.bot_start_time
 
         else:
             raise Exception("Trade Streamer should be launched with one of 2 modes -> "

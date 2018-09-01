@@ -15,4 +15,4 @@ SharedMongoClient.initialize(should_use_localhost_db=False)
 
 while True:
     TradeHandler(target_currency, mm1, mm2, False, False).launch_inner_outer_ocat()
-    time.sleep(30 * 60)
+    time.sleep(10 * 60)

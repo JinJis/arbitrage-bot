@@ -1,22 +1,26 @@
 import logging
 import time
+import pymongo
+from pymongo.collection import Collection
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
+from analyzer.trade_analyzer import BasicAnalyzer
 from collector.oppty_time_collector import OpptyTimeCollector
 from collector.scheduler.otc_scheduler import OTCScheduler
 from config.trade_setting_config import TradeSettingConfig
+from trader.market_manager.market_manager import MarketManager
 from optimizer.base_optimizer import BaseOptimizer
 from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TestTradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 30 * 60
+    INITIATION_REWEIND_TIME = 5 * 60
 
-    INITIATION_REWEIND_TIME = 30 * 60
+    TRADING_MODE_LOOP_INTERVAL = 2
 
-    # recommend this to same with slicing interval!!
-    TRADING_MODE_LOOP_INTERVAL = 60
+    EXHAUST_CTRL_DIVISION = 10
 
     YIELD_THRESHOLD_RATE_START = 0.1
     YIELD_THRESHOLD_RATE_END = 0.5
@@ -26,13 +30,13 @@ class TestTradeHandler:
     FTI_FORMULA_WEIGHT_END = 1.0
     FTI_FORMULA_WEIGHT_STEP = 0.05
 
-    FTI_MIN_INTERVAL = 1
+    FTI_MIN_INTERVAL = 5
 
     MAX_TI_MULTIPLIER_START = 1
     MAX_TI_MULTIPLIER_END = 5
     MAX_TI_MULTIPLIER_STEP = 1
 
-    def __init__(self, target_currency: str, mm1_name: str, mm2_name: str,
+    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager, mm1_name: str, mm2_name: str,
                  mm1_krw_bal: float, mm1_coin_bal: float, mm2_krw_bal: float, mm2_coin_bal: float,
                  is_initiation_mode: bool, is_trading_mode: bool):
 
@@ -41,25 +45,35 @@ class TestTradeHandler:
         self.is_initiation_mode = is_initiation_mode
         self.is_trading_mode = is_trading_mode
 
+        self.mm1 = mm1
+        self.mm2 = mm2
         self.mm1_name = mm1_name
         self.mm2_name = mm2_name
-        self.target_currency = target_currency
-
         self.mm1_krw_bal = mm1_krw_bal
-        self.mm1_coin_bal = mm1_coin_bal
         self.mm2_krw_bal = mm2_krw_bal
+        self.mm1_coin_bal = mm1_coin_bal
         self.mm2_coin_bal = mm2_coin_bal
         self.target_currency = target_currency
+
+        self.slicing_interval = Global.read_sliced_iyo_setting_config(self.target_currency)["slicing_interval"]
+
+        self.bot_start_time = int(time.time())
+        self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
 
         self.initiation_start_time = int(time.time())
         self.init_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
 
         self.trading_mode_start_time = None
-        self.trading_mode_fti_rewined_time = None
         self.trading_mode_rewined_time = None
 
         self.bot_start_time = None
         self.settlement_time = None
+
+        self.exhaust_booster = 2
+        self.exhaust_inhibitor = 0.5
+        self.cur_exhaust_ctrl_stage = None
+        self.init_exhaust_ctrl_currency_bal = None
+        self.cur_exhaust_ctrl_currency_bal = None
 
     """
     ==========================
@@ -122,18 +136,37 @@ class TestTradeHandler:
             self.target_currency = str(input("Type target_currency:"))
             self.mm1_name = str(input("Type mm1_name:"))
             self.mm2_name = str(input("Type mm2_name:"))
+            self.mm2_name = str(input("Type mm2_name:"))
             self.mm1_krw_bal = float(input("Type mm1_krw_bal:"))
+            self.mm1_coin_bal = float(input("Type mm1_coin_bal:"))
             self.mm2_krw_bal = float(input("Type mm2_krw_bal:"))
-            self.mm1_coin_bal = float(input("Type mm1_%s_bal:" % self.target_currency))
-            self.mm2_coin_bal = float(input("Type mm2_%s_bal:" % self.target_currency))
+            self.mm2_coin_bal = float(input("Type mm2_coin_bal:"))
+
+            logging.error("========== [INITIAL BALANCE] ================")
+            logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
+                                                               self.target_currency.upper(),
+                                                               self.mm1_coin_bal))
+            logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
+                                                                   self.target_currency.upper(),
+                                                                   self.mm2_coin_bal))
 
             # change IYO config settings of krw, coin seq end
-            Global.write_balance_seq_end_to_ini(krw_seq_end=self.mm1_krw_bal + self.mm2_krw_bal,
-                                                coin_seq_end=self.mm1_coin_bal + self.mm2_coin_bal)
+            self.update_bal_seq_end_by_recent_bal_init_mode()
             logging.error("Now initiating with changed settings!!")
             return True
 
         if to_proceed == "n":
+
+            logging.error("========== [INITIAL BALANCE] ================")
+            logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
+                                                               self.target_currency.upper(),
+                                                               self.mm1_coin_bal))
+            logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
+                                                                   self.target_currency.upper(),
+                                                                   self.mm2_coin_bal))
+
+            # change IYO config settings of krw, coin seq end
+            self.update_bal_seq_end_by_recent_bal_init_mode()
             logging.error("Now initiating with current settings!!")
             return True
 
@@ -170,11 +203,116 @@ class TestTradeHandler:
 
         return all_ocat_result_by_one_coin
 
+    def update_bal_seq_end_by_recent_bal_init_mode(self):
+
+        rough_exhaust_divider = self.INITIATION_REWEIND_TIME / self.TIME_DUR_OF_SETTLEMENT * self.EXHAUST_CTRL_DIVISION
+        Global.write_balance_seq_end_to_ini(
+            krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal / rough_exhaust_divider),
+            coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / rough_exhaust_divider)
+
+    def reset_time_relevant_before_trading_mode(self):
+        self.trading_mode_rewined_time = self.initiation_start_time
+        self.trading_mode_start_time = int(time.time())
+        self.bot_start_time = int(time.time())
+        self.settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
+
     """
     =======================
     || TRADING MODE ONLY ||
     =======================
     """
+
+    def update_bal_seq_end_by_recent_bal_and_exhaust_ctrl(self):
+
+        # update exhaust_ctrl_currency
+        self.update_exhaust_ctrl_target_currency()
+
+        # update exhaust_ctrl_stage
+        self.update_exhaust_stage()
+
+        # evaluate current exhaust rate and decide whether to boost or inhibit
+        current_exhaust_rate = 1 - (self.cur_exhaust_ctrl_currency_bal / self.init_exhaust_ctrl_currency_bal)
+
+        # fixme: 여기 뭔가 잘 안바뀜... 알고리즘 좀 더 고도화 할 필요 있음
+        if current_exhaust_rate <= self.cur_exhaust_ctrl_stage / self.EXHAUST_CTRL_DIVISION:
+            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.exhaust_booster
+        else:
+            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.exhaust_inhibitor
+
+        # finally, create seq with initial bal and evaluated divider
+        latest_rev_ledger = self.streamer_db["revenue_ledger"].find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+        initial_total_krw = latest_rev_ledger["initial_bal"]["krw"]["total"]
+        initial_total_coin = latest_rev_ledger["initial_bal"]["coin"]["total"]
+
+        krw_seq_end = initial_total_krw / exhaust_rate_divider
+        coin_seq_end = initial_total_coin / exhaust_rate_divider
+
+        Global.write_balance_seq_end_to_ini(krw_seq_end=krw_seq_end, coin_seq_end=coin_seq_end)
+
+        # log its result in order to analyze deeper
+        logging.warning("============= [EXHAUSTION INFO] ================")
+        logging.warning("Current Exhst rate: %.4f\n"
+                        "Current Exhst Ctrl Stage: %d\n"
+                        "------------------------------------------------\n"
+                        "[KRW] seq end: %.5f\n"
+                        "[%s] seq end: %.5f\n" % (current_exhaust_rate, self.cur_exhaust_ctrl_stage,
+                                                  krw_seq_end, self.target_currency, coin_seq_end))
+
+    def update_exhaust_stage(self):
+
+        stage_length = int((self.settlement_time - self.bot_start_time) / self.EXHAUST_CTRL_DIVISION)
+        if self.cur_exhaust_ctrl_stage is None:
+            self.cur_exhaust_ctrl_stage = 1
+        else:
+            if int(time.time()) >= self.cur_exhaust_ctrl_stage * stage_length + self.bot_start_time:
+                self.cur_exhaust_ctrl_stage += 1
+
+    def update_exhaust_ctrl_target_currency(self):
+        # retrieve latest s_iyo from MongoDB and decide b/t NEW and REV
+        latest_s_iyo = self.streamer_db["s_iyo"].find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+
+        latest_rev_ledger = self.streamer_db["revenue_ledger"].find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+
+        mm1_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(
+            self.mm1.get_orderbook(self.mm1.get_market_currency(self.target_currency)))
+        mm2_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(
+            self.mm2.get_orderbook(self.mm2.get_market_currency(self.target_currency)))
+
+        mid_price = (mm1_mid_price + mm2_mid_price) / 2
+
+        # IF NEW
+        if latest_s_iyo["new_oppty_count"] >= latest_s_iyo["rev_oppty_count"]:
+            krw_to_exhaust = latest_rev_ledger["current_bal"]["krw"]["mm1"]
+            coin_to_exhaust = latest_rev_ledger["current_bal"]["coin"]["mm2"] * mid_price
+
+            # if krw bal is larger than coin converted to krw by real exchange rate,
+            if krw_to_exhaust >= coin_to_exhaust:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["coin"]["mm2"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["coin"]["mm2"]
+            # if not,
+            else:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["krw"]["mm1"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["krw"]["mm1"]
+
+        # IF REV
+        else:
+            krw_to_exhaust = latest_rev_ledger["current_bal"]["krw"]["mm2"]
+            coin_to_exhaust = latest_rev_ledger["current_bal"]["coin"]["mm1"] * mid_price
+
+            # if krw bal is larger than coin converted to krw by real exchange rate,
+            if krw_to_exhaust >= coin_to_exhaust:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["coin"]["mm1"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["coin"]["mm1"]
+            # if not,
+            else:
+                self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["krw"]["mm2"]
+                self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["krw"]["mm2"]
 
     @staticmethod
     def trading_mode_loop_sleep_handler(mode_start_time: int, mode_end_time: int, mode_loop_interval: int):
@@ -183,44 +321,34 @@ class TestTradeHandler:
         if time_to_wait > 0:
             time.sleep(time_to_wait)
 
-    def log_oppty_dur_of_trading_mode_fti_anal(self):
-
-        start_time = self.trading_mode_fti_rewined_time
-        end_time = self.trading_mode_start_time
-        start_time_local = Global.convert_epoch_to_local_datetime(start_time, timezone="kr")
-        end_time_local = Global.convert_epoch_to_local_datetime(end_time, timezone="kr")
-
-        iyo_config = Global.read_iyo_setting_config(self.target_currency)
-        settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
-                                                   mm2_name=self.mm2_name,
-                                                   target_currency=self.target_currency,
-                                                   start_time=start_time,
-                                                   end_time=end_time,
-                                                   division=iyo_config["division"],
-                                                   depth=iyo_config["depth"],
-                                                   consecution_time=iyo_config["consecution_time"],
-                                                   is_virtual_mm=True)
-
-        otc_result_dict = OpptyTimeCollector.run(settings=settings)
-        total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
-        total_dur_dict["combination"] = \
-            "%s-%s-%s" % (self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper())
-
-        new_percent = (total_dur_dict["new"] / self.INITIATION_REWEIND_TIME) * 100
-        rev_percent = (total_dur_dict["rev"] / self.INITIATION_REWEIND_TIME) * 100
-        new_spread_strength = otc_result_dict["new_spread_ratio"] * 100
-        rev_spread_strength = otc_result_dict["rev_spread_ratio"] * 100
-        logging.warning("\n======= [Oppty Duration Checker] =======")
-        logging.warning("[Trading Mode Duration]: start_time: %s, end_time: %s" % (start_time_local, end_time_local))
-        logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
-                        % (total_dur_dict["combination"], new_percent, rev_percent,
-                           new_spread_strength, rev_spread_strength))
+    def no_oppty_handler_for_trading_mode(self):
+        # post empty fti_setting --> to make RFAB not to trade
+        self.post_empty_fti_setting_to_mongo_when_no_oppty()
+        self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
+                                             self.TRADING_MODE_LOOP_INTERVAL)
+        # reset time relevant
+        self.reset_time_relevant_for_trading_mode()
 
     def post_empty_fti_setting_to_mongo_when_no_oppty(self):
         self.streamer_db["fti_setting"].insert({
             "no_oppty": "True",
+            "settlement": "False",
             "fti_iyo_list": []
         })
+
+    def reset_time_relevant_for_trading_mode(self):
+        self.trading_mode_start_time = int(time.time())
+        self.trading_mode_rewined_time = self.trading_mode_start_time - self.slicing_interval
+
+    def trade_handler_when_settlement_reached(self):
+        logging.critical("Bot reached settlement time!! closing trade...")
+        self.streamer_db["fti_setting"].insert({
+            "no_oppty": "False",
+            "settlement": "True",
+            "fti_iyo_list": []
+        })
+        Global.send_to_slack_channel("Settlement reached for [%s-%s-%s] RFAB! Closing Trade Streamer.."
+                                     % (self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper()))
 
     """
     ===========================================
@@ -247,7 +375,41 @@ class TestTradeHandler:
     """
 
     def post_final_fti_result_to_mongodb(self, final_opt_iyo_dict):
+        final_opt_iyo_dict["no_oppty"] = "False"
+        final_opt_iyo_dict["settlement"] = "False"
         self.streamer_db["fti_setting"].insert(final_opt_iyo_dict)
+
+    def post_updated_revenue_ledger(self):
+
+        # get recent bal to append
+        bal_to_append = {
+            "krw": {
+                "mm1": self.mm1_krw_bal,
+                "mm2": self.mm2_krw_bal,
+                "total": self.mm1_krw_bal + self.mm2_krw_bal
+            },
+            "coin": {
+                "mm1": self.mm1_coin_bal,
+                "mm2": self.mm2_coin_bal,
+                "total": self.mm1_coin_bal + self.mm2_coin_bal
+            }
+        }
+
+        # if initiation mdoe, append bal to initial, current balance
+        if self.is_initiation_mode:
+            self.streamer_db["revenue_ledger"].insert({
+                "target_currency": self.target_currency,
+                "mm1_name": self.mm1_name,
+                "mm2_name": self.mm2_name,
+                "initial_bal": bal_to_append,
+                "current_bal": bal_to_append
+            })
+
+        # if initiation mdoe, only append to current balance
+        if self.is_trading_mode:
+            latest_rev_ledger: Collection = self.streamer_db["revenue_ledger"].find_one(
+                sort=[('_id', pymongo.DESCENDING)])
+            latest_rev_ledger["current_bal"] = bal_to_append
 
     """
     ==============================
@@ -256,54 +418,59 @@ class TestTradeHandler:
     """
 
     def run_fti_analysis(self):
+
         # change time info up-to-date (since some minutes passed b/c of OCAT and Balance transfer
         if self.is_initiation_mode:
             logging.error("Now conducting [Initiation Mode >> FTI Analysis]")
 
             # launch Oppty Sliced IYO
-            try:
-                sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_rewined_time)
-                self.streamer_db["s_iyo"].insert_many(sliced_iyo_list)
+            sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_rewined_time)
 
-                # extract yield only dict data from s_iyo list
-                extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
+            # if no s_iyo data b/c of no oppty
+            if len(sliced_iyo_list) == 0:
+                logging.error("There was no oppty.. must have some oppty time when in Initiation Mode!!")
+                return
 
-                bot_start_time = self.init_rewined_time
-            except TypeError:
-                logging.error("There was no oppty time.. must have some oppty time when Initiation Mode!!")
-                return None
+            # post result to MongoDb
+            self.streamer_db["s_iyo"].insert_many(sliced_iyo_list)
+
+            # extract yield only dict data from s_iyo list
+            extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
+
+            bot_start_time = self.init_rewined_time
 
         elif self.is_trading_mode:
             logging.error("Now conducting [Trading Mode >> FTI Analysis]")
 
-            try:
-                # launch Oppty Sliced IYO
-                small_s_iyo_list = self.launch_oppty_sliced_iyo(self.trading_mode_start_time,
-                                                                self.trading_mode_rewined_time)
+            # launch Oppty Sliced IYO
+            small_s_iyo_list = self.launch_oppty_sliced_iyo(self.trading_mode_start_time,
+                                                            self.trading_mode_rewined_time)
 
-                # post this small dur s-iyo to MongoDB
-                self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
+            # if no s_iyo data b/c of no oppty
+            if len(small_s_iyo_list) == 0:
+                logging.error(">>> There is no oppty time now...Waiting for oppty..")
+                return
 
-                # get same amount of duration as of Initiation Mode from s_iyo DB
-                s_iyo_col = self.streamer_db["s_iyo"]
-                s_iyo_cur_list = s_iyo_col.find({"settings.start_time": {
-                    "$gte": self.trading_mode_fti_rewined_time,
-                    "$lte": self.trading_mode_start_time
-                }}).sort([("start_time", 1)])
+            # post this small dur s-iyo to MongoDB
+            self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
 
-                sliced_iyo_list = []
-                for iyo in s_iyo_cur_list:
-                    sliced_iyo_list.append(iyo)
+            # get same amount of duration as of Initiation Mode from s_iyo DB
+            s_iyo_col = self.streamer_db["s_iyo"]
+            s_iyo_cur_list = s_iyo_col.find({"settings.start_time": {
+                "$gte": self.bot_start_time,
+                "$lte": self.trading_mode_start_time
+            }}).sort([("start_time", 1)])
 
-                extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
+            sliced_iyo_list = []
+            for iyo in s_iyo_cur_list:
+                sliced_iyo_list.append(iyo)
 
-                # analysis target is small_s_iyo_list (which is the most recent set), so change
-                sliced_iyo_list = small_s_iyo_list
+            extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
 
-                bot_start_time = self.bot_start_time
-            except TypeError:
-                logging.error("There was no oppty time...Waiting for oppty..")
-                return None
+            # analysis target is small_s_iyo_list (which is the most recent set), so change
+            sliced_iyo_list = small_s_iyo_list
+
+            bot_start_time = self.bot_start_time
 
         else:
             raise Exception("Trade Streamer should be launched with one of 2 modes -> "
