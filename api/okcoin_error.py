@@ -11,7 +11,7 @@ class OkcoinErrorCode(Enum):
     APIKeyInvalid = (10006, "'Api_key' does not exist")
     SignatureFailed = (10007, "Signature does not match")
     IllegalParam = (10008, "Illegal parameter")
-    OrderNotExist = (10009, "Order does not exist")
+    OrderNotExist = (10009, "Order id does not exist")
     InsufficientAsset = (10010, "Insufficient funds")
     AmtTooLow = (10011, "Amount too low")
     OnlyBTCLTC = (10012, "Only btc_krw ltc_krw supported")

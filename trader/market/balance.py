@@ -35,4 +35,4 @@ class Balance:
         return result
 
     def get_available_coin(self, coin: str):
-        return self._balance_dict[coin]["available"]
+        return float(self._balance_dict[coin]["available"])

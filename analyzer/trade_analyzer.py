@@ -108,7 +108,7 @@ class BasicAnalyzer:
 
     @staticmethod
     def have_enough_balance_for_arb(buy_mm: MarketManager, sell_mm: MarketManager,
-                                    buy_price: int, coin_trade_amount: float, coin_currency: str):
+                                    buy_price: (int or float), coin_trade_amount: float, coin_currency: str):
         buy_mm_needed_krw = coin_trade_amount * buy_price
         sell_mm_needed_coin = coin_trade_amount
         return (buy_mm.has_enough_coin("krw", buy_mm_needed_krw) and
@@ -169,8 +169,8 @@ class ATSAnalyzer:
         }
 
     @staticmethod  # avail_amount = total amount of coin that specific mkt provides
-    def get_actual_spread_info(buy_unit_price: int, buy_avail_amount: float, buy_fee: float,
-                               sell_unit_price: int, sell_avail_amount: float, sell_fee: float,
+    def get_actual_spread_info(buy_unit_price: (int or float), buy_avail_amount: float, buy_fee: float,
+                               sell_unit_price: (int or float), sell_avail_amount: float, sell_fee: float,
                                max_trading_unit: float):
         # buy, sell 그리고 설정한 최대 거래 코인수 중 최소값이 거래되는 qty (tradable qty는 mm1, mm2에서 제공하는 qty에 모두 만족되는 양)
         tradable_qty = min(buy_avail_amount, sell_avail_amount, max_trading_unit)

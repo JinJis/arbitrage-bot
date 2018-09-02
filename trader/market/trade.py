@@ -51,6 +51,7 @@ class Trade:
 
     def to_dict(self):
         return {
+            "type": "trade",
             "trade_id": self.trade_id,
             "timestamp": self.timestamp,
             "tag": self.trade_tag.value,

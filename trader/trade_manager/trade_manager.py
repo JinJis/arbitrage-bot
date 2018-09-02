@@ -76,11 +76,11 @@ class TradeManager:
         return len(self._switch_over_list)
 
     def _log_trade(self, trade: Trade):
-        logging.info(trade)
+        logging.info("[TRADE RESULT]: ", trade)
         if self.should_db_logging:
             SharedMongoClient.async_trade_insert(trade.to_dict())
 
     def _log_order(self, order: Order):
-        logging.info(order)
+        logging.info("[ORDER RESULT]:", order)
         if self.should_db_logging:
             SharedMongoClient.async_order_insert(order.to_dict())

@@ -88,6 +88,7 @@ class Order:
 
     def to_dict(self):
         return {
+            "type": "order",
             "timestamp": self.timestamp,
             "updated_at": self.updated_at,
             "order_id": self.order_id,

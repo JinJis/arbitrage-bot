@@ -1,17 +1,21 @@
-import time
 import logging
-from trader.market.order import Order, OrderStatus
-from trader.market.market import Market
+import time
 from threading import Thread
+from api.bithumb_api import BithumbApi
+from api.coinnest_api import CoinnestApi
 from api.coinone_api import CoinoneApi
-from api.korbit_api import KorbitApi
+from api.coinone_error import CoinoneError
 from api.gopax_api import GopaxApi
+from api.korbit_api import KorbitApi
+from api.okcoin_api import OkcoinApi
+from api.okcoin_error import OkcoinError
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
-from .order_watcher_stats import OrderWatcherStats
+from trader.market.market import Market
+from trader.market.order import Order, OrderStatus
 from trader.market_manager.global_fee_accumulator import GlobalFeeAccumulator
 from trader.market_manager.gopax_market_manager import GopaxMarketManager
-from api.coinone_error import CoinoneError
+from .order_watcher_stats import OrderWatcherStats
 
 
 class OrderWatcher(Thread):
@@ -21,7 +25,10 @@ class OrderWatcher(Thread):
     supported_markets = {
         Market.COINONE: CoinoneApi,
         Market.KORBIT: KorbitApi,
-        Market.GOPAX: GopaxApi
+        Market.GOPAX: GopaxApi,
+        Market.BITHUMB: BithumbApi,
+        Market.OKCOIN: OkcoinApi,
+        Market.COINNEST: CoinnestApi
     }
 
     @staticmethod
@@ -53,11 +60,11 @@ class OrderWatcher(Thread):
                     self.order.updated_at = int(time.time())
                     self.order.filled_amount = self.order.order_amount
                     self.order.remain_amount = 0
-                    self.order.fee_rate = GopaxMarketManager.TAKER_FEE
+                    self.order.fee_rate = GopaxMarketManager().taker_fee
                     self.order.fee = self.order.fee_rate * self.order.filled_amount
                     self.order.status = OrderStatus.FILLED
                 else:
-                    raise Exception("Unexpected response: `get_order_info` returned None")
+                    raise Exception("Unexpected response: with `get_order_info`, returned None")
             else:
                 self.order.update_from_api(res_json)
         except KorbitApi as e:
@@ -69,6 +76,14 @@ class OrderWatcher(Thread):
                 logging.warning(e)
                 logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
         except CoinoneError as e:
+            # consider it cancelled
+            if "Order id does not exist" in str(e):
+                logging.info("Order<%s> in %s is cancelled." % (self.order.order_id, self.order.market.value))
+                self.order.status = OrderStatus.CANCELLED
+            else:
+                logging.warning(e)
+                logging.warning("get_order_info in OrderWatcher failed! (Order %s)" % self.order.order_id)
+        except OkcoinError as e:
             # consider it cancelled
             if "Order id does not exist" in str(e):
                 logging.info("Order<%s> in %s is cancelled." % (self.order.order_id, self.order.market.value))

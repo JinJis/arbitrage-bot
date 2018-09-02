@@ -16,7 +16,7 @@ class SharedMongoClient:
     OKCOIN_DB_NAME = "okcoin"
     COINNEST_DB_NAME = "coinnest"
 
-    STREAMER_DB_NAME = "streamer"
+    STREAMER_DB_NAME = "[RFAB]streamer"
 
     __singleton_instance = None
 
@@ -66,8 +66,8 @@ class SharedMongoClient:
         return cls.instance()[cls.COINNEST_DB_NAME]
 
     @classmethod
-    def get_process_db(cls) -> "Database":
-        return cls.instance()[cls.p_db]
+    def get_process_db(cls, target_db_name: str) -> "Database":
+        return cls.instance()[target_db_name][cls.p_db]
 
     @classmethod
     def get_streamer_db(cls) -> "Database":
@@ -83,23 +83,24 @@ class SharedMongoClient:
 
     @classmethod
     def async_trade_insert(cls, trade: dict):
-        cls._async_insert(cls.get_process_db()["trade"], trade)
+        cls._async_insert(cls.get_process_db("[RFAB]result"), trade)
 
     @classmethod
     def async_order_insert(cls, order: dict):
-        cls._async_insert(cls.get_process_db()["order"], order)
+        cls._async_insert(cls.get_process_db("[RFAB]result"), order)
 
-    @classmethod
-    def async_balance_insert(cls, balance: dict):
-        cls._async_insert(cls.get_process_db()["balance"], balance)
-
-    @classmethod
-    def async_order_update(cls, order: dict):
-        cls._async_update(
-            cls.get_process_db()["order"],
-            {"order_id": order["order_id"]},
-            {"$set": order}
-        )
+    # This is for Stat Arbitrage Bot
+    # @classmethod
+    # def async_balance_insert(cls, balance: dict):
+    #     cls._async_insert(cls.get_process_db()["balance"], balance)
+    #
+    # @classmethod
+    # def async_order_update(cls, order: dict):
+    #     cls._async_update(
+    #         cls.get_process_db()["order"],
+    #         {"order_id": order["order_id"]},
+    #         {"$set": order}
+    #     )
 
     @classmethod
     def get_target_db(cls, market_tag: Market):

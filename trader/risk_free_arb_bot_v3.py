@@ -21,7 +21,7 @@ class RiskFreeArbBotV3(BaseArbBot):
         super().__init__(mm1, mm2, target_currency)
 
     def run(self):
-        logging.info("========== [  INITIAL BALANCE  ] ========================================================")
+        logging.info("========== [ INITIAL BALANCE ] ========================================================")
         logging.info(self.mm1.get_balance())
         logging.info(self.mm2.get_balance())
 
@@ -31,7 +31,7 @@ class RiskFreeArbBotV3(BaseArbBot):
             except KeyboardInterrupt:
                 logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
                 logging.info(
-                    "========== [  SETTLEMENT BALANCE  ] ========================================================")
+                    "========== [ SETTLEMENT BALANCE ] ========================================================")
                 logging.info(self.mm1.get_balance())
                 logging.info(self.mm2.get_balance())
                 # stop order watcher stats thread
@@ -50,19 +50,22 @@ class RiskFreeArbBotV3(BaseArbBot):
             sort=[('_id', pymongo.DESCENDING)]
         )
 
-        # if no data in fti_iyo_list,
+        # if no data in fti_iyo_list, conduct by its situation
         if len(fti_set["fti_iyo_list"]) == 0:
 
             # if no oppty,
             if fti_set["no_oppty"] == "True":
                 self.trade_interval_in_sec = 10
-                logging.error("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
+                logging.info("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
+                return
             if fti_set["settlement"] == "True":
                 raise KeyboardInterrupt
-            logging.error("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
-            return
 
-        # if data in fti_iyo_list, read latest init_setting & trade_interval
+            else:
+                logging.info("Unexpected data type in FTI mongodb.. passing this loop")
+                return
+
+        # if there is data in fti_iyo_list, read latest init_setting & trade_interval
         ini_set = fti_set["fti_iyo_list"][0]["initial_setting"]
 
         trade_interval = fti_set["fti_iyo_list"][0]["fti"]
@@ -163,7 +166,6 @@ class RiskFreeArbBotV3(BaseArbBot):
         logging.critical("Selling Price: %.2f" % spread_info.sell_unit_price)
         logging.critical("Selling Price: %f" % spread_info.sell_order_amt)
 
-        # FIxme: 여기에서 트론이 주문이 안먹힘.. 코인네스트, 오케이코인은 price가 소수점 한자리까지 가능, 비썸은 불가능
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
         return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))
