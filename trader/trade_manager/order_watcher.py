@@ -123,7 +123,7 @@ class OrderWatcher(Thread):
                         message = "Order %s has exceeded delayed flag time! " \
                                   "Counter measures are expected to be executed manually!" % self.order.order_id
                         logging.critical(message)
-                        Global.send_to_slack_channel(message)
+                        Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL, message)
 
                 # wait for the target interval
                 wait_time = self.interval_sec - (end_time - start_time)

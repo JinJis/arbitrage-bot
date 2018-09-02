@@ -38,7 +38,8 @@ class RiskFreeArbBotV3(BaseArbBot):
                 OrderWatcherStats.instance().tear_down()
 
             except Exception as e:
-                Global.send_to_slack_channel("Something happened to RFAB! Now it's dying from ... %s" % e)
+                Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
+                                             "Something happened to RFAB! Now it's dying from ... %s" % e)
                 # stop order watcher stats thread
                 OrderWatcherStats.instance().tear_down()
                 raise e

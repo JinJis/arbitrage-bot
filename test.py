@@ -1,8 +1,6 @@
-from config.shared_mongo_client import SharedMongoClient
+from config.global_conf import Global
 
-trade = {"hello": 123, "my": 151}
-order = {"order": 32}
-
-SharedMongoClient.initialize(should_use_localhost_db=False)
-SharedMongoClient.async_trade_insert(trade)
-SharedMongoClient.async_order_insert(order)
+Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, "test")
+Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL, "test")
+Global.send_to_slack_channel(Global.SLACK_OTC_SCHEDUELR_URL, "test")
+Global.send_to_slack_channel(Global.SLACK_BAL_STATUS_URL, "test")

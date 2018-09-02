@@ -65,7 +65,8 @@ class IYOScheduler(BaseScheduler):
                     continue
 
             except TypeError as e:
-                Global.send_to_slack_channel("Something went wrong in IYO Schduler! >> %s" % e)
+                Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
+                                             "Something went wrong in IYO Schduler! >> %s" % e)
                 pass
 
 

@@ -349,7 +349,8 @@ class TradeHandler:
             "settlement": "True",
             "fti_iyo_list": []
         })
-        Global.send_to_slack_channel("Settlement reached for [%s-%s-%s] RFAB! Closing Trade Streamer.."
+        Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL,
+                                     "Settlement reached for [%s-%s-%s] RFAB! Closing Trade Streamer.."
                                      % (self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper()))
 
     """

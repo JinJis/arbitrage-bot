@@ -26,6 +26,11 @@ class Global:
     RFAB_COMBINATION_CONFIG_LOCATION = "config/conf_rfab_combi.ini"
     COIN_FILTER_FOR_BALANCE = ("eth", "btc", "bch", "qtum", "xrp", "trx", "eos", "krw")
 
+    SLACK_BOT_STATUS_URL = "https://hooks.slack.com/services/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"
+    SLACK_BAL_STATUS_URL = "https://hooks.slack.com/services/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"
+    SLACK_STREAM_STATUS_URL = "https://hooks.slack.com/services/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"
+    SLACK_OTC_SCHEDUELR_URL = "https://hooks.slack.com/services/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"
+
     @staticmethod
     def read_mongodb_uri(should_use_localhost_db: bool = True):
         config = configparser.ConfigParser()
@@ -236,8 +241,8 @@ class Global:
         job_thread.start()
 
     @staticmethod
-    def send_to_slack_channel(message: str):
-        requests.post("https://hooks.slack.com/services/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", json={
+    def send_to_slack_channel(target_url: str, message: str):
+        requests.post(target_url, json={
             "text": message
         })
 

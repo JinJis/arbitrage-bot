@@ -106,7 +106,7 @@ class OTCScheduler(BaseScheduler):
             new_percent = (result["new"] / cls.time_dur_to_anal) * 100
             rev_percent = (result["rev"] / cls.time_dur_to_anal) * 100
             to_be_sent += ("[%s]\n NEW: %.2f%%, REV: %.2f%%\n" % (result["combination"], new_percent, rev_percent))
-        Global.send_to_slack_channel(to_be_sent)
+        Global.send_to_slack_channel(Global.SLACK_OTC_SCHEDUELR_URL, to_be_sent)
 
 
 if __name__ == "__main__":
