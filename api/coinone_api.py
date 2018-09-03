@@ -257,7 +257,7 @@ class CoinoneApi(MarketApi):
     @staticmethod
     def filter_successful_response(res: Response):
         if res.status_code != 200:
-            raise Exception("Network request has failed! (status code: %d)" % res.status_code)
+            raise ConnectionError("Network request has failed! (status code: %d)" % res.status_code)
         else:
             res_json = res.json()
             if res_json["result"] == "error":

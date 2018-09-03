@@ -45,7 +45,6 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
         # if parse oppty_dur by parsing_interval (usage for Trade Streamer
         if is_slicing_dur:
-
             sliced_oppty_dur_dict = cls.get_sliced_oppty_dur_dict(oppty_dur_dict, slicing_interval)
             return cls.run_iyo(settings, bal_factor_settings, factor_settings, sliced_oppty_dur_dict)
 

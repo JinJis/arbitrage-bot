@@ -16,12 +16,13 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
-    INITIATION_REWEIND_TIME = 30 * 60
+    TIME_DUR_OF_SETTLEMENT = 2 * 60 * 60
+    INITIATION_REWEIND_TIME = 15 * 60
 
     TRADING_MODE_LOOP_INTERVAL = 2
 
     MAX_TRADING_COIN_DIVISION = 10
+    IYO_INIT_FACT_SET_MULTIPLIER = 10
 
     EXHAUST_CTRL_DIVISION = 10
 
@@ -221,34 +222,10 @@ class TradeHandler:
 
     def update_bal_seq_end_by_recent_bal_init_mode(self):
 
-        rough_exhaust_divider = self.INITIATION_REWEIND_TIME / self.TIME_DUR_OF_SETTLEMENT * self.EXHAUST_CTRL_DIVISION
+        rough_exhaust_divider = self.TIME_DUR_OF_SETTLEMENT / self.INITIATION_REWEIND_TIME
         Global.write_balance_seq_end_to_ini(
-            krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal / rough_exhaust_divider),
+            krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal) / rough_exhaust_divider,
             coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / rough_exhaust_divider)
-
-        # todo: 나중에 코인가격 변하는거 고려해서 주기적으로 업뎃하는거 만들기
-        # update rest of IYO config
-        # first find specific ocat_result_dict by trading combination
-        target_ocat = None
-        for ocat in self.ocat_final_result:
-            if ocat["combination"] == "%s-%s-%s" % (self.target_currency.upper(),
-                                                    self.mm1_name.upper(), self.mm2_name.upper()):
-                target_ocat = ocat
-                break
-
-        if target_ocat is None:
-            raise Exception("There is no detected combination for IYO_config update!!")
-
-        max_trade_coin_end = round(
-            float((self.mm1_coin_bal + self.mm2_coin_bal) / 2 / self.MAX_TRADING_COIN_DIVISION), 4)
-        threshold_end = int(max(
-            target_ocat["new_max_unit_spread"], target_ocat["rev_max_unit_spread"]) * max_trade_coin_end)
-        appx_unit_coin_price = int(max(target_ocat["avg_new_mid_price"], target_ocat["avg_rev_mid_price"]))
-
-        Global.write_iyo_config_by_target_currency(self.target_currency,
-                                                   max_trade_coin_end=max_trade_coin_end,
-                                                   threshold_end=threshold_end,
-                                                   appx_unit_coin_price=appx_unit_coin_price)
 
     def reset_time_relevant_before_trading_mode(self):
         self.trading_mode_rewined_time = self.initiation_start_time
@@ -268,7 +245,7 @@ class TradeHandler:
         self.update_exhaust_ctrl_target_currency()
 
         # update exhaust_ctrl_stage
-        self.update_exhaust_stage()
+        self.update_exhaust_stage_and_iyo_config()
 
         # evaluate current exhaust rate and decide whether to boost or inhibit
         current_exhaust_rate = 1 - (self.cur_exhaust_ctrl_currency_bal / self.init_exhaust_ctrl_currency_bal)
@@ -288,6 +265,7 @@ class TradeHandler:
         krw_seq_end = initial_total_krw / exhaust_rate_divider
         coin_seq_end = initial_total_coin / exhaust_rate_divider
 
+        # update Balance seq end accordingly
         Global.write_balance_seq_end_to_ini(krw_seq_end=krw_seq_end,
                                             coin_seq_end=coin_seq_end)
 
@@ -298,13 +276,15 @@ class TradeHandler:
         logging.warning("[KRW] seq end: %.5f" % krw_seq_end)
         logging.warning("[%s] seq end: %.5f\n" % (self.target_currency.upper(), coin_seq_end))
 
-    def update_exhaust_stage(self):
+    def update_exhaust_stage_and_iyo_config(self):
+
+        now_time = int(time.time())
 
         stage_length = int((self.settlement_time - self.bot_start_time) / self.EXHAUST_CTRL_DIVISION)
         if self.cur_exhaust_ctrl_stage is None:
             self.cur_exhaust_ctrl_stage = 1
         else:
-            if int(time.time()) >= self.cur_exhaust_ctrl_stage * stage_length + self.bot_start_time:
+            if now_time >= self.cur_exhaust_ctrl_stage * stage_length + self.bot_start_time:
                 self.cur_exhaust_ctrl_stage += 1
 
     def update_exhaust_ctrl_target_currency(self):

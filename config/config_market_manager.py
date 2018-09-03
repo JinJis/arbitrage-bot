@@ -9,9 +9,8 @@ from trader.market_manager.coinnest_market_manager import CoinnestMarketManager
 
 class ConfigMarketManager(Enum):
     BITHUMB = BithumbMarketManager()
-    COINONE = CoinoneMarketManager()
+    # COINONE = CoinoneMarketManager()
     KORBIT = KorbitMarketManager()
     GOPAX = GopaxMarketManager()
     OKCOIN = OkcoinMarketManager()
     # COINNEST = CoinnestMarketManager()
-
