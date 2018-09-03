@@ -149,6 +149,17 @@ class Global:
             config.write(configfile)
 
     @staticmethod
+    def write_iyo_config_by_target_currency(target_currency: str,
+                                            max_trade_coin_end: float, threshold_end: int, appx_unit_coin_price: int):
+        config = configparser.ConfigParser()
+        config.read(Global.IYO_CONFIG_LOCATION)
+        config.set("%s_SETTING" % target_currency.upper(), "max_trade_coin_end", str(max_trade_coin_end))
+        config.set("%s_SETTING" % target_currency.upper(), "threshold_end", str(threshold_end))
+        config.set("%s_SETTING" % target_currency.upper(), "appx_unit_coin_price", str(appx_unit_coin_price))
+        with open(Global.IYO_CONFIG_LOCATION, 'w') as configfile:
+            config.write(configfile)
+
+    @staticmethod
     def read_avail_coin_in_list():
         config = configparser.ConfigParser()
         config.read(Global.RFAB_COMBINATION_CONFIG_LOCATION)

@@ -21,6 +21,8 @@ class TradeHandler:
 
     TRADING_MODE_LOOP_INTERVAL = 2
 
+    MAX_TRADING_COIN_DIVISION = 10
+
     EXHAUST_CTRL_DIVISION = 10
 
     YIELD_THRESHOLD_RATE_START = 0.1
@@ -44,6 +46,8 @@ class TradeHandler:
 
         self.is_initiation_mode = is_initiation_mode
         self.is_trading_mode = is_trading_mode
+
+        self.ocat_final_result = None
 
         self.mm1 = mm1
         self.mm2 = mm2
@@ -112,6 +116,10 @@ class TradeHandler:
                 outer_ocat_list = Global.get_rfab_combination_list(outer_ocat_coin)
                 ocat_result = self.otc_all_combination_by_one_coin(outer_ocat_coin, outer_ocat_list)
                 ocat_final_result.extend(ocat_result)
+
+            # save this setting for updating IYO setting in future ref
+            self.ocat_final_result = ocat_final_result
+
         else:
             raise Exception("Please indicate if it is Inner OCAT or not")
 
@@ -138,7 +146,6 @@ class TradeHandler:
             self.mm2: MarketManager = getattr(ConfigMarketManager, input("Type MM2!! ex) BITHUMB :").upper()).value
             self.mm1_name = self.mm1.get_market_name().lower()
             self.mm2_name = self.mm2.get_market_name().lower()
-            self.update_balance()
 
             # update balance
             self.update_balance()
@@ -198,8 +205,13 @@ class TradeHandler:
                 total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
                 total_dur_dict["new_spread_ratio"] = otc_result_dict["new_spread_ratio"]
                 total_dur_dict["rev_spread_ratio"] = otc_result_dict["rev_spread_ratio"]
+                total_dur_dict["new_max_unit_spread"] = otc_result_dict["new_max_unit_spread"]
+                total_dur_dict["rev_max_unit_spread"] = otc_result_dict["rev_max_unit_spread"]
+                total_dur_dict["avg_new_mid_price"] = otc_result_dict["avg_new_mid_price"]
+                total_dur_dict["avg_rev_mid_price"] = otc_result_dict["avg_rev_mid_price"]
                 total_dur_dict["combination"] = \
                     "%s-%s-%s" % (target_currency.upper(), str(_combi[0]).upper(), str(_combi[1]).upper())
+
                 all_ocat_result_by_one_coin.append(total_dur_dict)
             except TypeError as e:
                 logging.error("Something went wrong in OTC scheduler", e)
@@ -213,6 +225,30 @@ class TradeHandler:
         Global.write_balance_seq_end_to_ini(
             krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal / rough_exhaust_divider),
             coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / rough_exhaust_divider)
+
+        # todo: 나중에 코인가격 변하는거 고려해서 주기적으로 업뎃하는거 만들기
+        # update rest of IYO config
+        # first find specific ocat_result_dict by trading combination
+        target_ocat = None
+        for ocat in self.ocat_final_result:
+            if ocat["combination"] == "%s-%s-%s" % (self.target_currency.upper(),
+                                                    self.mm1_name.upper(), self.mm2_name.upper()):
+                target_ocat = ocat
+                break
+
+        if target_ocat is None:
+            raise Exception("There is no detected combination for IYO_config update!!")
+
+        max_trade_coin_end = round(
+            float((self.mm1_coin_bal + self.mm2_coin_bal) / 2 / self.MAX_TRADING_COIN_DIVISION), 4)
+        threshold_end = int(max(
+            target_ocat["new_max_unit_spread"], target_ocat["rev_max_unit_spread"]) * max_trade_coin_end)
+        appx_unit_coin_price = int(max(target_ocat["avg_new_mid_price"], target_ocat["avg_rev_mid_price"]))
+
+        Global.write_iyo_config_by_target_currency(self.target_currency,
+                                                   max_trade_coin_end=max_trade_coin_end,
+                                                   threshold_end=threshold_end,
+                                                   appx_unit_coin_price=appx_unit_coin_price)
 
     def reset_time_relevant_before_trading_mode(self):
         self.trading_mode_rewined_time = self.initiation_start_time
