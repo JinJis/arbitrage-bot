@@ -15,4 +15,4 @@ def main(mm1: MarketManager, mm2: MarketManager, target_currency: str):
 
 
 if __name__ == '__main__':
-    main(BithumbMarketManager(), OkcoinMarketManager(), "xrp")
+    main(OkcoinMarketManager(), BithumbMarketManager(), "xrp")
