@@ -20,6 +20,11 @@ class BithumbApi(MarketApi):
 
     def __init__(self, is_public_access_only=False):
         super().__init__(is_public_access_only)
+
+        requests_log = logging.getLogger("requests.packages.urllib3")
+        requests_log.setLevel(logging.DEBUG)
+        requests_log.propagate = True
+
         if not is_public_access_only:
             # set instance wide config
             self._config = configparser.ConfigParser()
