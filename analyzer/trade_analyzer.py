@@ -147,7 +147,7 @@ class ATSAnalyzer:
     @staticmethod
     def actual_tradable_spread_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
                                         mm1_market_fee: float, mm2_market_fee: float,
-                                        max_coin_trading_unit: float):
+                                        max_coin_trading_unit: float, min_trading_coin: int):
         mm1_minask_price, mm1_maxbid_price = BasicAnalyzer.get_price_of_minask_maxbid(mm1_orderbook)
         mm1_minask_amount, mm1_maxbid_amount = BasicAnalyzer.get_amount_of_minask_maxbid(mm1_orderbook)
 
@@ -157,11 +157,11 @@ class ATSAnalyzer:
         # new => buy in mm1, sell in mm2
         new_spread_info = ATSAnalyzer.get_actual_spread_info(mm1_minask_price, mm1_minask_amount, mm1_market_fee,
                                                              mm2_maxbid_price, mm2_maxbid_amount, mm2_market_fee,
-                                                             max_coin_trading_unit)
+                                                             max_coin_trading_unit, min_trading_coin)
         # rev => buy in mm2, sell in mm1
         rev_spread_info = ATSAnalyzer.get_actual_spread_info(mm2_minask_price, mm2_minask_amount, mm2_market_fee,
                                                              mm1_maxbid_price, mm1_maxbid_amount, mm1_market_fee,
-                                                             max_coin_trading_unit)
+                                                             max_coin_trading_unit, min_trading_coin)
 
         return {
             "new": new_spread_info,
@@ -171,7 +171,7 @@ class ATSAnalyzer:
     @staticmethod  # avail_amount = total amount of coin that specific mkt provides
     def get_actual_spread_info(buy_unit_price: (int or float), buy_avail_amount: float, buy_fee: float,
                                sell_unit_price: (int or float), sell_avail_amount: float, sell_fee: float,
-                               max_trading_unit: float):
+                               max_trading_unit: float, min_trading_coin: int):
         # buy, sell 그리고 설정한 최대 거래 코인수 중 최소값이 거래되는 qty (tradable qty는 mm1, mm2에서 제공하는 qty에 모두 만족되는 양)
         tradable_qty = min(buy_avail_amount, sell_avail_amount, max_trading_unit)
         spread_in_unit = (-1) * buy_unit_price / (1 - buy_fee) + (+1) * sell_unit_price * (1 - sell_fee)
@@ -214,6 +214,10 @@ class ATSAnalyzer:
             sell_amt = tradable_qty * (1 - buy_fee)  # buy_fee로 계산해야 buy 쪽 코인이랑 수량 맞춰짐!!
 
         else:
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+
+        # finally, check with tradable min_trading_amt (max of mm1, mm2 min_trading_coin) with buy, sell amt
+        if (buy_amt <= min_trading_coin) and (sell_amt <= min_trading_coin):
             return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
 
         # in unit은 코인 한개 거래시 스프레드. possible trading qty 곱해주면 (buy쪽 수수료 코인으로 차감되는 경우 감안) 실제 스프레드

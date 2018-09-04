@@ -142,15 +142,17 @@ class InitialSettingOptimizer(BaseOptimizer):
         for rev_th in factor_settings["rev"]["threshold"]["seq"]:
             for new_th in factor_settings["new"]["threshold"]["seq"]:
                 for max_unit in factor_settings["max_trading_coin"]["seq"]:
-                    result.append({
-                        "max_trading_coin": max_unit,
-                        "new": {
-                            "threshold": new_th
-                        },
-                        "rev": {
-                            "threshold": rev_th
-                        }
-                    })
+                    for min_unit in factor_settings["min_trading_coin"]["seq"]:
+                        result.append({
+                            "max_trading_coin": max_unit,
+                            "min_trading_coin": min_unit,
+                            "new": {
+                                "threshold": new_th
+                            },
+                            "rev": {
+                                "threshold": rev_th
+                            }
+                        })
         return result
 
     @classmethod

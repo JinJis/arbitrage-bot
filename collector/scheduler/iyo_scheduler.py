@@ -47,11 +47,12 @@ class IYOScheduler(BaseScheduler):
                                                        consecution_time=iyo_config["consecution_time"],
                                                        is_virtual_mm=True)
             # todo
-            bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"])
+            bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"],
+                                                                           iyo_config["coin_seq_end"])
 
-            factor_settings = TradeSettingConfig.get_factor_settings(iyo_config["max_trade_coin_end"],
+            factor_settings = TradeSettingConfig.get_factor_settings(_combi[0], _combi[1], coin_name,
+                                                                     iyo_config["max_trade_coin_end"],
                                                                      iyo_config["threshold_end"],
-                                                                     iyo_config["factor_end"],
                                                                      iyo_config["appx_unit_coin_price"])
 
             try:

@@ -1,6 +1,14 @@
-from config.global_conf import Global
+import os
+from multiprocessing import Pool
 
-Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, "test")
-Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL, "test")
-Global.send_to_slack_channel(Global.SLACK_OTC_SCHEDUELR_URL, "test")
-Global.send_to_slack_channel(Global.SLACK_BAL_STATUS_URL, "test")
+processes = ('/trader/trade_manager/oppty_tracker.py', 'process2.py')
+other = ('process3.py',)
+
+
+def run_process(process):
+    os.system('python {}'.format(process))
+
+
+pool = Pool(processes=3)
+pool.map(run_process, processes)
+pool.map(run_process, other)

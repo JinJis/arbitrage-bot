@@ -1,5 +1,6 @@
 import logging
 import pymongo
+import time
 from pymongo.collection import Collection
 from analyzer.trade_analyzer import ATSAnalyzer
 from analyzer.trade_analyzer import SpreadInfo
@@ -13,27 +14,38 @@ from trader.trade_manager.order_watcher_stats import OrderWatcherStats
 class RiskFreeArbBotV3(BaseArbBot):
 
     def __init__(
-            self, mm1: MarketManager, mm2: MarketManager, target_currency: str, fti_settings_col: Collection):
-
-        self.fti_settings_col = fti_settings_col
+            self, mm1: MarketManager, mm2: MarketManager, target_currency: str, streamer_db: Collection):
+        self.fti_settings_col = streamer_db["fti_setting"]
+        self.actual_trader_starter_col = streamer_db["actual_trader_starter"]
         self.trade_strategy = ATSAnalyzer.actual_tradable_spread_strategy
 
         super().__init__(mm1, mm2, target_currency)
 
     def run(self):
-        logging.info("========== [ INITIAL BALANCE ] ========================================================")
-        logging.info(self.mm1.get_balance())
-        logging.info(self.mm2.get_balance())
+        logging.warning("========== [ INITIAL BALANCE ] ========================================================")
+        logging.warning(self.mm1.get_balance())
+        logging.warning(self.mm2.get_balance())
 
+        # check from TradeStreamer's command to start trade
+        while True:
+            if self.actual_trader_starter_col.find_one(
+                    sort=[('_id', pymongo.DESCENDING)]
+            )["trade_command"] is True:
+                logging.error("Trade Streamer ready! Now commencing RFAB Actual Trader")
+                break
+            time.sleep(3)
+        self.launch_actual_trader()
+
+    def launch_actual_trader(self):
         while True:
             try:
                 self.execute_trade_loop()
             except KeyboardInterrupt:
                 logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
-                logging.info(
+                logging.warning(
                     "========== [ SETTLEMENT BALANCE ] ========================================================")
-                logging.info(self.mm1.get_balance())
-                logging.info(self.mm2.get_balance())
+                logging.warning(self.mm1.get_balance())
+                logging.warning(self.mm2.get_balance())
                 # stop order watcher stats thread
                 OrderWatcherStats.instance().tear_down()
 
@@ -55,15 +67,15 @@ class RiskFreeArbBotV3(BaseArbBot):
         if len(fti_set["fti_iyo_list"]) == 0:
 
             # if no oppty,
-            if fti_set["no_oppty"] == "True":
-                self.trade_interval_in_sec = 10
-                logging.info("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
+            if fti_set["no_oppty"] is True:
+                self.trade_interval_in_sec = 5
+                logging.warning("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
                 return
-            if fti_set["settlement"] == "True":
+            if fti_set["settlement"] is True:
                 raise KeyboardInterrupt
 
             else:
-                logging.info("Unexpected data type in FTI mongodb.. passing this loop")
+                logging.warning("Unexpected data type in FTI mongodb.. passing this loop")
                 return
 
         # if there is data in fti_iyo_list, read latest init_setting & trade_interval
@@ -82,7 +94,7 @@ class RiskFreeArbBotV3(BaseArbBot):
             mm2_data,
             self.mm1.taker_fee,
             self.mm2.taker_fee,
-            ini_set["max_trading_coin"]
+            ini_set["max_trading_coin"], ini_set["min_trading_coin"]
         )
         new_spread_info: SpreadInfo = result["new"]
         rev_spread_info: SpreadInfo = result["rev"]
@@ -123,11 +135,11 @@ class RiskFreeArbBotV3(BaseArbBot):
             raise Exception("Invalid trade type!")
 
         if not buying_mkt.is_bigger_than_min_trading_coin(spread_info.buy_order_amt, self.target_currency):
-            logging.info("buy amount smaller than min trading coin: %d" % spread_info.buy_order_amt)
+            logging.warning("buy amount smaller than min trading coin: %d" % spread_info.buy_order_amt)
             return None
 
         if not selling_mkt.is_bigger_than_min_trading_coin(spread_info.sell_order_amt, self.target_currency):
-            logging.info("sell amount smaller than min trading coin: %d" % spread_info.sell_order_amt)
+            logging.warning("sell amount smaller than min trading coin: %d" % spread_info.sell_order_amt)
             return None
 
         # obey each order amount to exchange min order digit
@@ -141,7 +153,7 @@ class RiskFreeArbBotV3(BaseArbBot):
 
         # quit if conditions don't meet
         if not threshold_cond:
-            logging.info("spread threshold condition not met!")
+            logging.warning("spread threshold condition not met!")
             return None
 
         # balance check
@@ -152,12 +164,12 @@ class RiskFreeArbBotV3(BaseArbBot):
 
         # not enough krw
         if not has_enough_krw:
-            logging.info("Not enough KRW in buying market!")
+            logging.warning("Not enough KRW in buying market!")
             return None
 
         # not enough coin
         if not has_enough_coin:
-            logging.info("Not enough COIN in selling market!")
+            logging.warning("Not enough COIN in selling market!")
             return None
 
         # make buy & sell order

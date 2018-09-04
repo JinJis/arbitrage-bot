@@ -16,19 +16,20 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 2 * 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
     INITIATION_REWEIND_TIME = 15 * 60
 
-    TRADING_MODE_LOOP_INTERVAL = 2
+    TRADING_MODE_LOOP_INTERVAL = 5
+    TRADING_MODE_BIG_S_IYO_REWIND_TIME = 60 * 60
 
-    MAX_TRADING_COIN_DIVISION = 10
-    IYO_INIT_FACT_SET_MULTIPLIER = 10
-
+    # this is useful when investing krw is big
     EXHAUST_CTRL_DIVISION = 10
+    EXHAUST_CTRL_BOOSTER = 2
+    EXHAUST_CTRL_INHIBITOR = 0.5  # if 1: no inhibit, less than 1 -> more inhibition
 
     YIELD_THRESHOLD_RATE_START = 0.1
-    YIELD_THRESHOLD_RATE_END = 0.5
-    YIELD_THRESHOLD_RATE_STEP = 0.05
+    YIELD_THRESHOLD_RATE_END = 1
+    YIELD_THRESHOLD_RATE_STEP = 0.1
 
     FTI_FORMULA_WEIGHT_START = 0.1
     FTI_FORMULA_WEIGHT_END = 1.0
@@ -66,16 +67,14 @@ class TradeHandler:
         self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
 
         self.initiation_start_time = int(time.time())
-        self.init_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
+        self.init_s_iyo_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
 
         self.trading_mode_start_time = None
-        self.trading_mode_rewined_time = None
+        self.trading_mode_s_iyo_rewined_time = None
 
         self.bot_start_time = None
         self.settlement_time = None
 
-        self.exhaust_booster = 2
-        self.exhaust_inhibitor = 0.5
         self.cur_exhaust_ctrl_stage = 0
         self.init_exhaust_ctrl_currency_bal = None
         self.cur_exhaust_ctrl_currency_bal = None
@@ -195,7 +194,7 @@ class TradeHandler:
             settings = TradeSettingConfig.get_settings(mm1_name=_combi[0],
                                                        mm2_name=_combi[1],
                                                        target_currency=target_currency,
-                                                       start_time=self.init_rewined_time,
+                                                       start_time=self.init_s_iyo_rewined_time,
                                                        end_time=self.initiation_start_time,
                                                        division=iyo_config["division"],
                                                        depth=iyo_config["depth"],
@@ -222,15 +221,15 @@ class TradeHandler:
 
     def update_bal_seq_end_by_recent_bal_init_mode(self):
 
-        rough_exhaust_divider = self.TIME_DUR_OF_SETTLEMENT / self.INITIATION_REWEIND_TIME
+        rough_exhaust_divider = self.EXHAUST_CTRL_DIVISION
         Global.write_balance_seq_end_to_ini(
             krw_seq_end=(self.mm1_krw_bal + self.mm2_krw_bal) / rough_exhaust_divider,
             coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / rough_exhaust_divider)
 
     def reset_time_relevant_before_trading_mode(self):
-        self.trading_mode_rewined_time = self.initiation_start_time
-        self.trading_mode_start_time = int(time.time())
+        self.trading_mode_s_iyo_rewined_time = self.initiation_start_time
         self.bot_start_time = int(time.time())
+        self.trading_mode_start_time = int(time.time())
         self.settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
 
     """
@@ -251,9 +250,9 @@ class TradeHandler:
         current_exhaust_rate = 1 - (self.cur_exhaust_ctrl_currency_bal / self.init_exhaust_ctrl_currency_bal)
 
         if current_exhaust_rate <= self.cur_exhaust_ctrl_stage / self.EXHAUST_CTRL_DIVISION:
-            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.exhaust_booster
+            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.EXHAUST_CTRL_BOOSTER
         else:
-            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.exhaust_inhibitor
+            exhaust_rate_divider = self.EXHAUST_CTRL_DIVISION / self.EXHAUST_CTRL_INHIBITOR
 
         # finally, create seq with initial bal and evaluated divider
         latest_rev_ledger = self.streamer_db["revenue_ledger"].find_one(
@@ -342,32 +341,41 @@ class TradeHandler:
     def no_oppty_handler_for_trading_mode(self):
         # post empty fti_setting --> to make RFAB not to trade
         self.post_empty_fti_setting_to_mongo_when_no_oppty()
-        self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
-                                             self.TRADING_MODE_LOOP_INTERVAL)
         # reset time relevant
         self.reset_time_relevant_for_trading_mode()
 
     def post_empty_fti_setting_to_mongo_when_no_oppty(self):
         self.streamer_db["fti_setting"].insert({
-            "no_oppty": "True",
-            "settlement": "False",
+            "no_oppty": True,
+            "settlement": False,
             "fti_iyo_list": []
         })
 
     def reset_time_relevant_for_trading_mode(self):
         self.trading_mode_start_time = int(time.time())
-        self.trading_mode_rewined_time = self.trading_mode_start_time - self.slicing_interval
+        self.trading_mode_s_iyo_rewined_time = self.trading_mode_start_time - self.slicing_interval
 
     def trade_handler_when_settlement_reached(self):
         logging.critical("Bot reached settlement time!! closing trade...")
         self.streamer_db["fti_setting"].insert({
-            "no_oppty": "False",
-            "settlement": "True",
+            "no_oppty": False,
+            "settlement": True,
             "fti_iyo_list": []
         })
+
+        # reset actual_trader_starter
+        self.reset_acutal_trader_starter()
+
+        # send to Slack
         Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL,
                                      "Settlement reached for [%s-%s-%s] RFAB! Closing Trade Streamer.."
                                      % (self.target_currency.upper(), self.mm1_name.upper(), self.mm2_name.upper()))
+
+    def reset_acutal_trader_starter(self):
+        # reset actual_trader_starter
+        self.streamer_db["actual_trader_starter"].insert({
+            "trade_command": False
+        })
 
     """
     ===========================================
@@ -400,8 +408,8 @@ class TradeHandler:
     """
 
     def post_final_fti_result_to_mongodb(self, final_opt_iyo_dict):
-        final_opt_iyo_dict["no_oppty"] = "False"
-        final_opt_iyo_dict["settlement"] = "False"
+        final_opt_iyo_dict["no_oppty"] = False
+        final_opt_iyo_dict["settlement"] = False
         self.streamer_db["fti_setting"].insert(final_opt_iyo_dict)
 
     def post_updated_revenue_ledger(self):
@@ -449,11 +457,10 @@ class TradeHandler:
             logging.error("Now conducting [Initiation Mode >> FTI Analysis]")
 
             # launch Oppty Sliced IYO
-            sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_rewined_time)
+            sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_s_iyo_rewined_time)
 
             # if no s_iyo data b/c of no oppty
             if len(sliced_iyo_list) == 0:
-                logging.error("There was no oppty.. must have some oppty time when in Initiation Mode!!")
                 return
 
             # post result to MongoDb
@@ -462,14 +469,14 @@ class TradeHandler:
             # extract yield only dict data from s_iyo list
             extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
 
-            bot_start_time = self.init_rewined_time
+            bot_start_time = self.init_s_iyo_rewined_time
 
         elif self.is_trading_mode:
             logging.error("Now conducting [Trading Mode >> FTI Analysis]")
 
             # launch Oppty Sliced IYO
             small_s_iyo_list = self.launch_oppty_sliced_iyo(self.trading_mode_start_time,
-                                                            self.trading_mode_rewined_time)
+                                                            self.trading_mode_s_iyo_rewined_time)
 
             # if no s_iyo data b/c of no oppty
             if len(small_s_iyo_list) == 0:
@@ -480,11 +487,17 @@ class TradeHandler:
             self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
 
             # get same amount of duration as of Initiation Mode from s_iyo DB
+            # limit Big S_IYO duration to be less or equal than TRADING MODE BIG S_IYO REWIND TIME
+            if (self.trading_mode_start_time - self.bot_start_time) > self.TRADING_MODE_BIG_S_IYO_REWIND_TIME:
+                start_time = self.trading_mode_start_time - self.TRADING_MODE_BIG_S_IYO_REWIND_TIME
+            else:
+                start_time = self.bot_start_time
+
             s_iyo_col = self.streamer_db["s_iyo"]
-            s_iyo_cur_list = s_iyo_col.find({"settings.start_time": {
-                "$gte": self.bot_start_time,
+            s_iyo_cur_list = s_iyo_col.find({"settings.end_time": {
+                "$gte": start_time,
                 "$lte": self.trading_mode_start_time
-            }}).sort([("start_time", 1)])
+            }}).sort([("end_time", 1)])
 
             sliced_iyo_list = []
             for iyo in s_iyo_cur_list:
@@ -535,7 +548,8 @@ class TradeHandler:
         bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(sliced_iyo_config["krw_seq_end"],
                                                                        sliced_iyo_config["coin_seq_end"])
 
-        factor_settings = TradeSettingConfig.get_factor_settings(sliced_iyo_config["max_trade_coin_end"],
+        factor_settings = TradeSettingConfig.get_factor_settings(self.mm1_name, self.mm2_name, self.target_currency,
+                                                                 sliced_iyo_config["max_trade_coin_end"],
                                                                  sliced_iyo_config["threshold_end"],
                                                                  sliced_iyo_config["appx_unit_coin_price"])
 

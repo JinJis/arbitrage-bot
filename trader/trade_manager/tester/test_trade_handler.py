@@ -511,7 +511,8 @@ class TestTradeHandler:
         bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(sliced_iyo_config["krw_seq_end"],
                                                                        sliced_iyo_config["coin_seq_end"])
 
-        factor_settings = TradeSettingConfig.get_factor_settings(sliced_iyo_config["max_trade_coin_end"],
+        factor_settings = TradeSettingConfig.get_factor_settings(self.mm1_name, self.mm2_name, self.target_currency,
+                                                                 sliced_iyo_config["max_trade_coin_end"],
                                                                  sliced_iyo_config["threshold_end"],
                                                                  sliced_iyo_config["appx_unit_coin_price"])
 

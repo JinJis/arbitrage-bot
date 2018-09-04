@@ -29,7 +29,8 @@ class OpptySlicedIYO:
         bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(sliced_iyo_config["krw_seq_end"],
                                                                        sliced_iyo_config["coin_seq_end"])
 
-        factor_settings = TradeSettingConfig.get_factor_settings(sliced_iyo_config["max_trade_coin_end"],
+        factor_settings = TradeSettingConfig.get_factor_settings(mm1_name, mm2_name, coin_name,
+                                                                 sliced_iyo_config["max_trade_coin_end"],
                                                                  sliced_iyo_config["threshold_end"],
                                                                  sliced_iyo_config["appx_unit_coin_price"])
 

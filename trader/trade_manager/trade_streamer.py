@@ -1,5 +1,7 @@
 import time
 import logging
+from multiprocessing import Process
+from trader.risk_free_arb_bot_v3 import RiskFreeArbBotV3
 from trader.trade_manager.trade_handler import TradeHandler
 from trader.market_manager.market_manager import MarketManager
 
@@ -8,6 +10,10 @@ class TradeStreamer(TradeHandler):
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
         super().__init__(target_currency, mm1, mm2, is_initiation_mode=True, is_trading_mode=False)
+
+        # reset actual_trader command to False
+        self.reset_acutal_trader_starter()
+
         # log when init
         logging.error("================================")
         logging.error("|| Trade Streamer Launched!!! ||")
@@ -19,15 +25,11 @@ class TradeStreamer(TradeHandler):
                                                                self.target_currency.upper(),
                                                                self.mm2_coin_bal))
 
-    def real_time_streamer(self):
+    def run(self):
 
-        trading_loop_count = 0
-        while True:
-
-            """ INITIATION MODE """
+        """ INITIATION MODE """
+        try:
             if self.is_initiation_mode:
-                # remove documents in MongoDB streamer
-
                 # first, make Actual Trader not to trade before Analysis
                 self.post_empty_fti_setting_to_mongo_when_no_oppty()
 
@@ -44,7 +46,30 @@ class TradeStreamer(TradeHandler):
                 # reset time relevant
                 self.reset_time_relevant_before_trading_mode()
 
-            """ TRADING MODE """
+                # wait for trading mode to be ready
+                time.sleep(self.TRADING_MODE_LOOP_INTERVAL)
+
+                # multiprocess Trading Mode and Acutal Trader
+                # self.launch_multiprocessing()
+                self.launch_trading_mode()
+        except KeyboardInterrupt:
+            # reset Actual Trader to commence
+            self.reset_acutal_trader_starter()
+
+    def launch_multiprocessing(self):
+        p1 = Process(target=self.launch_trading_mode())
+        p2 = Process(target=RiskFreeArbBotV3(self.mm1, self.mm2, self.target_currency, self.streamer_db).run())
+
+        p1.start()
+        p2.start()
+
+        p1.join()
+        p2.join()
+
+    def launch_trading_mode(self):
+        """ TRADING MODE """
+        trading_loop_count = 0
+        while True:
             if self.is_trading_mode:
 
                 # check if reached settlement time
@@ -87,15 +112,13 @@ class TradeStreamer(TradeHandler):
         logging.error("|| Conducting Initiation Mode ||")
         logging.error("================================\n")
 
-        self.initiation_start_time = int(time.time())
-        self.init_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
-
         # run FTI Analysis mode (for initiation mode)
         final_opt_iyo_dict = self.run_fti_analysis()
 
         # if there was no oppty, stop bot
         if final_opt_iyo_dict is None:
-            raise KeyboardInterrupt
+            logging.error("There was no oppty during Initiation Mode..Will wait by conducting Trading Mode")
+            return
 
         # finally, post to MongoDB
         self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)
@@ -103,7 +126,10 @@ class TradeStreamer(TradeHandler):
         # log initiation mode oppty_dur during
         self.log_final_opt_result(final_opt_iyo_dict)
 
-        # log balance seq end & rate against
+        # command Actual Trader to commence
+        self.streamer_db["actual_trader_starter"].insert({
+            "trade_command": True
+        })
 
     def run_trading_mode(self, loop_count: int):
         logging.error("======================================")
@@ -115,7 +141,7 @@ class TradeStreamer(TradeHandler):
         # if there was no oppty, wait for oppty by looping real_time_streamer...
         if final_opt_iyo_dict is None:
             self.no_oppty_handler_for_trading_mode()
-            return self.real_time_streamer()
+            return
 
         # finally, post to MongoDB
         self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)

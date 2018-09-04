@@ -68,12 +68,16 @@ class TradeSettingConfig:
         }
 
     @staticmethod
-    def get_factor_settings(max_trade_coin_end: float, threshold_end: int, appx_unit_coin_price: int):
+    def get_factor_settings(mm1_name: str, mm2_name: str, target_currency: str,
+                            max_trade_coin_end: float, threshold_end: int, appx_unit_coin_price: int):
 
         trading_coin_limit = (1000 / appx_unit_coin_price)
+        min_trading_coin = int(max(Global.read_min_trading_coin(mm1_name, target_currency),
+                                   Global.read_min_trading_coin(mm2_name, target_currency)))
 
         return {
             "max_trading_coin": {"start": 0, "end": max_trade_coin_end, "step_limit": float(trading_coin_limit)},
+            "min_trading_coin": {"start": min_trading_coin, "end": min_trading_coin, "step_limit": 0},
             "new": {
                 "threshold": {"start": 0, "end": threshold_end, "step_limit": 1}
             },

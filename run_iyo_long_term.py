@@ -47,7 +47,8 @@ def main(coin_name: str, init_time: str, final_time: str):
             bal_factor_settings = TradeSettingConfig.get_bal_fact_settings(iyo_config["krw_seq_end"],
                                                                            iyo_config["coin_seq_end"])
 
-            factor_settings = TradeSettingConfig.get_factor_settings(iyo_config["max_trade_coin_end"],
+            factor_settings = TradeSettingConfig.get_factor_settings(_combi[0], _combi[1], coin_name,
+                                                                     iyo_config["max_trade_coin_end"],
                                                                      iyo_config["threshold_end"],
                                                                      iyo_config["appx_unit_coin_price"])
 

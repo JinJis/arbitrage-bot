@@ -139,6 +139,7 @@ class IntegratedYieldOptimizer(BaseOptimizer):
 
         logging.info("<<<< Now in [IYO] depth: %d >>>>" % depth)
 
+        # FIXME: 여기서 처음 recursive들어올때 두번하는느낌...?
         # init seq for balance settings
         for market in bal_factor_settings.keys():
             for item in bal_factor_settings[market]:
