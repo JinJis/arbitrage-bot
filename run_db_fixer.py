@@ -15,5 +15,5 @@ DbFixer.add_missing_item_with_plain_copy_prev("bithumb", "bch_orderbook", "gopax
 #                                      start_time, end_time)
 
 """IYO 돌릴때 사용하는 것들"""
-# DbFixer.check_empty_data_by_rq_time("gopax", "bch_orderbook", start_time, end_time)
-DbFixer.match_request_time_in_orderbook_entry("gopax", "okcoin", "btc_orderbook", start_time, end_time)
+DbFixer.check_empty_data_by_rq_time("gopax", "bch_orderbook", start_time, end_time)
+# DbFixer.match_request_time_in_orderbook_entry("gopax", "okcoin", "btc_orderbook", start_time, end_time)
