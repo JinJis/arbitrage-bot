@@ -21,10 +21,6 @@ class BithumbApi(MarketApi):
     def __init__(self, is_public_access_only=False):
         super().__init__(is_public_access_only)
 
-        requests_log = logging.getLogger("requests.packages.urllib3")
-        requests_log.setLevel(logging.DEBUG)
-        requests_log.propagate = True
-
         if not is_public_access_only:
             # set instance wide config
             self._config = configparser.ConfigParser()
@@ -143,7 +139,6 @@ class BithumbApi(MarketApi):
         result = dict()
         for key in dict(all_res_json["data"]).keys():
             if "total_" in str(key):
-
                 currency_name = str(key).replace("total_", "")
                 result[currency_name] = {
                     "available": all_res_json["data"]["available_%s" % currency_name],

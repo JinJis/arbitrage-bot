@@ -15,12 +15,12 @@ class TradeStreamer(TradeHandler):
         self.reset_acutal_trader_starter()
 
         # log when init
-        logging.error("================================")
-        logging.error("|| Trade Streamer Launched!!! ||")
-        logging.error("================================\n")
-        logging.error("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
-                                                           self.target_currency.upper(),
-                                                           self.mm1_coin_bal))
+        logging.warning("================================")
+        logging.warning("|| Trade Streamer Launched!!! ||")
+        logging.warning("================================\n")
+        logging.warning("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
+                                                             self.target_currency.upper(),
+                                                             self.mm1_coin_bal))
         logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
                                                                self.target_currency.upper(),
                                                                self.mm2_coin_bal))
@@ -108,16 +108,16 @@ class TradeStreamer(TradeHandler):
         # check whether to proceed to next step
         self.to_proceed_handler_for_initiation_mode()
 
-        logging.error("================================")
-        logging.error("|| Conducting Initiation Mode ||")
-        logging.error("================================\n")
+        logging.warning("================================")
+        logging.warning("|| Conducting Initiation Mode ||")
+        logging.warning("================================\n")
 
         # run FTI Analysis mode (for initiation mode)
         final_opt_iyo_dict = self.run_fti_analysis()
 
         # if there was no oppty, stop bot
         if final_opt_iyo_dict is None:
-            logging.error("There was no oppty during Initiation Mode..Will wait by conducting Trading Mode")
+            logging.warning("There was no oppty during Initiation Mode..Will wait by conducting Trading Mode")
             return
 
         # finally, post to MongoDB
@@ -132,9 +132,9 @@ class TradeStreamer(TradeHandler):
         })
 
     def run_trading_mode(self, loop_count: int):
-        logging.error("======================================")
-        logging.error("|| Conducting Trading Mode -- # %4d ||" % loop_count)
-        logging.error("======================================\n")
+        logging.warning("======================================")
+        logging.warning("|| Conducting Trading Mode -- # %4d ||" % loop_count)
+        logging.warning("======================================\n")
 
         final_opt_iyo_dict = self.run_fti_analysis()
 
