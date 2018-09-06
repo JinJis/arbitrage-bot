@@ -16,15 +16,15 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 4 * 60 * 60
-    INITIATION_REWEIND_TIME = 15 * 60
+    TIME_DUR_OF_SETTLEMENT = 7 * 60 * 60
+    INITIATION_REWEIND_TIME = 30 * 60
 
     TRADING_MODE_LOOP_INTERVAL = 5
     TRADING_MODE_BIG_S_IYO_REWIND_TIME = 30 * 60
 
     # this is useful when investing krw is big
     EXHAUST_CTRL_DIVISION = 20  # bigger it is, more frequently to apply exhaustion ctrl
-    EXHAUST_CTRL_BOOSTER = 4  # if investing krw is small, recommand this lte 1
+    EXHAUST_CTRL_BOOSTER = 2  # if investing krw is small, recommand this lte 1
     EXHAUST_CTRL_INHIBITOR = 0.25  # if 1: no inhibit, less than 1 -> more inhibition
 
     YIELD_THRESHOLD_RATE_START = 0.1
@@ -35,7 +35,7 @@ class TradeHandler:
     FTI_FORMULA_WEIGHT_END = 1.0
     FTI_FORMULA_WEIGHT_STEP = 0.05
 
-    FTI_MIN_INTERVAL = 2
+    FTI_MIN_INTERVAL = 5
 
     MAX_TI_MULTIPLIER_START = 1
     MAX_TI_MULTIPLIER_END = 5
