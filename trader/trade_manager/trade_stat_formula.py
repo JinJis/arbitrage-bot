@@ -8,16 +8,7 @@ class TradeFormulaApplied:
     def get_formulated_trade_interval(sliced_iyo_list: list, mm1_krw_bal: float, mm2_krw_bal: float,
                                       settlement_time: int, weight: float, min_trade_interval: int,
                                       max_trade_interval_multiplier: int):
-        """
-        :return:
-        fti_iyos_result_dict = {"fti_exhaust_rate": flot,
-                                "fti_yield_sum" : float,
-                                "predicted_yield_by_settle": float
-                                "fti_iyo_list": [iyo, iyo, iyo...]
-                                                    ** iyo =
-                                                    {"fti",
-                                                    "fti_yield"}}
-        """
+
         target_formula = TradeFormula.formulated_trading_interval_formula
 
         cur_end_krw_bal = mm1_krw_bal + mm2_krw_bal
@@ -61,7 +52,7 @@ class TradeFormulaApplied:
                 calced_trade_interval = min_trade_interval
             # if calced_trading_interval is greater than iyo_run_time -> iyo_run_time
             elif iyo_run_time < calced_trade_interval < max_trade_interval_multiplier * iyo_run_time:
-                calced_trade_interval = iyo_run_time
+                calced_trade_interval = calced_trade_interval
             elif max_trade_interval_multiplier * iyo_run_time < calced_trade_interval:
                 continue
 
@@ -108,21 +99,15 @@ class TradeFormulaApplied:
         return s_iyo_yield_dict_list
 
     @staticmethod
-    def get_yield_histo_filtered_dict(s_iyo_yield_dict_list: list, sliced_iyo_list: list,
+    def get_yield_histo_filtered_dict(past_s_iyo_list: list,
                                       yield_th_rate_start, yield_th_rate_end, yield_th_rate_step):
-        """
-        :return:
-        yield_rank_filtered_dict =
-        {"0.1": [filtered_iyo, filt_iyo, ....],
-         "0.2": [filtered_iyo, filt_iyo, ....], ...
-        }
-        """
 
-        # convert s_iyo_yield_dict in flattend list
-        s_iyo_yield_list = [x["yield"] for x in s_iyo_yield_dict_list]
+        # extract yield from past data and make it a list
+        yield_only_list = [x["yield"] for x in past_s_iyo_list]
 
-        for s_iyo in sliced_iyo_list:
-            yield_rank_rate = TradeFormula.get_area_percent_by_histo_formula(s_iyo_yield_list, s_iyo["yield"])
+        # calc yield rank rate
+        for s_iyo in past_s_iyo_list:
+            yield_rank_rate = TradeFormula.get_area_percent_by_histo_formula(yield_only_list, s_iyo["yield"])
             s_iyo["yield_rank_rate"] = yield_rank_rate
 
         # create yield rank sequence to loop and analyze further down
@@ -131,7 +116,7 @@ class TradeFormulaApplied:
                                                         yield_th_rate_step):
 
             yield_histo_filtered_list = []
-            for s_iyo in sliced_iyo_list:
+            for s_iyo in past_s_iyo_list:
                 if s_iyo["yield_rank_rate"] >= yield_th_rate:
                     yield_histo_filtered_list.append(s_iyo)
                 else:

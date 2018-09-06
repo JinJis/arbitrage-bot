@@ -31,7 +31,7 @@ class RiskFreeArbBotV3(BaseArbBot):
             if self.actual_trader_starter_col.find_one(
                     sort=[('_id', pymongo.DESCENDING)]
             )["trade_command"] is True:
-                logging.error("Trade Streamer ready! Now commencing RFAB Actual Trader")
+                logging.critical("Trade Streamer ready! Now commencing RFAB Actual Trader")
                 break
             time.sleep(3)
         self.launch_actual_trader()
@@ -69,13 +69,13 @@ class RiskFreeArbBotV3(BaseArbBot):
             # if no oppty,
             if fti_set["no_oppty"] is True:
                 self.trade_interval_in_sec = 5
-                logging.warning("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
+                logging.error("No opted FTI in MongoDB because of no oppty.. Waiting for Oppty")
                 return
             if fti_set["settlement"] is True:
                 raise KeyboardInterrupt
 
             else:
-                logging.warning("Unexpected data type in FTI mongodb.. passing this loop")
+                logging.error("Nothing in FTI_IYO_LIST.. Probably streamer decided not to trade!")
                 return
 
         # if there is data in fti_iyo_list, read latest init_setting & trade_interval
@@ -173,7 +173,7 @@ class RiskFreeArbBotV3(BaseArbBot):
             return None
 
         # make buy & sell order
-        logging.critical("========[ Trade INFO]========================")
+        logging.critical("========[ Successful Trade INFO]========================")
         logging.critical("Buying Price: %.2f" % spread_info.buy_unit_price)
         logging.critical("Buying Amount: %f" % spread_info.buy_order_amt)
         logging.critical("Selling Price: %.2f" % spread_info.sell_unit_price)
