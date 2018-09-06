@@ -1,6 +1,7 @@
 import time
 from enum import Enum
 from threading import Lock
+from bson import Decimal128
 
 
 class TradeTag(Enum):
@@ -55,7 +56,21 @@ class Trade:
             "trade_id": self.trade_id,
             "timestamp": self.timestamp,
             "tag": self.trade_tag.value,
-            "orders": [order for order in self.orders],
+            "orders": [{
+                "timestamp": order.timestamp,
+                "order_id": order.order_id,
+                "market": order.market.value,
+                "currency": order.currency.name,
+                "order_type": order.order_type.value,
+                "status": order.status.value,
+                "price": Decimal128(str(order.price)),
+                "order_amount": Decimal128(str(order.order_amount)),
+                "filled_amount": Decimal128(str(order.filled_amount)),
+                "remain_amount": Decimal128(str(order.remain_amount)),
+                "avg_filled_price": Decimal128(str(order.avg_filled_price)),
+                "fee": Decimal128(str(order.fee)),
+                "fee_rate": Decimal128(str(order.fee_rate))
+            } for order in self.orders],
             "meta": self.trade_meta.to_dict()
         }
 

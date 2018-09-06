@@ -569,7 +569,8 @@ class TradeHandler:
             slicied_iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
                                                               is_stat_appender=False, is_slicing_dur=True,
                                                               slicing_interval=sliced_iyo_config["slicing_interval"])
-        except IndexError:
+        # FIXME: type error는 커서 에러때문에...
+        except IndexError or TypeError:
             slicied_iyo_result = None
 
         return slicied_iyo_result
