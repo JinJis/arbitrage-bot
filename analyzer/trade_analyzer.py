@@ -230,7 +230,74 @@ class ATSAnalyzer:
                           buy_order_amt=buy_amt, sell_order_amt=sell_amt)
 
 
-"""Initial Setting optimizer Analyzer"""
+""" Trade Streamer Analyzer """
+
+
+class MCTSAnalyzer:
+    @staticmethod
+    def min_coin_tradable_spread_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
+                                          mm1_market_fee: float, mm2_market_fee: float,
+                                          streamer_min_trading_coin: float):
+        mm1_minask_price, mm1_maxbid_price = BasicAnalyzer.get_price_of_minask_maxbid(mm1_orderbook)
+        mm1_minask_amount, mm1_maxbid_amount = BasicAnalyzer.get_amount_of_minask_maxbid(mm1_orderbook)
+
+        mm2_minask_price, mm2_maxbid_price = BasicAnalyzer.get_price_of_minask_maxbid(mm2_orderbook)
+        mm2_minask_amount, mm2_maxbid_amount = BasicAnalyzer.get_amount_of_minask_maxbid(mm2_orderbook)
+
+        # new => buy in mm1, sell in mm2
+        new_spread_info = MCTSAnalyzer.get_min_coin_tradable_spread_info(mm1_minask_price, mm1_minask_amount,
+                                                                         mm1_market_fee,
+                                                                         mm2_maxbid_price, mm2_maxbid_amount,
+                                                                         mm2_market_fee, streamer_min_trading_coin)
+        # rev => buy in mm2, sell in mm1
+        rev_spread_info = MCTSAnalyzer.get_min_coin_tradable_spread_info(mm2_minask_price, mm2_minask_amount,
+                                                                         mm2_market_fee,
+                                                                         mm1_maxbid_price, mm1_maxbid_amount,
+                                                                         mm1_market_fee, streamer_min_trading_coin)
+
+        return {
+            "new": new_spread_info,
+            "rev": rev_spread_info
+        }
+
+    @staticmethod  # avail_amount = total amount of coin that specific mkt provides
+    def get_min_coin_tradable_spread_info(buy_unit_price: (int or float), buy_avail_amount: float, buy_fee: float,
+                                          sell_unit_price: (int or float), sell_avail_amount: float, sell_fee: float,
+                                          streamer_min_trading_coin: float):
+        # buy, sell 그리고 설정한 최대 거래 코인수 중 최소값이 거래되는 qty (tradable qty는 mm1, mm2에서 제공하는 qty에 모두 만족되는 양)
+        tradable_qty = streamer_min_trading_coin
+
+        spread_in_unit = (-1) * buy_unit_price / (1 - buy_fee) + (+1) * sell_unit_price * (1 - sell_fee)
+
+        if (tradable_qty > buy_avail_amount) or (tradable_qty > sell_avail_amount):
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+
+        if tradable_qty < 0:
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+
+        # 여기 굉장히 중요!!! trade후 mm1, mm2 코인 수 합 정확히 유지해줘야함
+        # buy하면 buy하는 코인 주문 amt에서 fee 차감되어 들어옴
+        # sell은 코인 주문 amt 만큼 들어옴
+
+        # 1)
+        if tradable_qty / (1 - buy_fee) > buy_avail_amount:
+            # Don't trade
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+
+        buy_amt = tradable_qty / (1 - buy_fee)
+        sell_amt = tradable_qty
+
+        # in unit은 코인 한개 거래시 스프레드. possible trading qty 곱해주면 (buy쪽 수수료 코인으로 차감되는 경우 감안) 실제 스프레드
+        spread_to_trade = \
+            (-1) * buy_unit_price * buy_amt * (1 - buy_fee) + (+1) * sell_unit_price * sell_amt * (1 - sell_fee)
+
+        return SpreadInfo(able_to_trade=True,
+                          spread_in_unit=spread_in_unit, spread_to_trade=spread_to_trade,
+                          buy_unit_price=buy_unit_price, sell_unit_price=sell_unit_price,
+                          buy_order_amt=buy_amt, sell_order_amt=sell_amt)
+
+
+""" Initial Setting optimizer Analyzer """
 
 
 class ISOAnalyzer:
