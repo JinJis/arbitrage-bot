@@ -24,7 +24,7 @@ class TradeHandler:
 
     # this is useful when investing krw is big
     EXHAUST_CTRL_DIVISION = 20  # bigger it is, more frequently to apply exhaustion ctrl
-    EXHAUST_CTRL_BOOSTER = 4    # if investing krw is small, recommand this lte 1
+    EXHAUST_CTRL_BOOSTER = 4  # if investing krw is small, recommand this lte 1
     EXHAUST_CTRL_INHIBITOR = 0.25  # if 1: no inhibit, less than 1 -> more inhibition
 
     YIELD_THRESHOLD_RATE_START = 0.1
@@ -134,12 +134,12 @@ class TradeHandler:
 
     def to_proceed_handler_for_initiation_mode(self):
 
-        to_proceed = str(input("Inner & Outer OCAT finished. Do you want to change any settings? (y/n)"))
-        if to_proceed == "y":
+        to_proceed = str(input("Inner & Outer OCAT finished. Do you want to change any settings? (Y/n)"))
+        if to_proceed == "Y":
             # set settings accordingly
             self.target_currency = str(input("Type target_currency:"))
-            self.mm1: MarketManager = getattr(ConfigMarketManager, input("Type MM1!! ex) bithumb :").upper()).value
-            self.mm2: MarketManager = getattr(ConfigMarketManager, input("Type MM2!! ex) BITHUMB :").upper()).value
+            self.mm1: MarketManager = getattr(ConfigMarketManager, input("Type MM1: ").upper()).value
+            self.mm2: MarketManager = getattr(ConfigMarketManager, input("Type MM2: ").upper()).value
             self.mm1_name = self.mm1.get_market_name().lower()
             self.mm2_name = self.mm2.get_market_name().lower()
 
@@ -148,8 +148,8 @@ class TradeHandler:
 
             logging.warning("========== [INITIAL BALANCE] ================")
             logging.warning("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
-                                                               self.target_currency.upper(),
-                                                               self.mm1_coin_bal))
+                                                                 self.target_currency.upper(),
+                                                                 self.mm1_coin_bal))
             logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
                                                                    self.target_currency.upper(),
                                                                    self.mm2_coin_bal))
@@ -166,8 +166,8 @@ class TradeHandler:
 
             logging.warning("========== [INITIAL BALANCE] ================")
             logging.warning("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
-                                                               self.target_currency.upper(),
-                                                               self.mm1_coin_bal))
+                                                                 self.target_currency.upper(),
+                                                                 self.mm1_coin_bal))
             logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
                                                                    self.target_currency.upper(),
                                                                    self.mm2_coin_bal))
@@ -448,7 +448,15 @@ class TradeHandler:
         elif self.is_trading_mode:
             latest_rev_ledger: Collection = self.streamer_db["revenue_ledger"].find_one(
                 sort=[('_id', pymongo.DESCENDING)])
-            latest_rev_ledger["current_bal"] = bal_to_append
+
+            init_bal = latest_rev_ledger["initial_bal"]
+            self.streamer_db["revenue_ledger"].insert({
+                "target_currency": self.target_currency,
+                "mm1_name": self.mm1_name,
+                "mm2_name": self.mm2_name,
+                "initial_bal": init_bal,
+                "current_bal": bal_to_append
+            })
 
         else:
             raise Exception("Something went wrong while appending conducting Revenue Ledger!")
