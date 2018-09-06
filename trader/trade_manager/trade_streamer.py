@@ -1,7 +1,5 @@
 import time
 import logging
-from multiprocessing import Process
-from trader.risk_free_arb_bot_v3 import RiskFreeArbBotV3
 from trader.trade_manager.trade_handler import TradeHandler
 from trader.market_manager.market_manager import MarketManager
 
@@ -46,25 +44,10 @@ class TradeStreamer(TradeHandler):
                 # reset time relevant
                 self.reset_time_relevant_before_trading_mode()
 
-                # wait for trading mode to be ready
-                time.sleep(self.TRADING_MODE_LOOP_INTERVAL)
-
-                # multiprocess Trading Mode and Acutal Trader
-                # self.launch_multiprocessing()
                 self.launch_trading_mode()
         except KeyboardInterrupt:
             # reset Actual Trader to commence
             self.reset_acutal_trader_starter()
-
-    def launch_multiprocessing(self):
-        p1 = Process(target=self.launch_trading_mode())
-        p2 = Process(target=RiskFreeArbBotV3(self.mm1, self.mm2, self.target_currency, self.streamer_db).run())
-
-        p1.start()
-        p2.start()
-
-        p1.join()
-        p2.join()
 
     def launch_trading_mode(self):
         """ TRADING MODE """
@@ -73,9 +56,13 @@ class TradeStreamer(TradeHandler):
             if self.is_trading_mode:
 
                 # check if reached settlement time
-                if self.trading_mode_start_time > self.settlement_time:
+                if self.trading_mode_start_time > self._settlement_time:
                     self.trade_handler_when_settlement_reached()
                     raise KeyboardInterrupt
+
+                # run trading_mode
+                trading_loop_count += 1
+                self.run_trading_mode(trading_loop_count)
 
                 # update balance
                 self.update_balance()
@@ -85,10 +72,6 @@ class TradeStreamer(TradeHandler):
 
                 # update bal seq by exhaust rate ctrl algorithm
                 self.update_bal_seq_end_by_recent_bal_and_exhaust_ctrl()
-
-                # run trading_mode
-                trading_loop_count += 1
-                self.run_trading_mode(trading_loop_count)
 
                 # sleep by Trading Mode Loop Interval
                 self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),

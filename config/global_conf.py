@@ -263,8 +263,8 @@ class Global:
             a_rt = a_item["requestTime"]
             b_rt = b_item["requestTime"]
             if a_rt != b_rt:
-                raise Exception("Please manually check and fix the data on DB: "
-                                "a_cursor requestTime - %d, b_cursor requestTime - %d" % (a_rt, b_rt))
+                raise IndexError("Please manually check and fix the data on DB: "
+                                 "a_cursor requestTime - %d, b_cursor requestTime - %d" % (a_rt, b_rt))
 
     @staticmethod
     def iso8601_to_unix(date_string):

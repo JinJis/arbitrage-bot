@@ -16,11 +16,11 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 8 * 60 * 60
-    INITIATION_REWEIND_TIME = 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 4 * 60 * 60
+    INITIATION_REWEIND_TIME = 30 * 60
 
-    TRADING_MODE_LOOP_INTERVAL = 5
-    TRADING_MODE_BIG_S_IYO_REWIND_TIME = 60 * 60
+    TRADING_MODE_LOOP_INTERVAL = 10
+    TRADING_MODE_BIG_S_IYO_REWIND_TIME = 30 * 60
 
     # this is useful when investing krw is big
     EXHAUST_CTRL_DIVISION = 8
@@ -63,9 +63,6 @@ class TradeHandler:
 
         self.slicing_interval = Global.read_sliced_iyo_setting_config(self.target_currency)["slicing_interval"]
 
-        self.bot_start_time = int(time.time())
-        self.rewined_time = int(self.bot_start_time - self.INITIATION_REWEIND_TIME)
-
         self.initiation_start_time = int(time.time())
         self.init_s_iyo_rewined_time = int(self.initiation_start_time - self.INITIATION_REWEIND_TIME)
 
@@ -73,7 +70,7 @@ class TradeHandler:
         self.trading_mode_s_iyo_rewined_time = None
 
         self.bot_start_time = None
-        self.settlement_time = None
+        self._settlement_time = None
 
         self.cur_exhaust_ctrl_stage = 0
         self.init_exhaust_ctrl_currency_bal = None
@@ -227,21 +224,15 @@ class TradeHandler:
             coin_seq_end=(self.mm1_coin_bal + self.mm2_coin_bal) / rough_exhaust_divider)
 
     def reset_time_relevant_before_trading_mode(self):
-        self.trading_mode_s_iyo_rewined_time = self.initiation_start_time
         self.bot_start_time = int(time.time())
-        self.trading_mode_start_time = int(time.time())
-        self.settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
-
-    """
-    =======================
-    || TRADING MODE ONLY ||
-    =======================
-    """
+        self.trading_mode_start_time = self.bot_start_time
+        self.trading_mode_s_iyo_rewined_time = self.initiation_start_time
+        self._settlement_time = self.bot_start_time + self.TIME_DUR_OF_SETTLEMENT
 
     def update_bal_seq_end_by_recent_bal_and_exhaust_ctrl(self):
 
         # update exhaust_ctrl_currency
-        self.update_exhaust_ctrl_target_currency()
+        trade_strategy = self.update_exhaust_ctrl_target_currency()
 
         # update exhaust_ctrl_stage
         self.update_exhaust_stage_and_iyo_config()
@@ -258,11 +249,18 @@ class TradeHandler:
         latest_rev_ledger = self.streamer_db["revenue_ledger"].find_one(
             sort=[('_id', pymongo.DESCENDING)]
         )
-        initial_total_krw = latest_rev_ledger["initial_bal"]["krw"]["total"]
-        initial_total_coin = latest_rev_ledger["initial_bal"]["coin"]["total"]
+        if trade_strategy == "new":
+            current_krw_be_traded = latest_rev_ledger["current_bal"]["krw"]["mm1"]
+            current_coin_be_traded = latest_rev_ledger["current_bal"]["coin"]["mm2"]
 
-        krw_seq_end = initial_total_krw / exhaust_rate_divider
-        coin_seq_end = initial_total_coin / exhaust_rate_divider
+        elif trade_strategy == "rev":
+            current_krw_be_traded = latest_rev_ledger["current_bal"]["krw"]["mm2"]
+            current_coin_be_traded = latest_rev_ledger["current_bal"]["coin"]["mm1"]
+        else:
+            raise Exception("Invalid type of trade strategy injected.. should be one of NEW or REV")
+
+        krw_seq_end = current_krw_be_traded / exhaust_rate_divider
+        coin_seq_end = current_coin_be_traded / exhaust_rate_divider
 
         # update Balance seq end accordingly
         Global.write_balance_seq_end_to_ini(krw_seq_end=krw_seq_end,
@@ -275,11 +273,17 @@ class TradeHandler:
         logging.warning("[KRW] seq end: %.5f" % krw_seq_end)
         logging.warning("[%s] seq end: %.5f\n" % (self.target_currency.upper(), coin_seq_end))
 
+    """
+    =======================
+    || TRADING MODE ONLY ||
+    =======================
+    """
+
     def update_exhaust_stage_and_iyo_config(self):
 
-        now_time = int(time.time())
+        now_time = self.trading_mode_start_time
 
-        stage_length = int((self.settlement_time - self.bot_start_time) / self.EXHAUST_CTRL_DIVISION)
+        stage_length = int((self._settlement_time - self.bot_start_time) / self.EXHAUST_CTRL_DIVISION)
         if self.cur_exhaust_ctrl_stage is None:
             self.cur_exhaust_ctrl_stage = 1
         else:
@@ -305,6 +309,7 @@ class TradeHandler:
 
         # IF NEW
         if latest_s_iyo["new_oppty_count"] >= latest_s_iyo["rev_oppty_count"]:
+            trade_strategy = "new"
             krw_to_exhaust = latest_rev_ledger["current_bal"]["krw"]["mm1"]
             coin_to_exhaust = latest_rev_ledger["current_bal"]["coin"]["mm2"] * mid_price
 
@@ -319,6 +324,7 @@ class TradeHandler:
 
         # IF REV
         else:
+            trade_strategy = "rev"
             krw_to_exhaust = latest_rev_ledger["current_bal"]["krw"]["mm2"]
             coin_to_exhaust = latest_rev_ledger["current_bal"]["coin"]["mm1"] * mid_price
 
@@ -330,6 +336,8 @@ class TradeHandler:
             else:
                 self.init_exhaust_ctrl_currency_bal = latest_rev_ledger["initial_bal"]["krw"]["mm2"]
                 self.cur_exhaust_ctrl_currency_bal = latest_rev_ledger["current_bal"]["krw"]["mm2"]
+
+        return trade_strategy
 
     @staticmethod
     def trading_mode_loop_sleep_handler(mode_start_time: int, mode_end_time: int, mode_loop_interval: int):
@@ -352,8 +360,8 @@ class TradeHandler:
         })
 
     def reset_time_relevant_for_trading_mode(self):
+        self.trading_mode_s_iyo_rewined_time = self.trading_mode_start_time
         self.trading_mode_start_time = int(time.time())
-        self.trading_mode_s_iyo_rewined_time = self.trading_mode_start_time - self.slicing_interval
 
     def trade_handler_when_settlement_reached(self):
         logging.critical("Bot reached settlement time!! closing trade...")
@@ -438,11 +446,14 @@ class TradeHandler:
                 "current_bal": bal_to_append
             })
 
-        # if initiation mdoe, only append to current balance
-        if self.is_trading_mode:
+        # if trading mdoe, only append to current balance
+        elif self.is_trading_mode:
             latest_rev_ledger: Collection = self.streamer_db["revenue_ledger"].find_one(
                 sort=[('_id', pymongo.DESCENDING)])
             latest_rev_ledger["current_bal"] = bal_to_append
+
+        else:
+            raise Exception("Something went wrong while appending conducting Revenue Ledger!")
 
     """
     ==============================
@@ -454,13 +465,13 @@ class TradeHandler:
 
         # change time info up-to-date (since some minutes passed b/c of OCAT and Balance transfer
         if self.is_initiation_mode:
-            logging.error("Now conducting [Initiation Mode >> FTI Analysis]")
+            logging.warning("Now conducting [Initiation Mode >> FTI Analysis]")
 
             # launch Oppty Sliced IYO
             sliced_iyo_list = self.launch_oppty_sliced_iyo(self.initiation_start_time, self.init_s_iyo_rewined_time)
 
-            # if no s_iyo data b/c of no oppty
-            if len(sliced_iyo_list) == 0:
+            # if no s_iyo data b/c of no oppty OR cursor diff occured
+            if (len(sliced_iyo_list) == 0) or (sliced_iyo_list is None):
                 return
 
             # post result to MongoDb
@@ -469,35 +480,29 @@ class TradeHandler:
             # extract yield only dict data from s_iyo list
             extracted_yield_dict_list = TradeFormulaApplied.extract_yield_dict_from_s_iyo_list(sliced_iyo_list)
 
-            bot_start_time = self.init_s_iyo_rewined_time
+            anal_start_time = self.init_s_iyo_rewined_time
 
         elif self.is_trading_mode:
-            logging.error("Now conducting [Trading Mode >> FTI Analysis]")
+            logging.warning("Now conducting [Trading Mode >> FTI Analysis]")
 
             # launch Oppty Sliced IYO
             small_s_iyo_list = self.launch_oppty_sliced_iyo(self.trading_mode_start_time,
                                                             self.trading_mode_s_iyo_rewined_time)
 
-            # if no s_iyo data b/c of no oppty
-            if len(small_s_iyo_list) == 0:
+            # if no s_iyo data b/c of no oppty OR cursor diff occured
+            if (len(small_s_iyo_list) == 0) or (small_s_iyo_list is None):
                 logging.error(">>> There is no oppty time now...Waiting for oppty..")
                 return
 
             # post this small dur s-iyo to MongoDB
             self.streamer_db["s_iyo"].insert_many(small_s_iyo_list)
 
-            # get same amount of duration as of Initiation Mode from s_iyo DB
-            # limit Big S_IYO duration to be less or equal than TRADING MODE BIG S_IYO REWIND TIME
-            if (self.trading_mode_start_time - self.bot_start_time) > self.TRADING_MODE_BIG_S_IYO_REWIND_TIME:
-                start_time = self.trading_mode_start_time - self.TRADING_MODE_BIG_S_IYO_REWIND_TIME
-            else:
-                start_time = self.bot_start_time
-
             s_iyo_col = self.streamer_db["s_iyo"]
-            s_iyo_cur_list = s_iyo_col.find({"settings.end_time": {
-                "$gte": start_time,
-                "$lte": self.trading_mode_start_time
-            }}).sort([("end_time", 1)])
+            s_iyo_cur_list = s_iyo_col.find({
+                "settings.start_time": {
+                    "$gte": self.trading_mode_start_time - self.TRADING_MODE_BIG_S_IYO_REWIND_TIME},
+                "settings.end_time": {
+                    "$lte": self.trading_mode_start_time}}).sort([("start_time", 1)])
 
             sliced_iyo_list = []
             for iyo in s_iyo_cur_list:
@@ -508,7 +513,7 @@ class TradeHandler:
             # analysis target is small_s_iyo_list (which is the most recent set), so change
             sliced_iyo_list = small_s_iyo_list
 
-            bot_start_time = self.bot_start_time
+            anal_start_time = self.bot_start_time
 
         else:
             raise Exception("Trade Streamer should be launched with one of 2 modes -> "
@@ -521,7 +526,7 @@ class TradeHandler:
                                                                                     self.YIELD_THRESHOLD_RATE_END,
                                                                                     self.YIELD_THRESHOLD_RATE_STEP)
         # launch Formulated Trade Interval (FTI)
-        fti_result_list = self.launch_formulated_trade_interval(yield_histo_filted_dict, bot_start_time)
+        fti_result_list = self.launch_formulated_trade_interval(yield_histo_filted_dict, anal_start_time)
 
         # loop through all fti_result and get the best one expected yield and its infos
         final_opt_iyo_dict = self.get_opted_fti_one_result(fti_result_list)
@@ -553,13 +558,17 @@ class TradeHandler:
                                                                  sliced_iyo_config["threshold_end"],
                                                                  sliced_iyo_config["appx_unit_coin_price"])
 
-        slicied_iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
-                                                          is_stat_appender=False, is_slicing_dur=True,
-                                                          slicing_interval=sliced_iyo_config["slicing_interval"])
+        try:
+            slicied_iyo_result = IntegratedYieldOptimizer.run(settings, bal_factor_settings, factor_settings,
+                                                              is_stat_appender=False, is_slicing_dur=True,
+                                                              slicing_interval=sliced_iyo_config["slicing_interval"])
+        except IndexError:
+            slicied_iyo_result = None
+
         return slicied_iyo_result
 
-    def launch_formulated_trade_interval(self, yield_histo_filted_dict: dict, bot_start_time: int):
-        time_of_settlement = int(bot_start_time + self.TIME_DUR_OF_SETTLEMENT)
+    def launch_formulated_trade_interval(self, yield_histo_filted_dict: dict, anal_start_time: int):
+        time_of_settlement = int(anal_start_time + self.TIME_DUR_OF_SETTLEMENT)
 
         fti_final_result_list = []
         for yield_th_rate in list(yield_histo_filted_dict.keys()):
