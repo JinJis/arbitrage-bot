@@ -5,7 +5,8 @@ from config.global_conf import Global
 class TradeSettingConfig:
 
     @staticmethod
-    def get_settings(mm1_name: str, mm2_name: str, target_currency: str, start_time: int, end_time: int, division: int,
+    def get_settings(mm1_name: str, mm2_name: str, target_currency: str,
+                     start_time: int, end_time: int, division: int,
                      depth: int, consecution_time: int, is_virtual_mm: bool):
         if is_virtual_mm:
             mm1_tag = "VIRTUAL_%s" % mm1_name.upper()
@@ -23,16 +24,16 @@ class TradeSettingConfig:
                 "taker_fee": Global.read_market_fee(mm1_name, is_taker_fee=True),
                 "maker_fee": Global.read_market_fee(mm1_name, is_taker_fee=False),
                 "min_trading_coin": Global.read_min_trading_coin(mm1_name, target_currency),
-                "krw_balance": 1000000,
-                "coin_balance": 10
+                "krw_balance": 10000000,
+                "coin_balance": 100
             },
             "mm2": {
                 "market_tag": getattr(Market, mm2_tag),
                 "taker_fee": Global.read_market_fee(mm2_name, is_taker_fee=True),
                 "maker_fee": Global.read_market_fee(mm2_name, is_taker_fee=False),
                 "min_trading_coin": Global.read_min_trading_coin(mm2_name, target_currency),
-                "krw_balance": 1000000,
-                "coin_balance": 10
+                "krw_balance": 10000000,
+                "coin_balance": 100
 
             },
             "division": division,

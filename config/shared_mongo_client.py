@@ -2,6 +2,7 @@ import logging
 from .global_conf import Global
 from trader.market.market import Market
 from pymongo import MongoClient
+from pymongo.cursor import Cursor
 from pymongo.collection import Collection
 from pymongo.database import Database
 
@@ -127,12 +128,84 @@ class SharedMongoClient:
 
         mm1_count = mm1_cursor.count()
         mm2_count = mm2_cursor.count()
+
         if mm1_count != mm2_count:
             logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
-            logging.info("Now validating data...")
-            Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
+            logging.info("Now fixing data...")
+            SharedMongoClient.match_request_time_in_orderbook_entry(mm1_cursor, mm2_cursor, mm1_count, mm2_count,
+                                                                    mm1_data_col, mm2_data_col)
+            return IndexError("Cursor fixed.. Now evaluate again!")
 
         return mm1_cursor, mm2_cursor
+
+    @staticmethod
+    def match_request_time_in_orderbook_entry(mm1_cursor: Cursor, mm2_cursor: Cursor,
+                                              mm1_count: int, mm2_count: int,
+                                              mm1_col: Collection, mm2_col: Collection):
+
+        if mm1_count > mm2_count:
+            ctrl_cursor = mm1_cursor
+            ctrl_data_count = mm1_count
+
+            target_cur = mm2_cursor
+            target_col = mm2_col
+
+        else:
+            ctrl_cursor = mm2_cursor
+
+            ctrl_data_count = mm2_count
+
+            target_cur = mm1_cursor
+            target_col = mm1_col
+
+        # get first nearest request time from control db
+        first_ctrl_rq = ctrl_cursor[0]["requestTime"]
+
+        # first target requestTime
+        first_trgt_rq = target_cur[0]["requestTime"]
+        # second target requestTime
+        second_trgt_rq = target_cur[1]["requestTime"]
+
+        # calc difference between control reqTime and target reqTimes
+        ctrl_first_trgt_first_diff = abs(first_ctrl_rq - first_trgt_rq)
+        ctrl_first_trgt_second_diff = abs(first_ctrl_rq - second_trgt_rq)
+
+        # if first in target is nearer to first in control, set first in target as starting point
+        if ctrl_first_trgt_first_diff < ctrl_first_trgt_second_diff:
+            trgt_start_rq = first_trgt_rq
+        # if second in target is nearer to first in control, set second in target as starting point
+        elif ctrl_first_trgt_first_diff > ctrl_first_trgt_second_diff:
+            trgt_start_rq = second_trgt_rq
+        else:
+            raise Exception("Difference is same, please Manually check the database and fix!!")
+
+        # get same count of data from target db with the starting point as start time and without end time
+        trgt_data_set = target_col.find({"requestTime": {
+            "$gte": trgt_start_rq
+        }}).sort([("requestTime", 1)]).limit(ctrl_data_count)
+        trgt_data_count = trgt_data_set.count(with_limit_and_skip=True)
+
+        logging.info("ctrl count count: %d, trgt: %d" % (ctrl_data_count, trgt_data_count))
+        assert (ctrl_data_count == trgt_data_count)
+
+        last_index = ctrl_data_count - 1
+        ctrl_last_rq = ctrl_cursor[last_index]["requestTime"]
+        trgt_last_rq = trgt_data_set[last_index]["requestTime"]
+        assert (abs(ctrl_last_rq - trgt_last_rq) < 3)
+
+        # loop through both
+        # update target's request time with control's request
+        for ctrl_data, trgt_data in zip(ctrl_cursor, trgt_data_set):
+            ctrl_rq = ctrl_data["requestTime"]
+            trgt_rq = trgt_data["requestTime"]
+            logging.info("ctrl_rqt: %d, trgt_rqt: %d" % (ctrl_rq, trgt_rq))
+            if trgt_rq == ctrl_rq:
+                continue
+            SharedMongoClient._async_update(
+                target_col,
+                {"requestTime": trgt_rq},
+                {"$set": {"requestTime": ctrl_rq}}
+            )
 
     @staticmethod
     def get_target_col(market_tag: Market, target_coin: str):

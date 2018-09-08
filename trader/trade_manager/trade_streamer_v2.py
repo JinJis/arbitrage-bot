@@ -25,7 +25,6 @@ class TradeStreamerV2(TradeHandlerV2):
         """ INITIATION MODE """
         try:
             if self.is_initiation_mode:
-
                 # run initiation mode
                 self.run_initiation_mode()
 
@@ -33,43 +32,44 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.is_initiation_mode = False
                 self.is_trading_mode = True
 
-                # self.launch_trading_mode()
+                # update time relevant
+                self.set_time_relevant_before_trading_mode()
+
+                # init revenue ledger
+                self.update_revenue_ledger()
+
+                # launch trading mode
+                self.launch_trading_mode()
         except KeyboardInterrupt:
             return
 
-    # def launch_trading_mode(self):
-    #     """ TRADING MODE """
-    #     trading_loop_count = 0
-    #     while True:
-    #         if self.is_trading_mode:
-    #
-    #             # check if reached settlement time
-    #             if self.trading_mode_start_time > self._settlement_time:
-    #                 self.trade_handler_when_settlement_reached()
-    #                 raise KeyboardInterrupt
-    #
-    #             # run trading_mode
-    #             trading_loop_count += 1
-    #             self.run_trading_mode(trading_loop_count)
-    #
-    #             # update balance
-    #             self.update_balance()
-    #
-    #             # post rev_ledger to MongoDB
-    #             self.post_updated_revenue_ledger()
-    #
-    #             # update bal seq by exhaust rate ctrl algorithm
-    #             self.update_bal_seq_end_by_recent_bal_and_exhaust_ctrl()
-    #
-    #             # sleep by Trading Mode Loop Interval
-    #             self.trading_mode_loop_sleep_handler(self.trading_mode_start_time, int(time.time()),
-    #                                                  self.TRADING_MODE_LOOP_INTERVAL)
-    #             # reset time relevant
-    #             self.reset_time_relevant_for_trading_mode()
-    #
-    #         else:
-    #             raise Exception("Trade Streamer should be launched with one of 3 modes -> "
-    #                             "[INITIAL ANALYSIS MODE] / [TRADING MODE] / [OPPTY DETECTING MODE]")
+    def launch_trading_mode(self):
+        """ TRADING MODE """
+        trading_loop_count = 0
+        while True:
+            if self.is_trading_mode:
+
+                # check if reached settlement time
+                if self.trading_mode_now_time > self._settlement_time:
+                    self.settlment_reached = False
+                    raise KeyboardInterrupt
+
+                # update balance & time
+                self.update_balance()
+                self.update_revenue_ledger()
+                self.trading_mode_prev_time = self.trading_mode_now_time
+                self.trading_mode_now_time = int(time.time())
+
+                # run trading_mode
+                trading_loop_count += 1
+                self.run_trading_mode(trading_loop_count)
+
+                # post trade_commander dict to MongoDB
+                self.post_trade_commander_to_mongo()
+
+            else:
+                raise Exception("Trade Streamer should be launched with one of 2 modes -> "
+                                "[INITIAL ANALYSIS MODE] / [TRADING MODE] ")
 
     def run_initiation_mode(self):
 
@@ -86,22 +86,21 @@ class TradeStreamerV2(TradeHandlerV2):
         # save spread_to_trade list & amount of krw_earend
         self.get_min_tradable_coin_unit_spread_list(self.initiation_rewind_time, self.streamer_start_time)
 
-        # log spread_to_trade
+        # log MCTU info and decide spread threshold
+        self.log_mctu_info(self.initiation_rewind_time, self.streamer_start_time)
+        self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
 
-    # def run_trading_mode(self, loop_count: int):
-    #     logging.warning("======================================")
-    #     logging.warning("|| Conducting Trading Mode -- # %4d ||" % loop_count)
-    #     logging.warning("======================================\n")
-    #
-    #     final_opt_iyo_dict = self.run_fti_analysis()
-    #
-    #     # if there was no oppty, wait for oppty by looping real_time_streamer...
-    #     if final_opt_iyo_dict is None:
-    #         self.no_oppty_handler_for_trading_mode()
-    #         return
-    #
-    #     # finally, post to MongoDB
-    #     self.post_final_fti_result_to_mongodb(final_opt_iyo_dict)
-    #
-    #     # log final_opt_iyo_dict
-    #     self.log_final_opt_result(final_opt_iyo_dict)
+    def run_trading_mode(self, loop_count: int):
+        logging.warning("======================================")
+        logging.warning("|| Conducting Trading Mode -- # %4d ||" % loop_count)
+        logging.warning("======================================\n")
+
+        # get MTCU
+        self.get_min_tradable_coin_unit_spread_list(anal_start_time=self.trading_mode_prev_time,
+                                                    anal_end_time=self.trading_mode_now_time)
+
+        # log MCTU
+        self.log_mctu_info(self.initiation_rewind_time, self.trading_mode_now_time)
+
+        # trade command by comparing current flowed time with exhaustion rate
+        self.trade_command_by_comparing_exhaustion_with_flow_time()

@@ -48,13 +48,11 @@ def main(coin_name: str, mm1_name: str, mm2_name: str, start_time: str, end_time
 
 if __name__ == '__main__':
     # for short term (=< one day)
-    st_local = "2018.08.25 22:00:00"
-    et_local = "2018.08.26 01:00:00"
+    st_local = "2018.09.03 01:00:00"
+    et_local = "2018.09.04 01:00:00"
 
-    parsed_iyo_result = main("btc", "gopax", "okcoin", st_local, et_local, slicing_interval=120)
+    parsed_iyo_result = main("xrp", "bithumb", "okcoin", st_local, et_local, slicing_interval=20)
 
     yield_result = []
     for iyo in parsed_iyo_result:
         yield_result.append(iyo["yield"])
-
-    print(yield_result)

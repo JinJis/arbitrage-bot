@@ -1,6 +1,7 @@
 import logging
 from itertools import zip_longest
 from pymongo.cursor import Cursor
+from pymongo.collection import Collection
 from config.shared_mongo_client import SharedMongoClient
 
 
@@ -101,7 +102,7 @@ class DbFixer:
         control_col = db_client[control_db][col_name]
         target_col = db_client[target_db][col_name]
 
-        ctrl_data_set = control_col.find({"requestTime": {
+        ctrl_data_set: Cursor = control_col.find({"requestTime": {
             "$gte": start_time,
             "$lte": end_time
         }}).sort([("requestTime", 1)])

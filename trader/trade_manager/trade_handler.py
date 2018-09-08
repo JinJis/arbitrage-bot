@@ -16,11 +16,11 @@ from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:
-    TIME_DUR_OF_SETTLEMENT = 7 * 60 * 60
-    INITIATION_REWEIND_TIME = 30 * 60
+    TIME_DUR_OF_SETTLEMENT = 3 * 60 * 60
+    INITIATION_REWEIND_TIME = 10 * 60
 
     TRADING_MODE_LOOP_INTERVAL = 5
-    TRADING_MODE_BIG_S_IYO_REWIND_TIME = 30 * 60
+    TRADING_MODE_BIG_S_IYO_REWIND_TIME = 10 * 60
 
     # this is useful when investing krw is big
     EXHAUST_CTRL_DIVISION = 20  # bigger it is, more frequently to apply exhaustion ctrl
@@ -449,7 +449,9 @@ class TradeHandler:
             latest_rev_ledger: Collection = self.streamer_db["revenue_ledger"].find_one(
                 sort=[('_id', pymongo.DESCENDING)])
 
+            # get initial balance
             init_bal = latest_rev_ledger["initial_bal"]
+
             self.streamer_db["revenue_ledger"].insert({
                 "target_currency": self.target_currency,
                 "mm1_name": self.mm1_name,
