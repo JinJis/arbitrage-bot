@@ -86,7 +86,7 @@ class TradeStreamerV2(TradeHandlerV2):
     def run_initiation_mode(self):
 
         # run inner & outer OCAT
-        self.launch_inner_outer_ocat()
+        # self.launch_inner_outer_ocat()
 
         # check whether to proceed to next step
         self.to_proceed_handler_for_initiation_mode()
@@ -96,11 +96,11 @@ class TradeStreamerV2(TradeHandlerV2):
         logging.warning("|| Conducting Initiation Mode ||")
         logging.warning("================================\n")
 
-        # save spread_to_trade list & amount of krw_earend
-        self.get_min_tradable_coin_unit_spread_list(self.initiation_rewind_time, self.streamer_start_time)
-
-        # log MCTU info and decide spread threshold
-        self.log_mctu_info(self.initiation_rewind_time, self.streamer_start_time)
+        # # save spread_to_trade list & amount of krw_earend
+        # self.get_min_tradable_coin_unit_spread_list(self.initiation_rewind_time, self.streamer_start_time)
+        #
+        # # log MCTU info and decide spread threshold
+        # self.log_mctu_info(self.initiation_rewind_time, self.streamer_start_time)
 
         self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
 
