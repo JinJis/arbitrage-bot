@@ -74,6 +74,13 @@ class TradeHandlerV2:
     ==========================
     """
 
+    def post_empty_trade_commander(self):
+        self.streamer_db["trade_commander"].insert({
+            "trade": False,
+            "settlement": False
+        })
+
+
     def launch_inner_outer_ocat(self):
         # run Inner OCAT
         # decide which market has the most coin and make it as a set point
@@ -268,6 +275,13 @@ class TradeHandlerV2:
             "settlement": self.settlment_reached
         })
 
+    @staticmethod
+    def trading_mode_loop_sleep_handler(mode_start_time: int, mode_end_time: int, mode_loop_interval: int):
+        run_time = mode_end_time - mode_start_time
+        time_to_wait = int(mode_loop_interval - run_time)
+        if time_to_wait > 0:
+            time.sleep(time_to_wait)
+
     """
     ======================
     || UNIVERSALLY USED ||
@@ -345,7 +359,7 @@ class TradeHandlerV2:
                                                                division=iyo_config["division"],
                                                                depth=iyo_config["depth"],
                                                                consecution_time=iyo_config["consecution_time"],
-                                                               is_virtual_mm=False)
+                                                               is_virtual_mm=True)
         self.target_settings["mm1"]["krw_balance"] = self.mm1_krw_bal
         self.target_settings["mm1"]["coin_balance"] = self.mm1_coin_bal
         self.target_settings["mm2"]["krw_balance"] = self.mm2_krw_bal

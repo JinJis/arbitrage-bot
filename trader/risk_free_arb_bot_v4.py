@@ -59,6 +59,7 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # check if trade
         if trade_commander_set["trade"] is False:
+            logging.warning("Trade Commander is False.. Waiting for command")
             return
 
         if trade_commander_set["trade"] is True:

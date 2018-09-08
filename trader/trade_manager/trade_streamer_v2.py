@@ -20,23 +20,27 @@ class TradeStreamerV2(TradeHandlerV2):
                                                                self.target_currency.upper(),
                                                                self.mm2_coin_bal))
 
+        # update for the first time
+        self.post_empty_trade_commander()
+
     def run(self):
 
         """ INITIATION MODE """
         try:
             if self.is_initiation_mode:
+
                 # run initiation mode
                 self.run_initiation_mode()
 
-                # reset mode relevant
-                self.is_initiation_mode = False
-                self.is_trading_mode = True
+                # init revenue ledger
+                self.update_revenue_ledger()
 
                 # update time relevant
                 self.set_time_relevant_before_trading_mode()
 
-                # init revenue ledger
-                self.update_revenue_ledger()
+                # reset mode relevant
+                self.is_initiation_mode = False
+                self.is_trading_mode = True
 
                 # launch trading mode
                 self.launch_trading_mode()
@@ -67,6 +71,10 @@ class TradeStreamerV2(TradeHandlerV2):
                 # post trade_commander dict to MongoDB
                 self.post_trade_commander_to_mongo()
 
+                # sleep by Trading Mode Loop Interval
+                self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
+                                                     self.TRADING_MODE_LOOP_INTERVAL)
+
             else:
                 raise Exception("Trade Streamer should be launched with one of 2 modes -> "
                                 "[INITIAL ANALYSIS MODE] / [TRADING MODE] ")
@@ -74,7 +82,7 @@ class TradeStreamerV2(TradeHandlerV2):
     def run_initiation_mode(self):
 
         # run inner & outer OCAT
-        self.launch_inner_outer_ocat()
+        # self.launch_inner_outer_ocat()
 
         # check whether to proceed to next step
         self.to_proceed_handler_for_initiation_mode()
@@ -88,7 +96,10 @@ class TradeStreamerV2(TradeHandlerV2):
 
         # log MCTU info and decide spread threshold
         self.log_mctu_info(self.initiation_rewind_time, self.streamer_start_time)
-        self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
+
+        # fixme: 현재 테스트로 nohup하려고 해서 0으로
+        # self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
+        self.mctu_spread_threshold = 0
 
     def run_trading_mode(self, loop_count: int):
         logging.warning("======================================")
