@@ -302,6 +302,7 @@ class TradeHandlerV2:
             try:
                 mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
             except IndexError:  # after fixing DB
+                SharedMongoClient.match_request_time_in_orderbook_entry(mm1_col, mm2_col, start_time, end_time)
                 mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
 
             for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):

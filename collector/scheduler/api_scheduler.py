@@ -23,26 +23,26 @@ class ApiScheduler(BaseScheduler):
         db_client = MongoClient(mongodb_uri)
         bithumb_db = db_client["bithumb"]
         coinone_db = db_client["coinone"]
-        # korbit_db = db_client["korbit"]
+        korbit_db = db_client["korbit"]
         gopax_db = db_client["gopax"]
         okcoin_db = db_client["okcoin"]
-        # coinnest_db = db_client["coinnest"]
+        coinnest_db = db_client["coinnest"]
 
         # init api
         bithumb_api = BithumbApi.instance(True)
         coinone_api = CoinoneApi.instance(True)
-        # korbit_api = KorbitApi.instance(True)
+        korbit_api = KorbitApi.instance(True)
         gopax_api = GopaxApi.instance(True)
         okcoin_api = OkcoinApi.instance(True)
-        # coinnest_api = CoinnestApi.instance(True)
+        coinnest_api = CoinnestApi.instance(True)
 
         # init currency
         bithumb_currency = BithumbCurrency[currency.upper()]
         coinone_currency = CoinoneCurrency[currency.upper()]
-        # korbit_currency = KorbitCurrency[currency.upper()]
+        korbit_currency = KorbitCurrency[currency.upper()]
         goapx_currency = GopaxCurrency[currency.upper()]
         okcoin_currency = OkcoinCurrency[currency.upper()]
-        # coinnest_currency = CoinnestCurrency[currency.upper()]
+        coinnest_currency = CoinnestCurrency[currency.upper()]
 
         # init collector
         self.bt_collector = Collector(
@@ -51,18 +51,18 @@ class ApiScheduler(BaseScheduler):
         self.co_collector = Collector(
             coinone_api, coinone_currency, coinone_db
         )
-        # self.kb_collector = Collector(
-        #     korbit_api, korbit_currency, korbit_db
-        # )
+        self.kb_collector = Collector(
+            korbit_api, korbit_currency, korbit_db
+        )
         self.go_collector = Collector(
             gopax_api, goapx_currency, gopax_db
         )
         self.oc_collector = Collector(
             okcoin_api, okcoin_currency, okcoin_db
         )
-        # self.cn_collector = Collector(
-        #     coinnest_api, coinnest_currency, coinnest_db
-        # )
+        self.cn_collector = Collector(
+            coinnest_api, coinnest_currency, coinnest_db
+        )
 
     @abstractmethod
     def _actual_run_in_loop(self):

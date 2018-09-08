@@ -37,7 +37,12 @@ class DbFixer:
 
             for a_item, b_item in zip_longest(a_cursor, b_cursor):
                 a_rt = a_item["requestTime"]
-                b_rt = b_item["requestTime"]
+                try:
+                    b_rt = b_item["requestTime"]
+                except TypeError:
+                    print(b_item)
+                    b_rt = 0
+
                 if a_rt != b_rt:
                     logging.info("Diff: a_rt %d, b_rt %d " % (a_rt, b_rt))
                     if last_a_item is None or last_b_item is None:

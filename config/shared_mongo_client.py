@@ -132,18 +132,26 @@ class SharedMongoClient:
 
         if mm1_count != mm2_count:
             logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
-            logging.warning("Now fixing data...")
+            logging.warning("should fix data...")
             # fixme: 이렇게 푸는거 ㅇㅋ?
-            # SharedMongoClient.match_request_time_in_orderbook_entry(mm1_cursor, mm2_cursor, mm1_count, mm2_count,
-            #                                                         mm1_data_col, mm2_data_col)
-            raise IndexError
+            return IndexError
 
         return mm1_cursor, mm2_cursor
 
     @staticmethod
-    def match_request_time_in_orderbook_entry(mm1_cursor: Cursor, mm2_cursor: Cursor,
-                                              mm1_count: int, mm2_count: int,
-                                              mm1_col: Collection, mm2_col: Collection):
+    def match_request_time_in_orderbook_entry(mm1_col: Collection, mm2_col: Collection, start_time: int, end_time: int):
+
+        mm1_cursor = mm1_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+        mm2_cursor = mm2_col.find({"requestTime": {
+            "$gte": start_time,
+            "$lte": end_time
+        }}).sort([("requestTime", 1)])
+
+        mm1_count = mm1_cursor.count()
+        mm2_count = mm2_cursor.count()
 
         if mm1_count > mm2_count:
             ctrl_cursor = mm1_cursor
