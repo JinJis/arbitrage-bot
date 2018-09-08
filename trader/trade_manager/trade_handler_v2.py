@@ -14,8 +14,8 @@ from trader.market_manager.market_manager import MarketManager
 
 class TradeHandlerV2:
 
-    MIN_TRDBLE_COIN_MLTPLIER = 2
-    TIME_DUR_OF_SETTLEMENT = 8 * 60 * 60
+    MIN_TRDBLE_COIN_MLTPLIER = 1.5
+    TIME_DUR_OF_SETTLEMENT = 5 * 60 * 60
     TRADING_MODE_LOOP_INTERVAL = 5
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
@@ -302,8 +302,7 @@ class TradeHandlerV2:
             try:
                 mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
             except IndexError:  # after fixing DB
-                SharedMongoClient.match_request_time_in_orderbook_entry(mm1_col, mm2_col, start_time, end_time)
-                mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
+                return
 
             for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):
                 spread_info_dict = MCTSAnalyzer.min_coin_tradable_spread_strategy(mm1_data, mm2_data,

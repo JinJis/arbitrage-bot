@@ -134,7 +134,7 @@ class SharedMongoClient:
             logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
             logging.warning("should fix data...")
             # fixme: 이렇게 푸는거 ㅇㅋ?
-            return IndexError
+            raise IndexError
 
         return mm1_cursor, mm2_cursor
 

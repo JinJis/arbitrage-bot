@@ -112,10 +112,13 @@ class TradeStreamerV2(TradeHandlerV2):
         logging.warning("======================================\n")
 
         # get MTCU
-        self.get_min_tradable_coin_unit_spread_list(anal_start_time=self.trading_mode_prev_time,
-                                                    anal_end_time=self.trading_mode_now_time)
+        try:
+            self.get_min_tradable_coin_unit_spread_list(anal_start_time=self.trading_mode_prev_time,
+                                                        anal_end_time=self.trading_mode_now_time)
+        except TypeError or IndexError:
+            return
 
-        # log MCTU
+            # log MCTU
         self.log_mctu_info(self.initiation_rewind_time, self.trading_mode_now_time)
 
         # trade command by comparing current flowed time with exhaustion rate
