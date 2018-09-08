@@ -1,30 +1,22 @@
 import logging
 import time
 from itertools import groupby
+from config.global_conf import Global
 
 from analyzer.trade_analyzer import MCTSAnalyzer, BasicAnalyzer
 from collector.oppty_time_collector import OpptyTimeCollector
 from collector.scheduler.otc_scheduler import OTCScheduler
 from config.config_market_manager import ConfigMarketManager
-from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from config.trade_setting_config import TradeSettingConfig
 from trader.market_manager.market_manager import MarketManager
 
 
 class TradeHandlerV2:
+
     MIN_TRDBLE_COIN_MLTPLIER = 2
-
-    TIME_DUR_OF_SETTLEMENT = 2 * 60 * 60
-
+    TIME_DUR_OF_SETTLEMENT = 8 * 60 * 60
     TRADING_MODE_LOOP_INTERVAL = 5
-
-    # this is useful when investing krw is big
-    EXHAUST_CTRL_DIVISION = 20  # bigger it is, more frequently to apply exhaustion ctrl
-    EXHAUST_CTRL_BOOSTER = 1.5  # if investing krw is small, recommand this lte 1
-    EXHAUST_CTRL_INHIBITOR = 0.25  # if 1: no inhibit, less than 1 -> more inhibition
-
-    YIELD_THRESHOLD_RATE = 0.2
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
 
@@ -79,7 +71,6 @@ class TradeHandlerV2:
             "trade": False,
             "settlement": False
         })
-
 
     def launch_inner_outer_ocat(self):
         # run Inner OCAT
@@ -222,6 +213,10 @@ class TradeHandlerV2:
         # calc current exhaust rate
         exhaust_rate = self.calc_latest_exhaust_rate()
 
+        logging.warning("========= [EXHAUST INFO] ========")
+        logging.warning("Time Flowed Rate: %.2f " % time_flowed_rate)
+        logging.warning("Exhaustion Rate: %.2f\n" % exhaust_rate)
+
         if time_flowed_rate >= exhaust_rate:
             self.trade_commander = True
         else:
@@ -264,7 +259,7 @@ class TradeHandlerV2:
                 target_intial_balance = self.revenue_ledger["initial_bal"]["krw"]["mm2"]
                 target_current_balance = self.revenue_ledger["current_bal"]["krw"]["mm2"]
 
-        return round(float(target_current_balance / target_intial_balance), 5)
+        return round(float(1 - (target_current_balance / target_intial_balance)), 5)
 
     def post_trade_commander_to_mongo(self):
 
@@ -327,7 +322,7 @@ class TradeHandlerV2:
 
         # if there is no Oppty,
         if len(current_spread_to_trade_list) == 0:
-            logging.error("There is no oppty.. Skipping")
+            logging.error("*-*-*-*-*-*-*-* There is no oppty.. Skipping *-*-*-*-*-*-*-*\n")
             return
 
         # get spread_to_trade list from min_trdble_coin_sprd_list
@@ -336,12 +331,45 @@ class TradeHandlerV2:
     def log_mctu_info(self, anal_start_time: int, anal_end_time: int):
         local_anal_st = Global.convert_epoch_to_local_datetime(anal_start_time, timezone="kr")
         local_anal_et = Global.convert_epoch_to_local_datetime(anal_end_time, timezone="kr")
-        logging.warning("")
-        logging.warning("~~~~~~~~~<< MCTU INFO >>~~~~~~~~~")
-        logging.warning(">> Anal Duration: %s - %s]" % (local_anal_st, local_anal_et))
-        logging.warning(">> Spread INFO:\n %s" % self.get_mctu_spread_and_frequency())
+
+        logging.warning("========= [MCTU INFO] ========")
+        logging.warning(">> Anal Duration: %s - %s" % (local_anal_st, local_anal_et))
+        logging.warning(">> Spread INFO: %s\n" % self.get_mctu_spread_and_frequency())
+
+    def get_mctu_spread_and_frequency(self):
+        result = str()
+
+        # extract spread only list from spread to trade list
+        spread_list = [spread_info["spread_to_trade"] for spread_info in self.spread_to_trade_list]
+
+        for key, group in groupby(spread_list):
+            result += "spread: %.2f -- frequency: %.2f\n" % (key, (len(list(group)) / len(spread_list)))
+        return result
+
+    def log_rev_ledger(self):
+        logging.warning("========= [REV LEDGER INFO] ========")
+        logging.warning("<<< Initial Balance >>>")
+        target_data = self.revenue_ledger["initial_bal"]
+        logging.warning("[mm1] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
+                                                       self.target_currency, target_data["coin"]["mm1"]))
+        logging.warning("[mm2] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
+                                                       self.target_currency, target_data["coin"]["mm2"]))
+        logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
+                                                         self.target_currency, target_data["coin"]["total"]))
+
+        target_data = self.revenue_ledger["current_bal"]
+        logging.warning("<<< Current Balance >>>")
+        logging.warning("[mm1] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
+                                                       self.target_currency, target_data["coin"]["mm1"]))
+        logging.warning("[mm2] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
+                                                       self.target_currency, target_data["coin"]["mm2"]))
+        logging.warning("[total] krw: %.5f, %s: %.5f\n" % (target_data["krw"]["total"],
+                                                           self.target_currency, target_data["coin"]["total"]))
 
     def update_balance(self):
+        self.mm1.update_balance()
+        self.mm2.update_balance()
+
         self.mm1_krw_bal = float(self.mm1.balance.get_available_coin("krw"))
         self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
         self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
@@ -366,12 +394,6 @@ class TradeHandlerV2:
         self.target_settings["mm2"]["coin_balance"] = self.mm2_coin_bal
 
         return OpptyTimeCollector.run(settings=self.target_settings)
-
-    def get_mctu_spread_and_frequency(self):
-        result = str()
-        for key, group in groupby(self.spread_to_trade_list):
-            result += "spread: %.2f -- frequency:%.2f\n" % (key, (len(list(group)) / len(self.spread_to_trade_list)))
-        return result
 
     def update_revenue_ledger(self):
 
@@ -405,3 +427,6 @@ class TradeHandlerV2:
 
         else:
             raise Exception("Something went wrong while appending conducting Revenue Ledger!")
+
+        # finally post to Mongo DB
+        self.streamer_db["revenue_ledger"].insert_one(dict(self.revenue_ledger))

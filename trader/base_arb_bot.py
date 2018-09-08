@@ -51,7 +51,7 @@ class BaseArbBot(ABC):
     def trade_loop_start(self):
         # print trade loop seq
         self.loop_count += 1
-        logging.info("========== [# %12d Trade Loop] =================================================="
+        logging.warning("========== [# %12d Trade Loop] =================================================="
                      % self.loop_count)
         self.loop_start_time = time.time()
 

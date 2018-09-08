@@ -28,7 +28,6 @@ class TradeStreamerV2(TradeHandlerV2):
         """ INITIATION MODE """
         try:
             if self.is_initiation_mode:
-
                 # run initiation mode
                 self.run_initiation_mode()
 
@@ -44,7 +43,9 @@ class TradeStreamerV2(TradeHandlerV2):
 
                 # launch trading mode
                 self.launch_trading_mode()
+
         except KeyboardInterrupt:
+            self.post_empty_trade_commander()
             return
 
     def launch_trading_mode(self):
@@ -71,6 +72,9 @@ class TradeStreamerV2(TradeHandlerV2):
                 # post trade_commander dict to MongoDB
                 self.post_trade_commander_to_mongo()
 
+                # log rev ledger info
+                self.log_rev_ledger()
+
                 # sleep by Trading Mode Loop Interval
                 self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
                                                      self.TRADING_MODE_LOOP_INTERVAL)
@@ -82,11 +86,12 @@ class TradeStreamerV2(TradeHandlerV2):
     def run_initiation_mode(self):
 
         # run inner & outer OCAT
-        # self.launch_inner_outer_ocat()
+        self.launch_inner_outer_ocat()
 
         # check whether to proceed to next step
         self.to_proceed_handler_for_initiation_mode()
 
+        logging.warning("")
         logging.warning("================================")
         logging.warning("|| Conducting Initiation Mode ||")
         logging.warning("================================\n")
@@ -100,6 +105,8 @@ class TradeStreamerV2(TradeHandlerV2):
         self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
 
     def run_trading_mode(self, loop_count: int):
+
+        logging.warning("")
         logging.warning("======================================")
         logging.warning("|| Conducting Trading Mode -- # %4d ||" % loop_count)
         logging.warning("======================================\n")

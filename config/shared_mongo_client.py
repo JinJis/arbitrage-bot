@@ -128,10 +128,12 @@ class SharedMongoClient:
 
         mm1_count = mm1_cursor.count()
         mm2_count = mm2_cursor.count()
+        # print("cursor count mm1: %d, mm2: %d" % (mm1_count, mm2_count))
 
+        # fixme: 이렇게 푸는거 ㅇㅋ?
         if mm1_count != mm2_count:
             logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
-            logging.info("Now fixing data...")
+            logging.warning("Now fixing data...")
             SharedMongoClient.match_request_time_in_orderbook_entry(mm1_cursor, mm2_cursor, mm1_count, mm2_count,
                                                                     mm1_data_col, mm2_data_col)
             return IndexError("Cursor fixed.. Now evaluate again!")

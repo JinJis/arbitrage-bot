@@ -40,11 +40,13 @@ class TradeManager:
 
         if not self.is_backtesting:
             # log current trade
-            self._log_trade(cur_trade)
+            # fixme: 현재로썬 이렇게 로그 안함... 나중에 고치기
+            # self._log_trade(cur_trade)
 
             # log and initiate watcher for each order in current trade
             for order in cur_trade.orders:
-                self._log_order(order)
+                # fixme: 현재로썬 이렇게 로그 안함... 나중에 고치기
+                # self._log_order(order)
                 OrderWatcher(order).start()
 
     def add_switch_over(self, switch_over: SwitchOver):
