@@ -97,9 +97,7 @@ class TradeStreamerV2(TradeHandlerV2):
         # log MCTU info and decide spread threshold
         self.log_mctu_info(self.initiation_rewind_time, self.streamer_start_time)
 
-        # fixme: 현재 테스트로 nohup하려고 해서 0으로
-        # self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
-        self.mctu_spread_threshold = 0
+        self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
 
     def run_trading_mode(self, loop_count: int):
         logging.warning("======================================")
