@@ -1,6 +1,7 @@
 import logging
 import time
 from abc import ABC, abstractmethod
+from config.global_conf import Global
 from analyzer.trade_analyzer import BasicAnalyzer
 from trader.market.trade import Trade, TradeTag
 from trader.market_manager.market_manager import MarketManager
@@ -68,7 +69,12 @@ class BaseArbBot(ABC):
             self.trade_loop_start()
         # refresh cur_trade
         self.cur_trade = None
-        self.actual_trade_loop(mm1_data, mm2_data)
+        try:
+            self.actual_trade_loop(mm1_data, mm2_data)
+        except Exception as e:
+            log = "Error occured while executing trade loop.. possible reason for Cursor Error" + str(e)
+            logging.error(log)
+            Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL, log)
         if not self.is_backtesting:
             self.trade_loop_end()
 

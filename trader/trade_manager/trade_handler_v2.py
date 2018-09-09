@@ -13,7 +13,6 @@ from trader.market_manager.market_manager import MarketManager
 
 
 class TradeHandlerV2:
-
     MIN_TRDBLE_COIN_MLTPLIER = 1.5
     TIME_DUR_OF_SETTLEMENT = 5 * 60 * 60
     TRADING_MODE_LOOP_INTERVAL = 5
@@ -214,8 +213,8 @@ class TradeHandlerV2:
         exhaust_rate = self.calc_latest_exhaust_rate()
 
         logging.warning("========= [EXHAUST INFO] ========")
-        logging.warning("Time Flowed Rate: %.2f " % time_flowed_rate)
-        logging.warning("Exhaustion Rate: %.2f\n" % exhaust_rate)
+        logging.warning("Time Flowed(%%): %.2f%% " % (time_flowed_rate * 100))
+        logging.warning("Exhaustion(%%): %.2f%%\n" % (exhaust_rate * 100))
 
         if time_flowed_rate >= exhaust_rate:
             self.trade_commander = True
@@ -298,11 +297,7 @@ class TradeHandlerV2:
             start_time = sliced_time_list[0]
             end_time = sliced_time_list[1]
 
-            # fixme: 여기 이렇게 하는거 맞나? ㅋㅋ
-            try:
-                mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
-            except IndexError:  # after fixing DB
-                return
+            mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
 
             for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):
                 spread_info_dict = MCTSAnalyzer.min_coin_tradable_spread_strategy(mm1_data, mm2_data,
@@ -322,7 +317,7 @@ class TradeHandlerV2:
 
         # if there is no Oppty,
         if len(current_spread_to_trade_list) == 0:
-            logging.error("*-*-*-*-*-*-*-* There is no oppty.. Skipping *-*-*-*-*-*-*-*\n")
+            logging.error(" [WARNING!!] There is no oppty.. Waiting ------- \n")
             return
 
         # get spread_to_trade list from min_trdble_coin_sprd_list
@@ -334,20 +329,22 @@ class TradeHandlerV2:
 
         logging.warning("========= [MCTU INFO] ========")
         logging.warning(">> Anal Duration: %s - %s" % (local_anal_st, local_anal_et))
-        logging.warning(">> Spread INFO: %s\n" % self.get_mctu_spread_and_frequency())
+        logging.warning(">> Spread INFO:\n%s" % self.get_mctu_spread_and_frequency())
 
     def get_mctu_spread_and_frequency(self):
         result = str()
 
         # extract spread only list from spread to trade list
         spread_list = [spread_info["spread_to_trade"] for spread_info in self.spread_to_trade_list]
+        spread_list.sort(reverse=True)
 
         for key, group in groupby(spread_list):
-            result += "spread: %.2f -- frequency: %.2f\n" % (key, (len(list(group)) / len(spread_list)))
+            result += "* spread: %.2f -- frequency: %.2f%%\n" % (key, (len(list(group)) / len(spread_list)) * 100)
         return result
 
     def log_rev_ledger(self):
         logging.warning("========= [REV LEDGER INFO] ========")
+        logging.warning("------------------------------------")
         logging.warning("<<< Initial Balance >>>")
         target_data = self.revenue_ledger["initial_bal"]
         logging.warning("[mm1] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
@@ -356,6 +353,7 @@ class TradeHandlerV2:
                                                        self.target_currency, target_data["coin"]["mm2"]))
         logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
                                                          self.target_currency, target_data["coin"]["total"]))
+        logging.warning("------------------------------------")
 
         target_data = self.revenue_ledger["current_bal"]
         logging.warning("<<< Current Balance >>>")

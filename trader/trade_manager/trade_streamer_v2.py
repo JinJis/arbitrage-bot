@@ -1,5 +1,6 @@
 import time
 import logging
+from config.global_conf import Global
 from trader.trade_manager.trade_handler_v2 import TradeHandlerV2
 from trader.market_manager.market_manager import MarketManager
 
@@ -11,7 +12,7 @@ class TradeStreamerV2(TradeHandlerV2):
 
         # log when init
         logging.warning("================================")
-        logging.warning("|| Trade Streamer Launched!!! ||")
+        logging.warning("|| Trade Streamer Launched!!! || -------------------------------------------------")
         logging.warning("================================\n")
         logging.warning("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
                                                              self.target_currency.upper(),
@@ -44,9 +45,12 @@ class TradeStreamerV2(TradeHandlerV2):
                 # launch trading mode
                 self.launch_trading_mode()
 
-        except KeyboardInterrupt:
+        except AssertionError:
             self.post_empty_trade_commander()
-            return
+            message = "Settlement reached!! now closing Trade Streamer!!"
+            logging.error(message)
+            Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, message)
+            raise KeyboardInterrupt
 
     def launch_trading_mode(self):
         """ TRADING MODE """
@@ -57,7 +61,7 @@ class TradeStreamerV2(TradeHandlerV2):
                 # check if reached settlement time
                 if self.trading_mode_now_time > self._settlement_time:
                     self.settlment_reached = False
-                    raise KeyboardInterrupt
+                    raise AssertionError
 
                 # update balance & time
                 self.update_balance()
@@ -67,7 +71,13 @@ class TradeStreamerV2(TradeHandlerV2):
 
                 # run trading_mode
                 trading_loop_count += 1
-                self.run_trading_mode(trading_loop_count)
+                try:
+                    self.run_trading_mode(trading_loop_count)
+                except Exception as e:
+                    log = "Error occured while executing Trade Streamer - Trading mode.. " \
+                          "possible reason for Cursor Error" + str(e)
+                    logging.error(log)
+                    Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
 
                 # post trade_commander dict to MongoDB
                 self.post_trade_commander_to_mongo()
@@ -78,9 +88,8 @@ class TradeStreamerV2(TradeHandlerV2):
                 # sleep by Trading Mode Loop Interval
                 self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
                                                      self.TRADING_MODE_LOOP_INTERVAL)
-
             else:
-                raise Exception("Trade Streamer should be launched with one of 2 modes -> "
+                raise TypeError("Trade Streamer should be launched with one of 2 modes -> "
                                 "[INITIAL ANALYSIS MODE] / [TRADING MODE] ")
 
     def run_initiation_mode(self):
@@ -91,34 +100,30 @@ class TradeStreamerV2(TradeHandlerV2):
         # check whether to proceed to next step
         self.to_proceed_handler_for_initiation_mode()
 
-        logging.warning("")
         logging.warning("================================")
-        logging.warning("|| Conducting Initiation Mode ||")
+        logging.warning("|| Conducting Initiation Mode || --------------------------------------------")
         logging.warning("================================\n")
 
         # # save spread_to_trade list & amount of krw_earend
-        # self.get_min_tradable_coin_unit_spread_list(self.initiation_rewind_time, self.streamer_start_time)
-        #
-        # # log MCTU info and decide spread threshold
-        # self.log_mctu_info(self.initiation_rewind_time, self.streamer_start_time)
+        self.get_min_tradable_coin_unit_spread_list(self.initiation_rewind_time, self.streamer_start_time)
+
+        # log MCTU info and decide spread threshold
+        self.log_mctu_info(self.initiation_rewind_time, self.streamer_start_time)
 
         self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
 
     def run_trading_mode(self, loop_count: int):
 
-        logging.warning("")
         logging.warning("======================================")
-        logging.warning("|| Conducting Trading Mode -- # %4d ||" % loop_count)
+        logging.warning("|| Conducting Trading Mode -- # %4d || --------------------------------------" % loop_count)
         logging.warning("======================================\n")
 
         # get MTCU
-        try:
-            self.get_min_tradable_coin_unit_spread_list(anal_start_time=self.trading_mode_prev_time,
-                                                        anal_end_time=self.trading_mode_now_time)
-        except TypeError or IndexError:
-            return
 
-            # log MCTU
+        self.get_min_tradable_coin_unit_spread_list(anal_start_time=self.trading_mode_prev_time,
+                                                    anal_end_time=self.trading_mode_now_time)
+
+        # log MCTU
         self.log_mctu_info(self.initiation_rewind_time, self.trading_mode_now_time)
 
         # trade command by comparing current flowed time with exhaustion rate

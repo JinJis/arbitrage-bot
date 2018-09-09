@@ -24,8 +24,6 @@ class RiskFreeArbBotV4(BaseArbBot):
         while True:
             try:
                 self.execute_trade_loop()
-
-            # FIXME: 여기 이렇게 하는거 맞나?
             except KeyboardInterrupt:
                 logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
                 logging.warning(
@@ -34,17 +32,10 @@ class RiskFreeArbBotV4(BaseArbBot):
                 logging.warning(self.mm2.get_balance())
                 # stop order watcher stats thread
                 OrderWatcherStats.instance().tear_down()
-
                 # send to Slack
                 Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
                                              "Settlement Reached! Stopping RFAB Actual Trader")
-
-            except Exception as e:
-                Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
-                                             "Something happened to RFAB! Now it's dying from ... %s" % e)
-                # stop order watcher stats thread
-                OrderWatcherStats.instance().tear_down()
-                raise e
+                return False
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
 

@@ -132,12 +132,24 @@ class SharedMongoClient:
 
         if mm1_count != mm2_count:
             logging.warning("Cursor count does not match! : mm1 %d, mm2 %d" % (mm1_count, mm2_count))
-            logging.warning("should fix data...")
-            # fixme: 이렇게 푸는거 ㅇㅋ?
-            raise IndexError
+            logging.info("Now validating data...")
+            Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
 
         return mm1_cursor, mm2_cursor
 
+    @staticmethod
+    def get_target_col(market_tag: Market, target_coin: str):
+        method_name = {
+            Market.VIRTUAL_COINONE: "get_coinone_db",
+            Market.VIRTUAL_KORBIT: "get_korbit_db",
+            Market.VIRTUAL_GOPAX: "get_gopax_db",
+            Market.VIRTUAL_BITHUMB: "get_bithumb_db",
+            Market.VIRTUAL_OKCOIN: "get_okcoin_db",
+            Market.VIRTUAL_COINNEST: "get_coinnest_db"
+        }[market_tag]
+        return getattr(SharedMongoClient, method_name)()[target_coin + "_orderbook"]
+
+    # Fixme: 이렇게 짜면 효과 있는지 검증 필요
     @staticmethod
     def match_request_time_in_orderbook_entry(mm1_col: Collection, mm2_col: Collection, start_time: int, end_time: int):
 
@@ -216,15 +228,3 @@ class SharedMongoClient:
                 {"requestTime": trgt_rq},
                 {"$set": {"requestTime": ctrl_rq}}
             )
-
-    @staticmethod
-    def get_target_col(market_tag: Market, target_coin: str):
-        method_name = {
-            Market.VIRTUAL_COINONE: "get_coinone_db",
-            Market.VIRTUAL_KORBIT: "get_korbit_db",
-            Market.VIRTUAL_GOPAX: "get_gopax_db",
-            Market.VIRTUAL_BITHUMB: "get_bithumb_db",
-            Market.VIRTUAL_OKCOIN: "get_okcoin_db",
-            Market.VIRTUAL_COINNEST: "get_coinnest_db"
-        }[market_tag]
-        return getattr(SharedMongoClient, method_name)()[target_coin + "_orderbook"]
