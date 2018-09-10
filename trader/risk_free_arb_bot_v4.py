@@ -146,6 +146,7 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # make buy & sell order
         logging.critical("========[ Successful Trade INFO ]========================")
+        logging.critical("Spread Traded: %.2f" % spread_info.spread_to_trade)
         logging.critical("Buying Price: %.2f" % spread_info.buy_unit_price)
         logging.critical("Buying Amount: %f" % spread_info.buy_order_amt)
         logging.critical("Selling Price: %.2f" % spread_info.sell_unit_price)

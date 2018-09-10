@@ -14,6 +14,7 @@ from trader.market_manager.market_manager import MarketManager
 
 class TradeHandlerV2:
     MIN_TRDBLE_COIN_MLTPLIER = 1.5
+    OCAT_REWIND_DUR = 1 * 60 * 60
     TIME_DUR_OF_SETTLEMENT = 8 * 60 * 60
     TRADING_MODE_LOOP_INTERVAL = 5
 
@@ -46,7 +47,7 @@ class TradeHandlerV2:
 
         # TIME relevant
         self.streamer_start_time = int(time.time())
-        self.initiation_rewind_time = int(self.streamer_start_time - self.TIME_DUR_OF_SETTLEMENT)
+        self.ocat_rewind_time = int(self.streamer_start_time - self.OCAT_REWIND_DUR)
 
         self._bot_start_time = None
         self._settlement_time = None
@@ -110,8 +111,8 @@ class TradeHandlerV2:
         top_ten_descend_order_result = descending_order_result[:10]
 
         for result in top_ten_descend_order_result:
-            new_percent = (result["new"] / self.TIME_DUR_OF_SETTLEMENT) * 100
-            rev_percent = (result["rev"] / self.TIME_DUR_OF_SETTLEMENT) * 100
+            new_percent = (result["new"] / self.OCAT_REWIND_DUR) * 100
+            rev_percent = (result["rev"] / self.OCAT_REWIND_DUR) * 100
             new_spread_strength = result["new_spread_ratio"] * 100
             rev_spread_strength = result["rev_spread_ratio"] * 100
 
@@ -128,7 +129,7 @@ class TradeHandlerV2:
             settings = TradeSettingConfig.get_settings(mm1_name=_combi[0],
                                                        mm2_name=_combi[1],
                                                        target_currency=target_currency,
-                                                       start_time=self.initiation_rewind_time,
+                                                       start_time=self.ocat_rewind_time,
                                                        end_time=self.streamer_start_time,
                                                        division=iyo_config["division"],
                                                        depth=iyo_config["depth"],
@@ -380,8 +381,8 @@ class TradeHandlerV2:
         self.target_settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
                                                                mm2_name=self.mm2_name,
                                                                target_currency=self.target_currency,
-                                                               start_time=rewined_time,
-                                                               end_time=anal_end_time,
+                                                               start_time=int(rewined_time - 0.5),
+                                                               end_time=int(anal_end_time + 0.5),
                                                                division=iyo_config["division"],
                                                                depth=iyo_config["depth"],
                                                                consecution_time=iyo_config["consecution_time"],
