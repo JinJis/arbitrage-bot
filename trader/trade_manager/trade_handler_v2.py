@@ -1,8 +1,7 @@
-import logging
 import time
+import logging
 from itertools import groupby
 from config.global_conf import Global
-
 from analyzer.trade_analyzer import MCTSAnalyzer, BasicAnalyzer
 from collector.oppty_time_collector import OpptyTimeCollector
 from collector.scheduler.otc_scheduler import OTCScheduler
@@ -14,7 +13,6 @@ from trader.market_manager.market_manager import MarketManager
 
 class TradeHandlerV2:
     MIN_TRDBLE_COIN_MLTPLIER = 1.5
-    OCAT_REWIND_DUR = 1 * 60 * 60
     TIME_DUR_OF_SETTLEMENT = 8 * 60 * 60
     TRADING_MODE_LOOP_INTERVAL = 5
 
@@ -42,22 +40,18 @@ class TradeHandlerV2:
         self.streamer_min_trading_coin = None
         self.spread_to_trade_list = list()
         self.mctu_spread_threshold = None
-
-        self.slicing_interval = Global.read_sliced_iyo_setting_config(self.target_currency)["slicing_interval"]
+        self.is_oppty = False
 
         # TIME relevant
         self.streamer_start_time = int(time.time())
-        self.ocat_rewind_time = int(self.streamer_start_time - self.OCAT_REWIND_DUR)
-
+        self.ocat_rewind_time = int(self.streamer_start_time - self.TIME_DUR_OF_SETTLEMENT)
         self._bot_start_time = None
         self._settlement_time = None
-
-        self.trading_mode_prev_time = None
         self.trading_mode_now_time = None
 
         # EXHAUSTION relevant
         self.revenue_ledger = dict()
-        self.trade_commander = True
+        self.is_time_flow_above_exhaust = True
         self.settlment_reached = False
 
     """
@@ -65,12 +59,6 @@ class TradeHandlerV2:
     || INITIATION MODE ONLY ||
     ==========================
     """
-
-    def post_empty_trade_commander(self):
-        self.streamer_db["trade_commander"].insert({
-            "trade": False,
-            "settlement": False
-        })
 
     def launch_inner_outer_ocat(self):
         # run Inner OCAT
@@ -111,8 +99,8 @@ class TradeHandlerV2:
         top_ten_descend_order_result = descending_order_result[:10]
 
         for result in top_ten_descend_order_result:
-            new_percent = (result["new"] / self.OCAT_REWIND_DUR) * 100
-            rev_percent = (result["rev"] / self.OCAT_REWIND_DUR) * 100
+            new_percent = (result["new"] / self.TIME_DUR_OF_SETTLEMENT) * 100
+            rev_percent = (result["rev"] / self.TIME_DUR_OF_SETTLEMENT) * 100
             new_spread_strength = result["new_spread_ratio"] * 100
             rev_spread_strength = result["rev_spread_ratio"] * 100
 
@@ -193,17 +181,110 @@ class TradeHandlerV2:
         logging.warning("Now initiating with typed settings!!")
         return True
 
+    def get_min_tradable_coin_unit_spread_list_init_mode(self, anal_start_time: int, anal_end_time: int):
+
+        # get OTC from determined combination
+        otc_result_dict = self.get_otc_result_init_mode(anal_start_time, anal_end_time)
+
+        # get mm1, mm2 collection by target_currency
+        mm1_col = getattr(SharedMongoClient, "get_%s_db" % self.mm1_name)()[self.target_currency + "_orderbook"]
+        mm2_col = getattr(SharedMongoClient, "get_%s_db" % self.mm2_name)()[self.target_currency + "_orderbook"]
+
+        # loop through sliced_oppty_dur and launch backtesting
+        min_trdble_coin_unit_sprd_list = []
+        for sliced_time_list in otc_result_dict[self.trade_type]:
+            start_time = sliced_time_list[0]
+            end_time = sliced_time_list[1]
+
+            mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
+
+            for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):
+                spread_info_dict = MCTSAnalyzer.min_coin_tradable_spread_strategy(mm1_data, mm2_data,
+                                                                                  self.mm1.taker_fee,
+                                                                                  self.mm2.taker_fee,
+                                                                                  self.streamer_min_trading_coin)
+
+                target_spread_info = spread_info_dict[self.trade_type]
+                if (target_spread_info.able_to_trade is False) or (target_spread_info.spread_to_trade < 0):
+                    continue
+                min_trdble_coin_unit_sprd_list.append(target_spread_info)
+
+        current_spread_to_trade_list = [{"spread_to_trade": spread_info.spread_to_trade,
+                                         "sell_amt": spread_info.sell_order_amt,
+                                         "buy_amt": spread_info.buy_order_amt}
+                                        for spread_info in min_trdble_coin_unit_sprd_list]
+
+        # if there is no Oppty,
+        if len(current_spread_to_trade_list) == 0:
+            logging.error("[WARNING] There is no oppty.. Waiting\n")
+            return
+
+        # get spread_to_trade list from min_trdble_coin_sprd_list
+        self.spread_to_trade_list.extend(current_spread_to_trade_list)
+
     def set_time_relevant_before_trading_mode(self):
         self.trading_mode_now_time = int(time.time())
-        self.trading_mode_prev_time = self.streamer_start_time
         self._bot_start_time = self.trading_mode_now_time
         self._settlement_time = self._bot_start_time + self.TIME_DUR_OF_SETTLEMENT
+
+    def post_empty_trade_commander(self):
+        self.streamer_db["trade_commander"].insert_one({
+            "time": self.trading_mode_now_time,
+            "execute_trade": False,
+            "is_time_flow_above_exhaust": self.is_time_flow_above_exhaust,
+            "is_oppty": self.is_oppty,
+            "streamer_mctu": self.streamer_min_trading_coin,
+            "mctu_spread_threshold": self.mctu_spread_threshold,
+            "settlement": False
+        })
 
     """
     =======================
     || TRADING MODE ONLY ||
     =======================
     """
+
+    def get_min_tradable_coin_unit_spread_list_trading_mode(self):
+
+        # get mm1, mm2 collection by target_currency
+        mm1_col = getattr(SharedMongoClient, "get_%s_db" % self.mm1_name)()[self.target_currency + "_orderbook"]
+        mm2_col = getattr(SharedMongoClient, "get_%s_db" % self.mm2_name)()[self.target_currency + "_orderbook"]
+
+        # get latest db
+        mm1_data, mm2_data = SharedMongoClient.get_latest_data_from_db(mm1_col, mm2_col)
+        mm1_rq = Global.convert_epoch_to_local_datetime(mm1_data["requestTime"], timezone="kr")
+        mm2_rq = Global.convert_epoch_to_local_datetime(mm2_data["requestTime"], timezone="kr")
+
+        logging.warning("[REQUEST TIME] -- mm1: %s, mm2: %s\n" % (mm1_rq, mm2_rq))
+
+        # analyze by MCTS
+        spread_info_dict = MCTSAnalyzer.min_coin_tradable_spread_strategy(mm1_data, mm2_data,
+                                                                          self.mm1.taker_fee,
+                                                                          self.mm2.taker_fee,
+                                                                          self.streamer_min_trading_coin)
+        target_spread_info = spread_info_dict[self.trade_type]
+
+        # reformat spread info class to dict
+        current_spread_to_trade_list = [{"spread_to_trade": target_spread_info.spread_to_trade,
+                                         "sell_amt": target_spread_info.sell_order_amt,
+                                         "buy_amt": target_spread_info.buy_order_amt}
+                                        ]
+        logging.warning("========= [OPPTY NOTIFIER] ========")
+        if (target_spread_info.able_to_trade is False) or (target_spread_info.spread_to_trade < 0):
+            # if there is no Oppty,
+
+            logging.error("[WARNING] There is no oppty.. Waiting")
+            logging.error("[SPREAD TO TRADE]: %s\n" % target_spread_info.spread_to_trade)
+            self.is_oppty = False
+            return
+
+        # if oppty,
+        self.is_oppty = True
+        logging.critical("[AWESOME] Oppty detected!!! now evaluating spread infos..")
+        logging.critical("[SPREAD TO TRADE]: %s\n" % target_spread_info.spread_to_trade)
+
+        # get spread_to_trade list from min_trdble_coin_sprd_list
+        self.spread_to_trade_list.extend(current_spread_to_trade_list)
 
     def trade_command_by_comparing_exhaustion_with_flow_time(self):
 
@@ -213,14 +294,14 @@ class TradeHandlerV2:
         # calc current exhaust rate
         exhaust_rate = self.calc_latest_exhaust_rate()
 
-        logging.warning("========= [EXHAUST INFO] ========")
+        logging.warning("========== [EXHAUST INFO] =========")
         logging.warning("Time Flowed(%%): %.2f%% " % (time_flowed_rate * 100))
         logging.warning("Exhaustion(%%): %.2f%%\n" % (exhaust_rate * 100))
 
         if time_flowed_rate >= exhaust_rate:
-            self.trade_commander = True
+            self.is_time_flow_above_exhaust = True
         else:
-            self.trade_commander = False
+            self.is_time_flow_above_exhaust = False
 
     def calc_latest_exhaust_rate(self):
 
@@ -263,8 +344,16 @@ class TradeHandlerV2:
 
     def post_trade_commander_to_mongo(self):
 
-        self.streamer_db["trade_commander"].insert({
-            "trade": self.trade_commander,
+        if self.is_time_flow_above_exhaust and self.is_oppty:
+            execute_trade = True
+        else:
+            execute_trade = False
+
+        self.streamer_db["trade_commander"].insert_one({
+            "time": self.trading_mode_now_time,
+            "execute_trade": execute_trade,
+            "is_time_flow_above_exhaust": self.is_time_flow_above_exhaust,
+            "is_oppty": self.is_oppty,
             "streamer_mctu": self.streamer_min_trading_coin,
             "mctu_spread_threshold": self.mctu_spread_threshold,
             "settlement": self.settlment_reached
@@ -277,60 +366,26 @@ class TradeHandlerV2:
         if time_to_wait > 0:
             time.sleep(time_to_wait)
 
+    def post_settlement_commander(self):
+        self.streamer_db["trade_commander"].insert_one({
+            "time": self.trading_mode_now_time,
+            "trade": False,
+            "settlement": True
+        })
+
     """
     ======================
     || UNIVERSALLY USED ||
     ======================
     """
 
-    def get_min_tradable_coin_unit_spread_list(self, anal_start_time: int, anal_end_time: int):
-
-        # get OTC from determined combination
-        otc_result_dict = self.get_otc_result(anal_start_time, anal_end_time)
-
-        # get mm1, mm2 collection by target_currency
-        mm1_col = getattr(SharedMongoClient, "get_%s_db" % self.mm1_name)()[self.target_currency + "_orderbook"]
-        mm2_col = getattr(SharedMongoClient, "get_%s_db" % self.mm2_name)()[self.target_currency + "_orderbook"]
-
-        # loop through sliced_oppty_dur and launch backtesting
-        min_trdble_coin_unit_sprd_list = []
-        for sliced_time_list in otc_result_dict[self.trade_type]:
-            start_time = sliced_time_list[0]
-            end_time = sliced_time_list[1]
-
-            mm1_cursor, mm2_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, start_time, end_time)
-
-            for mm1_data, mm2_data in zip(mm1_cursor, mm2_cursor):
-                spread_info_dict = MCTSAnalyzer.min_coin_tradable_spread_strategy(mm1_data, mm2_data,
-                                                                                  self.mm1.taker_fee,
-                                                                                  self.mm2.taker_fee,
-                                                                                  self.streamer_min_trading_coin)
-
-                target_spread_info = spread_info_dict[self.trade_type]
-                if (target_spread_info.able_to_trade is False) or (target_spread_info.spread_to_trade < 0):
-                    continue
-                min_trdble_coin_unit_sprd_list.append(target_spread_info)
-
-        current_spread_to_trade_list = [{"spread_to_trade": spread_info.spread_to_trade,
-                                         "sell_amt": spread_info.sell_order_amt,
-                                         "buy_amt": spread_info.buy_order_amt}
-                                        for spread_info in min_trdble_coin_unit_sprd_list]
-
-        # if there is no Oppty,
-        if len(current_spread_to_trade_list) == 0:
-            logging.error(" [WARNING!!] There is no oppty.. Waiting ------- \n")
-            return
-
-        # get spread_to_trade list from min_trdble_coin_sprd_list
-        self.spread_to_trade_list.extend(current_spread_to_trade_list)
-
     def log_mctu_info(self, anal_start_time: int, anal_end_time: int):
         local_anal_st = Global.convert_epoch_to_local_datetime(anal_start_time, timezone="kr")
         local_anal_et = Global.convert_epoch_to_local_datetime(anal_end_time, timezone="kr")
 
-        logging.warning("========= [MCTU INFO] ========")
-        logging.warning(">> Anal Duration: %s - %s" % (local_anal_st, local_anal_et))
-        logging.warning(">> Spread INFO:\n%s" % self.get_mctu_spread_and_frequency())
+        logging.warning("=========== [MCTU INFO] ==========")
+        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
+        logging.warning("[SPREAD RECORDER]:\n%s" % self.get_mctu_spread_and_frequency())
 
     def get_mctu_spread_and_frequency(self):
         result = str()
@@ -346,24 +401,25 @@ class TradeHandlerV2:
     def log_rev_ledger(self):
         logging.warning("========= [REV LEDGER INFO] ========")
         logging.warning("------------------------------------")
-        logging.warning("<<< Initial Balance >>>")
         target_data = self.revenue_ledger["initial_bal"]
-        logging.warning("[mm1] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
-                                                       self.target_currency, target_data["coin"]["mm1"]))
-        logging.warning("[mm2] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
-                                                       self.target_currency, target_data["coin"]["mm2"]))
+        logging.warning("<<< Initial Balance >>>")
+        logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
+                                                         self.target_currency, target_data["coin"]["mm1"]))
+        logging.warning("[ mm2 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
+                                                         self.target_currency, target_data["coin"]["mm2"]))
         logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
                                                          self.target_currency, target_data["coin"]["total"]))
         logging.warning("------------------------------------")
 
         target_data = self.revenue_ledger["current_bal"]
         logging.warning("<<< Current Balance >>>")
-        logging.warning("[mm1] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
-                                                       self.target_currency, target_data["coin"]["mm1"]))
-        logging.warning("[mm2] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
-                                                       self.target_currency, target_data["coin"]["mm2"]))
-        logging.warning("[total] krw: %.5f, %s: %.5f\n" % (target_data["krw"]["total"],
-                                                           self.target_currency, target_data["coin"]["total"]))
+        logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
+                                                         self.target_currency, target_data["coin"]["mm1"]))
+        logging.warning("[ mm2 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
+                                                         self.target_currency, target_data["coin"]["mm2"]))
+        logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
+                                                         self.target_currency, target_data["coin"]["total"]))
+        logging.warning("------------------------------------\n\n\n")
 
     def update_balance(self):
         self.mm1.update_balance()
@@ -374,15 +430,15 @@ class TradeHandlerV2:
         self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
         self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
 
-    def get_otc_result(self, rewined_time: int, anal_end_time: int):
+    def get_otc_result_init_mode(self, rewined_time: int, anal_end_time: int):
         # OTC target combination
         iyo_config = Global.read_iyo_setting_config(self.target_currency)
 
         self.target_settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
                                                                mm2_name=self.mm2_name,
                                                                target_currency=self.target_currency,
-                                                               start_time=int(rewined_time - 0.5),
-                                                               end_time=int(anal_end_time + 0.5),
+                                                               start_time=rewined_time,
+                                                               end_time=anal_end_time,
                                                                division=iyo_config["division"],
                                                                depth=iyo_config["depth"],
                                                                consecution_time=iyo_config["consecution_time"],

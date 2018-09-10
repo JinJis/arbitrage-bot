@@ -1,8 +1,8 @@
 import logging
+import pymongo
+from pymongo import MongoClient
 from .global_conf import Global
 from trader.market.market import Market
-from pymongo import MongoClient
-from pymongo.cursor import Cursor
 from pymongo.collection import Collection
 from pymongo.database import Database
 
@@ -136,6 +136,16 @@ class SharedMongoClient:
             Global.request_time_validation_on_cursor_count_diff(mm1_cursor, mm2_cursor)
 
         return mm1_cursor, mm2_cursor
+
+    @staticmethod
+    def get_latest_data_from_db(mm1_data_col: Collection, mm2_data_col: Collection):
+        mm1_data = mm1_data_col.find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+        mm2_data = mm2_data_col.find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+        return mm1_data, mm2_data
 
     @staticmethod
     def get_target_col(market_tag: Market, target_coin: str):

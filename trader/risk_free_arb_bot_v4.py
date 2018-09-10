@@ -7,7 +7,6 @@ from config.global_conf import Global
 from trader.base_arb_bot import BaseArbBot
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.market_manager.market_manager import MarketManager
-from trader.trade_manager.order_watcher_stats import OrderWatcherStats
 
 
 class RiskFreeArbBotV4(BaseArbBot):
@@ -22,20 +21,7 @@ class RiskFreeArbBotV4(BaseArbBot):
 
     def run(self):
         while True:
-            try:
-                self.execute_trade_loop()
-            except KeyboardInterrupt:
-                logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
-                logging.warning(
-                    "========== [ SETTLEMENT BALANCE ] ========================================================")
-                logging.warning(self.mm1.get_balance())
-                logging.warning(self.mm2.get_balance())
-                # stop order watcher stats thread
-                OrderWatcherStats.instance().tear_down()
-                # send to Slack
-                Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
-                                             "Settlement Reached! Stopping RFAB Actual Trader")
-                return False
+            self.execute_trade_loop()
 
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
 
@@ -46,14 +32,18 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # check if settlement reached
         if trade_commander_set["settlement"] is True:
-            raise KeyboardInterrupt
+            raise EnvironmentError
 
-        # check if trade
-        if trade_commander_set["trade"] is False:
-            logging.warning("Trade Commander is False.. Waiting for command")
+        # check if time flow rate under exhaustion rate
+        if trade_commander_set["execute_trade"] is False:
+            logging.warning("Trade Streamer decided not to trade.. check below to see what caused this decision")
+            logging.warning("[TimeFlow > Exhaust]: %s"
+                            % trade_commander_set["is_time_flow_above_exhaust"])
+            logging.warning("[Under Opportunity]: %s"
+                            % trade_commander_set["is_oppty"])
             return
 
-        if trade_commander_set["trade"] is True:
+        if trade_commander_set["execute_trade"] is True:
             pass
 
         # get orderbook data

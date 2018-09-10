@@ -15,6 +15,7 @@ class OpptyTimeCollector:
         cls.CONSECUTION_GRACE_TIME = settings["consecution_time"]
 
         # initiate Market / Mongo settings
+
         mm1, mm2, mm1_data_cursor, mm2_data_cursor = cls.initiate_market_mongo_settings(settings)
 
         # loop through history data
@@ -117,6 +118,7 @@ class OpptyTimeCollector:
                                    target_currency)
         mm1_col = SharedMongoClient.get_target_col(settings["mm1"]["market_tag"], target_currency)
         mm2_col = SharedMongoClient.get_target_col(settings["mm2"]["market_tag"], target_currency)
+
         mm1_data_cursor, mm2_data_cursor = SharedMongoClient.get_data_from_db(mm1_col, mm2_col, settings["start_time"],
                                                                               settings["end_time"])
         return mm1, mm2, mm1_data_cursor, mm2_data_cursor

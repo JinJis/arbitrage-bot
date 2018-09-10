@@ -8,11 +8,15 @@ from trader.market_manager.market_manager import MarketManager
 class TradeStreamerV2(TradeHandlerV2):
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
+
         super().__init__(target_currency, mm1, mm2)
+
+        # update for the first time
+        self.post_empty_trade_commander()
 
         # log when init
         logging.warning("================================")
-        logging.warning("|| Trade Streamer Launched!!! || -------------------------------------------------")
+        logging.warning("|| Trade Streamer Launched!!! || ")
         logging.warning("================================\n")
         logging.warning("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
                                                              self.target_currency.upper(),
@@ -20,9 +24,6 @@ class TradeStreamerV2(TradeHandlerV2):
         logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
                                                                self.target_currency.upper(),
                                                                self.mm2_coin_bal))
-
-        # update for the first time
-        self.post_empty_trade_commander()
 
     def run(self):
 
@@ -46,10 +47,10 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.launch_trading_mode()
 
         except AssertionError:
-            self.post_empty_trade_commander()
             message = "Settlement reached!! now closing Trade Streamer!!"
             logging.error(message)
             Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, message)
+            self.post_settlement_commander()
             raise KeyboardInterrupt
 
     def launch_trading_mode(self):
@@ -66,7 +67,6 @@ class TradeStreamerV2(TradeHandlerV2):
                 # update balance & time
                 self.update_balance()
                 self.update_revenue_ledger()
-                self.trading_mode_prev_time = self.trading_mode_now_time
                 self.trading_mode_now_time = int(time.time())
 
                 # run trading_mode
@@ -100,12 +100,12 @@ class TradeStreamerV2(TradeHandlerV2):
         # check whether to proceed to next step
         self.to_proceed_handler_for_initiation_mode()
 
-        logging.warning("================================")
-        logging.warning("|| Conducting Initiation Mode || --------------------------------------------")
-        logging.warning("================================\n")
+        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        logging.warning("||| Conducting Initiation Mode |||")
+        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # # save spread_to_trade list & amount of krw_earend
-        self.get_min_tradable_coin_unit_spread_list(self.ocat_rewind_time, self.streamer_start_time)
+        self.get_min_tradable_coin_unit_spread_list_init_mode(self.ocat_rewind_time, self.streamer_start_time)
 
         # log MCTU info and decide spread threshold
         self.log_mctu_info(self.ocat_rewind_time, self.streamer_start_time)
@@ -114,14 +114,13 @@ class TradeStreamerV2(TradeHandlerV2):
 
     def run_trading_mode(self, loop_count: int):
 
-        logging.warning("======================================")
-        logging.warning("|| Conducting Trading Mode -- # %4d || --------------------------------------" % loop_count)
-        logging.warning("======================================\n")
+        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        logging.warning("|| Conducting Trading Mode -- # %4d || " % loop_count)
+        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # get MTCU
 
-        self.get_min_tradable_coin_unit_spread_list(anal_start_time=self.trading_mode_prev_time,
-                                                    anal_end_time=self.trading_mode_now_time)
+        self.get_min_tradable_coin_unit_spread_list_trading_mode()
 
         # log MCTU
         self.log_mctu_info(self.ocat_rewind_time, self.trading_mode_now_time)
