@@ -225,6 +225,14 @@ class TradeHandlerV2:
         # get spread_to_trade list from min_trdble_coin_sprd_list
         self.past_spread_to_trade_list.extend(current_spread_to_trade_list)
 
+    def log_past_mctu_info(self):
+        local_anal_st = Global.convert_epoch_to_local_datetime(self.ocat_rewind_time, timezone="kr")
+        local_anal_et = Global.convert_epoch_to_local_datetime(self.streamer_start_time, timezone="kr")
+
+        logging.warning("=========== [MCTU INFO] ==========")
+        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
+        logging.warning("\n[SPREAD RECORDER]:\n%s" % self.get_mctu_spread_and_frequency(self.past_spread_to_trade_list))
+
     def set_time_relevant_before_trading_mode(self):
         self.trading_mode_now_time = int(time.time())
         self._bot_start_time = self.trading_mode_now_time
@@ -377,6 +385,15 @@ class TradeHandlerV2:
             "settlement": self.settlment_reached
         })
 
+    def log_present_mctu_info(self, anal_start_time: int, anal_end_time: int):
+        local_anal_st = Global.convert_epoch_to_local_datetime(anal_start_time, timezone="kr")
+        local_anal_et = Global.convert_epoch_to_local_datetime(anal_end_time, timezone="kr")
+
+        logging.warning("=========== [MCTU INFO] ==========")
+        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
+        logging.warning("\n[SPREAD RECORDER]:\n%s"
+                        % self.get_mctu_spread_and_frequency(self.present_spread_to_trade_list))
+
     @staticmethod
     def trading_mode_loop_sleep_handler(mode_start_time: int, mode_end_time: int, mode_loop_interval: int):
         run_time = mode_end_time - mode_start_time
@@ -397,23 +414,6 @@ class TradeHandlerV2:
     ======================
     """
 
-    def log_past_mctu_info(self):
-        local_anal_st = Global.convert_epoch_to_local_datetime(self.ocat_rewind_time, timezone="kr")
-        local_anal_et = Global.convert_epoch_to_local_datetime(self.streamer_start_time, timezone="kr")
-
-        logging.warning("=========== [MCTU INFO] ==========")
-        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
-        logging.warning("[SPREAD RECORDER]:\n%s" % self.get_mctu_spread_and_frequency(self.past_spread_to_trade_list))
-
-    def log_present_mctu_info(self, anal_start_time: int, anal_end_time: int):
-        local_anal_st = Global.convert_epoch_to_local_datetime(anal_start_time, timezone="kr")
-        local_anal_et = Global.convert_epoch_to_local_datetime(anal_end_time, timezone="kr")
-
-        logging.warning("=========== [MCTU INFO] ==========")
-        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
-        logging.warning("[SPREAD RECORDER]:\n%s"
-                        % self.get_mctu_spread_and_frequency(self.present_spread_to_trade_list))
-
     @staticmethod
     def get_mctu_spread_and_frequency(spread_to_trade_list: list):
         result = str()
@@ -421,6 +421,10 @@ class TradeHandlerV2:
         # extract spread only list from spread to trade list
         spread_list = [spread_info["spread_to_trade"] for spread_info in spread_to_trade_list]
         spread_list.sort(reverse=True)
+
+        if len(spread_to_trade_list) == 0:
+            result = "* spread: Null -- frequency: Null\n"
+            return result
 
         for key, group in groupby(spread_list):
             result += "* spread: %.2f -- frequency: %.2f%%\n" % (key, (len(list(group)) / len(spread_list)) * 100)

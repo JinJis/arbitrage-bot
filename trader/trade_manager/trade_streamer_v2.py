@@ -95,6 +95,7 @@ class TradeStreamerV2(TradeHandlerV2):
     def run_initiation_mode(self):
 
         # run inner & outer OCAT
+        # fixme: 필요하다면 사용!
         # self.launch_inner_outer_ocat()
 
         # check whether to proceed to next step
@@ -124,7 +125,7 @@ class TradeStreamerV2(TradeHandlerV2):
         self.get_min_tradable_coin_unit_spread_list_trading_mode()
 
         # log MCTU
-        self.log_present_mctu_info(self.ocat_rewind_time, self.trading_mode_now_time)
+        self.log_present_mctu_info(self.streamer_start_time, self.trading_mode_now_time)
 
         # trade command by comparing current flowed time with exhaustion rate
         self.trade_command_by_comparing_exhaustion_with_flow_time()
