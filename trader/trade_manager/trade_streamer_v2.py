@@ -111,6 +111,7 @@ class TradeStreamerV2(TradeHandlerV2):
         self.log_mctu_info(self.ocat_rewind_time, self.streamer_start_time)
 
         self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
+        self.mctu_royal_spread = float(input("Decide MCTU Royal spread: "))
 
     def run_trading_mode(self, loop_count: int):
 

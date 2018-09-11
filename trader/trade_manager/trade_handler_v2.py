@@ -40,6 +40,8 @@ class TradeHandlerV2:
         self.streamer_min_trading_coin = None
         self.spread_to_trade_list = list()
         self.mctu_spread_threshold = None
+        self.mctu_royal_spread = None
+        self.is_royal_spread = False
         self.is_oppty = False
 
         # TIME relevant
@@ -233,8 +235,10 @@ class TradeHandlerV2:
             "execute_trade": False,
             "is_time_flow_above_exhaust": self.is_time_flow_above_exhaust,
             "is_oppty": self.is_oppty,
+            "is_royal_spread": self.is_royal_spread,
             "streamer_mctu": self.streamer_min_trading_coin,
             "mctu_spread_threshold": self.mctu_spread_threshold,
+            "mctu_royal_spread": self.mctu_royal_spread,
             "settlement": False
         })
 
@@ -276,12 +280,20 @@ class TradeHandlerV2:
             logging.error("[WARNING] There is no oppty.. Waiting")
             logging.error("[SPREAD TO TRADE]: %s\n" % target_spread_info.spread_to_trade)
             self.is_oppty = False
+            self.is_royal_spread = False
             return
 
         # if oppty,
         self.is_oppty = True
-        logging.critical("[AWESOME] Oppty detected!!! now evaluating spread infos..")
+        logging.critical("[HOORAY] Oppty detected!!! now evaluating spread infos..")
         logging.critical("[SPREAD TO TRADE]: %s\n" % target_spread_info.spread_to_trade)
+
+        # if gte rotal spread,
+        if target_spread_info.spread_to_trade >= self.mctu_royal_spread:
+            self.is_royal_spread = True
+            logging.critical("[!CONGRAT!] THIS WAS ROYAL SPREAD!! Now command to trade no matter what!! :D")
+        else:
+            self.is_royal_spread = False
 
         # get spread_to_trade list from min_trdble_coin_sprd_list
         self.spread_to_trade_list.extend(current_spread_to_trade_list)
@@ -347,15 +359,20 @@ class TradeHandlerV2:
         if self.is_time_flow_above_exhaust and self.is_oppty:
             execute_trade = True
         else:
-            execute_trade = False
+            if self.is_royal_spread:
+                execute_trade = True
+            else:
+                execute_trade = False
 
         self.streamer_db["trade_commander"].insert_one({
             "time": self.trading_mode_now_time,
             "execute_trade": execute_trade,
             "is_time_flow_above_exhaust": self.is_time_flow_above_exhaust,
             "is_oppty": self.is_oppty,
+            "is_royal_spread": self.is_royal_spread,
             "streamer_mctu": self.streamer_min_trading_coin,
             "mctu_spread_threshold": self.mctu_spread_threshold,
+            "mctu_royal_spread": self.mctu_royal_spread,
             "settlement": self.settlment_reached
         })
 
