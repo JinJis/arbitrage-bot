@@ -115,7 +115,11 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # quit if conditions don't meet
         if not threshold_cond:
-            logging.warning("spread threshold condition not met!")
+            logging.warning("< Spread threshold condition not met! >")
+            logging.warning("---------------------------------------------------------")
+            logging.warning("Spread Traded: %.2f" % spread_info.spread_to_trade)
+            logging.warning("Spread Threshold: %.2f" % mctu_spread_threshold)
+            logging.warning("---------------------------------------------------------")
             return None
 
         # balance check
@@ -136,11 +140,14 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # make buy & sell order
         logging.critical("========[ Successful Trade INFO ]========================")
-        logging.critical("Spread Traded: %.2f" % spread_info.spread_to_trade)
+        logging.critical("Spread To Trade: %.2f" % spread_info.spread_to_trade)
+        logging.critical("Spread Threshold: %.2f" % mctu_spread_threshold)
+        logging.critical("---------------------------------------------------------")
         logging.critical("Buying Price: %.2f" % spread_info.buy_unit_price)
         logging.critical("Buying Amount: %f" % spread_info.buy_order_amt)
         logging.critical("Selling Price: %.2f" % spread_info.sell_unit_price)
         logging.critical("Selling Price: %f" % spread_info.sell_order_amt)
+        logging.critical("---------------------------------------------------------")
 
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)

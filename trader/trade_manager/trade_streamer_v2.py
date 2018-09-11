@@ -34,7 +34,7 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.run_initiation_mode()
 
                 # init revenue ledger
-                self.update_revenue_ledger()
+                self.update_revenue_ledger(mode_status="initiation")
 
                 # update time relevant
                 self.set_time_relevant_before_trading_mode()
@@ -50,7 +50,17 @@ class TradeStreamerV2(TradeHandlerV2):
             message = "Settlement reached!! now closing Trade Streamer!!"
             logging.error(message)
             Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, message)
+
+            # command Acutal Trader to stop
             self.post_settlement_commander()
+
+            # wait until Acutal Trader stops trading (in case actual balance unmatch)
+            time.sleep(self.TRADING_MODE_LOOP_INTERVAL)
+
+            # post settled balance info to MongoDB
+            self.update_balance()
+            self.update_revenue_ledger(mode_status="settlement")
+
             raise KeyboardInterrupt
 
     def launch_trading_mode(self):
@@ -66,7 +76,7 @@ class TradeStreamerV2(TradeHandlerV2):
 
                 # update balance & time
                 self.update_balance()
-                self.update_revenue_ledger()
+                self.update_revenue_ledger(mode_status="trading")
                 self.trading_mode_now_time = int(time.time())
 
                 # run trading_mode
@@ -121,7 +131,6 @@ class TradeStreamerV2(TradeHandlerV2):
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # get MTCU
-
         self.get_min_tradable_coin_unit_spread_list_trading_mode()
 
         # log MCTU

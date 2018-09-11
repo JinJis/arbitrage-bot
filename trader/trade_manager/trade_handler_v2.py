@@ -283,21 +283,20 @@ class TradeHandlerV2:
                                          "buy_amt": target_spread_info.buy_order_amt}
                                         ]
         logging.warning("========= [OPPTY NOTIFIER] ========")
-        if (target_spread_info.able_to_trade is False) or (target_spread_info.spread_to_trade < 0):
-            # if there is no Oppty,
-
-            logging.error("[WARNING] There is no oppty.. Waiting")
-            logging.error("[SPREAD TO TRADE]: %s\n" % target_spread_info.spread_to_trade)
+        # if there is no Oppty,
+        if target_spread_info.able_to_trade is False:
             self.is_oppty = False
             self.is_royal_spread = False
+            logging.error("[WARNING] There is no oppty.. Waiting")
+            logging.error("[SPREAD TO TRADE]: %.4f\n" % target_spread_info.spread_to_trade)
             return
 
         # if oppty,
         self.is_oppty = True
         logging.critical("[HOORAY] Oppty detected!!! now evaluating spread infos..")
-        logging.critical("[SPREAD TO TRADE]: %s\n" % target_spread_info.spread_to_trade)
+        logging.critical("[SPREAD TO TRADE]: %.4f\n" % target_spread_info.spread_to_trade)
 
-        # if gte rotal spread,
+        # if gte royal spread,
         if target_spread_info.spread_to_trade >= self.mctu_royal_spread:
             self.is_royal_spread = True
             logging.critical("[!CONGRAT!] THIS WAS ROYAL SPREAD!! Now command to trade no matter what!! :D")
@@ -482,7 +481,7 @@ class TradeHandlerV2:
 
         return OpptyTimeCollector.run(settings=self.target_settings)
 
-    def update_revenue_ledger(self):
+    def update_revenue_ledger(self, mode_status: str):
 
         # get recent bal to append
         bal_to_append = {
@@ -501,6 +500,8 @@ class TradeHandlerV2:
         # if initiation mdoe, append bal to initial, current balance
         if self.is_initiation_mode:
             self.revenue_ledger = {
+                "time": self.streamer_start_time,
+                "mode_status": mode_status,
                 "target_currency": self.target_currency,
                 "mm1_name": self.mm1_name,
                 "mm2_name": self.mm2_name,
@@ -510,6 +511,8 @@ class TradeHandlerV2:
 
         # if trading mdoe, only append to current balance
         elif self.is_trading_mode:
+            self.revenue_ledger["time"] = self.trading_mode_now_time
+            self.revenue_ledger["mode_status"] = mode_status
             self.revenue_ledger["current_bal"] = bal_to_append
 
         else:
