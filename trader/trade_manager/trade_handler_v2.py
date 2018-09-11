@@ -288,7 +288,6 @@ class TradeHandlerV2:
             self.is_oppty = False
             self.is_royal_spread = False
             logging.error("[WARNING] There is no oppty.. Waiting")
-            logging.error("[SPREAD TO TRADE]: %.4f\n" % target_spread_info.spread_to_trade)
             return
 
         # if oppty,
