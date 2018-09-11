@@ -108,7 +108,7 @@ class TradeStreamerV2(TradeHandlerV2):
         self.get_min_tradable_coin_unit_spread_list_init_mode(self.ocat_rewind_time, self.streamer_start_time)
 
         # log MCTU info and decide spread threshold
-        self.log_mctu_info(self.ocat_rewind_time, self.streamer_start_time)
+        self.log_past_mctu_info()
 
         self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
         self.mctu_royal_spread = float(input("Decide MCTU Royal spread: "))
@@ -124,7 +124,7 @@ class TradeStreamerV2(TradeHandlerV2):
         self.get_min_tradable_coin_unit_spread_list_trading_mode()
 
         # log MCTU
-        self.log_mctu_info(self.ocat_rewind_time, self.trading_mode_now_time)
+        self.log_present_mctu_info(self.ocat_rewind_time, self.trading_mode_now_time)
 
         # trade command by comparing current flowed time with exhaustion rate
         self.trade_command_by_comparing_exhaustion_with_flow_time()
