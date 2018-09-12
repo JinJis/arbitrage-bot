@@ -1,5 +1,6 @@
-import logging
+import sys
 import time
+import logging
 from abc import ABC, abstractmethod
 from config.global_conf import Global
 from analyzer.trade_analyzer import BasicAnalyzer
@@ -26,6 +27,7 @@ class BaseArbBot(ABC):
         self.is_backtesting = is_backtesting
         self.start_time = start_time
         self.end_time = end_time
+        self.is_settlement = False
 
         # init market managers
         self.mm1 = mm1
@@ -71,6 +73,19 @@ class BaseArbBot(ABC):
         self.cur_trade = None
         try:
             self.actual_trade_loop(mm1_data, mm2_data)
+
+            # if settlemnet, close
+            if self.is_settlement:
+                logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
+                logging.warning(
+                    "========== [ SETTLEMENT BALANCE ] ========================================================")
+                logging.warning(self.mm1.get_balance())
+                logging.warning(self.mm2.get_balance())
+
+                # send to Slack
+                Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
+                                             "Settlement Reached! Stopping RFAB Actual Trader")
+                sys.exit()
 
         # handle other exception
         except Exception as e:

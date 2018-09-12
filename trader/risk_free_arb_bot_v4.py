@@ -33,16 +33,8 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # check if settlement reached
         if trade_commander_set["settlement"] is True:
-            logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
-            logging.warning(
-                "========== [ SETTLEMENT BALANCE ] ========================================================")
-            logging.warning(self.mm1.get_balance())
-            logging.warning(self.mm2.get_balance())
-
-            # send to Slack
-            Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
-                                         "Settlement Reached! Stopping RFAB Actual Trader")
-            sys.exit()
+            self.is_settlement = True
+            return
 
         # check if time flow rate under exhaustion rate
         if trade_commander_set["execute_trade"] is False:

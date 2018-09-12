@@ -35,7 +35,7 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.set_initial_trade_setting()
 
                 # run initiation mode
-                self.run_initiation_mode()
+                self.run_initiation_mode_analysis()
 
                 # init revenue ledger
                 self.update_revenue_ledger(mode_status="initiation")
@@ -48,7 +48,7 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.is_trading_mode = True
 
                 # launch trading mode
-                self.launch_trading_mode()
+                self.trading_mode_looper()
 
                 # if reached settlement
                 if self.settlment_reached:
@@ -61,7 +61,7 @@ class TradeStreamerV2(TradeHandlerV2):
             Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
             raise KeyboardInterrupt
 
-    def launch_trading_mode(self):
+    def trading_mode_looper(self):
         """ TRADING MODE """
         trading_loop_count = 0
         while True:
@@ -79,7 +79,7 @@ class TradeStreamerV2(TradeHandlerV2):
             # run trading_mode
             trading_loop_count += 1
             try:
-                self.run_trading_mode(trading_loop_count)
+                self.run_trading_mode_analysis(trading_loop_count)
             except Exception as e:
                 log = "Error occured while executing Trade Streamer - Trading mode..\n" + str(e)
                 logging.error(log)
@@ -95,7 +95,7 @@ class TradeStreamerV2(TradeHandlerV2):
             self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
                                                  self.TRADING_MODE_LOOP_INTERVAL)
 
-    def run_initiation_mode(self):
+    def run_initiation_mode_analysis(self):
 
         # run inner & outer OCAT
         # fixme: 필요하다면 사용!
@@ -117,7 +117,7 @@ class TradeStreamerV2(TradeHandlerV2):
         self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
         self.mctu_royal_spread = float(input("Decide MCTU Royal spread: "))
 
-    def run_trading_mode(self, loop_count: int):
+    def run_trading_mode_analysis(self, loop_count: int):
 
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         logging.warning("|| Conducting Trading Mode -- # %4d || " % loop_count)
