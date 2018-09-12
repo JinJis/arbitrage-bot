@@ -1,3 +1,4 @@
+import sys
 import time
 import logging
 from itertools import groupby
@@ -12,8 +13,8 @@ from trader.market_manager.market_manager import MarketManager
 
 
 class TradeHandlerV2:
-    MIN_TRDBLE_COIN_MLTPLIER = 1.5
-    TIME_DUR_OF_SETTLEMENT = 4 * 60 * 60 + 20 * 60
+    MIN_TRDBLE_COIN_MLTPLIER = None
+    TIME_DUR_OF_SETTLEMENT = None
     TRADING_MODE_LOOP_INTERVAL = 5
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
@@ -47,7 +48,7 @@ class TradeHandlerV2:
 
         # TIME relevant
         self.streamer_start_time = int(time.time())
-        self.ocat_rewind_time = int(self.streamer_start_time - self.TIME_DUR_OF_SETTLEMENT)
+        self.ocat_rewind_time = None
         self._bot_start_time = None
         self._settlement_time = None
         self.trading_mode_now_time = None
@@ -63,6 +64,13 @@ class TradeHandlerV2:
     ==========================
     """
 
+    def set_initial_trade_setting(self):
+        self.MIN_TRDBLE_COIN_MLTPLIER = float(input("Please indicate Min Tradable Coin Multiplier (gte 1.0) "))
+        settle_hour = int(input("Please indicate settlement hour (int only)"))
+        settle_min = int(input("Please indicate settlement minute (int only)"))
+        self.TIME_DUR_OF_SETTLEMENT = settle_hour * 60 * 60 + settle_min * 60
+        self.ocat_rewind_time = int(self.streamer_start_time - self.TIME_DUR_OF_SETTLEMENT)
+
     def launch_inner_outer_ocat(self):
         # run Inner OCAT
         # decide which market has the most coin and make it as a set point
@@ -77,6 +85,8 @@ class TradeHandlerV2:
 
         # run Outer OCAT
         self.run_inner_or_outer_ocat(set_point_market, self.target_currency, is_inner_ocat=False)
+
+        logging.warning("Inner & Outer OCAT finished.")
 
     def run_inner_or_outer_ocat(self, set_point_market: str, target_currency: str, is_inner_ocat: bool):
         if is_inner_ocat:
@@ -146,7 +156,7 @@ class TradeHandlerV2:
 
     def to_proceed_handler_for_initiation_mode(self):
 
-        to_proceed = str(input("Inner & Outer OCAT finished. Do you want to change any settings? (Y/n)"))
+        to_proceed = str(input("Do you want to change any market settings? (Y/n)"))
         if to_proceed == "Y":
 
             # set settings accordingly
@@ -163,8 +173,7 @@ class TradeHandlerV2:
             logging.error("Irrelevant command. Please try again")
             return self.to_proceed_handler_for_initiation_mode()
 
-        # update balance
-        self.update_balance()
+        # update trading env setting
 
         # update streamer_min_trading_coin
         self.streamer_min_trading_coin \
@@ -412,17 +421,33 @@ class TradeHandlerV2:
     ======================
     """
 
+    def settlement_handler(self):
+        message = "Settlement reached!! now closing Trade Streamer!!"
+        logging.error(message)
+        Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, message)
+
+        # command Acutal Trader to stop
+        self.post_settlement_commander()
+
+        # wait until Acutal Trader stops trading (in case actual balance unmatch)
+        time.sleep(self.TRADING_MODE_LOOP_INTERVAL)
+
+        # post settled balance info to MongoDB
+        self.update_balance()
+        self.update_revenue_ledger(mode_status="settlement")
+        sys.exit()
+
     @staticmethod
     def get_mctu_spread_and_frequency(spread_to_trade_list: list):
         result = str()
 
-        # extract spread only list from spread to trade list
-        spread_list = [spread_info["spread_to_trade"] for spread_info in spread_to_trade_list]
-        spread_list.sort(reverse=True)
-
         if len(spread_to_trade_list) == 0:
             result = "* spread: Null -- frequency: Null\n"
             return result
+
+        # extract spread only list from spread to trade list
+        spread_list = [spread_info["spread_to_trade"] for spread_info in spread_to_trade_list]
+        spread_list.sort(reverse=True)
 
         for key, group in groupby(spread_list):
             result += "* spread: %.2f -- frequency: %.2f%%\n" % (key, (len(list(group)) / len(spread_list)) * 100)

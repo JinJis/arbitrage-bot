@@ -71,19 +71,7 @@ class BaseArbBot(ABC):
         self.cur_trade = None
         try:
             self.actual_trade_loop(mm1_data, mm2_data)
-        # if reached settlement,
-        except EnvironmentError:
-            logging.critical("Settlement Reached! Stopping RFAB Actual Trader")
-            logging.warning(
-                "========== [ SETTLEMENT BALANCE ] ========================================================")
-            logging.warning(self.mm1.get_balance())
-            logging.warning(self.mm2.get_balance())
-            # stop order watcher stats thread
-            OrderWatcherStats.instance().tear_down()
-            # send to Slack
-            Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL,
-                                         "Settlement Reached! Stopping RFAB Actual Trader")
-            raise KeyboardInterrupt
+
         # handle other exception
         except Exception as e:
             log = "Error occured while executing trade loop.. possible reason for Cursor Error" + str(e)

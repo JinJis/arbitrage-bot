@@ -30,6 +30,10 @@ class TradeStreamerV2(TradeHandlerV2):
         """ INITIATION MODE """
         try:
             if self.is_initiation_mode:
+
+                # set initial trade settings
+                self.set_initial_trade_setting()
+
                 # run initiation mode
                 self.run_initiation_mode()
 
@@ -46,61 +50,50 @@ class TradeStreamerV2(TradeHandlerV2):
                 # launch trading mode
                 self.launch_trading_mode()
 
-        except AssertionError:
-            message = "Settlement reached!! now closing Trade Streamer!!"
-            logging.error(message)
-            Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, message)
+                # if reached settlement
+                if self.settlment_reached:
+                    self.settlement_handler()
 
-            # command Acutal Trader to stop
-            self.post_settlement_commander()
-
-            # wait until Acutal Trader stops trading (in case actual balance unmatch)
-            time.sleep(self.TRADING_MODE_LOOP_INTERVAL)
-
-            # post settled balance info to MongoDB
-            self.update_balance()
-            self.update_revenue_ledger(mode_status="settlement")
-
+        except Exception as e:
+            log = "CRITICAL Error occured while executing Trade Streamer.. Not a type occured in Trading Mode.." \
+                  "Stopping Streamer..!!\n" + str(e)
+            logging.error(log)
+            Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
             raise KeyboardInterrupt
 
     def launch_trading_mode(self):
         """ TRADING MODE """
         trading_loop_count = 0
         while True:
-            if self.is_trading_mode:
 
-                # check if reached settlement time
-                if self.trading_mode_now_time > self._settlement_time:
-                    self.settlment_reached = False
-                    raise AssertionError
+            # check if reached settlement time
+            if self.trading_mode_now_time > self._settlement_time:
+                self.settlment_reached = True
+                return
 
-                # update balance & time
-                self.update_balance()
-                self.update_revenue_ledger(mode_status="trading")
-                self.trading_mode_now_time = int(time.time())
+            # update balance & time
+            self.update_balance()
+            self.update_revenue_ledger(mode_status="trading")
+            self.trading_mode_now_time = int(time.time())
 
-                # run trading_mode
-                trading_loop_count += 1
-                try:
-                    self.run_trading_mode(trading_loop_count)
-                except Exception as e:
-                    log = "Error occured while executing Trade Streamer - Trading mode.. " \
-                          "possible reason for Cursor Error" + str(e)
-                    logging.error(log)
-                    Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
+            # run trading_mode
+            trading_loop_count += 1
+            try:
+                self.run_trading_mode(trading_loop_count)
+            except Exception as e:
+                log = "Error occured while executing Trade Streamer - Trading mode..\n" + str(e)
+                logging.error(log)
+                Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
 
-                # post trade_commander dict to MongoDB
-                self.post_trade_commander_to_mongo()
+            # post trade_commander dict to MongoDB
+            self.post_trade_commander_to_mongo()
 
-                # log rev ledger info
-                self.log_rev_ledger()
+            # log rev ledger info
+            self.log_rev_ledger()
 
-                # sleep by Trading Mode Loop Interval
-                self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
-                                                     self.TRADING_MODE_LOOP_INTERVAL)
-            else:
-                raise TypeError("Trade Streamer should be launched with one of 2 modes -> "
-                                "[INITIAL ANALYSIS MODE] / [TRADING MODE] ")
+            # sleep by Trading Mode Loop Interval
+            self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
+                                                 self.TRADING_MODE_LOOP_INTERVAL)
 
     def run_initiation_mode(self):
 

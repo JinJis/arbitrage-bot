@@ -291,6 +291,9 @@ class MCTSAnalyzer:
         spread_to_trade = \
             (-1) * buy_unit_price * buy_amt * (1 - buy_fee) + (+1) * sell_unit_price * sell_amt * (1 - sell_fee)
 
+        if spread_to_trade < 0:
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+
         return SpreadInfo(able_to_trade=True,
                           spread_in_unit=spread_in_unit, spread_to_trade=spread_to_trade,
                           buy_unit_price=buy_unit_price, sell_unit_price=sell_unit_price,
