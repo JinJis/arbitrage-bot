@@ -13,7 +13,7 @@ from trader.market_manager.market_manager import MarketManager
 
 class TradeHandlerV2:
     MIN_TRDBLE_COIN_MLTPLIER = 1.5
-    TIME_DUR_OF_SETTLEMENT = 9 * 60 * 60
+    TIME_DUR_OF_SETTLEMENT = 4 * 60 * 60 + 20 * 60
     TRADING_MODE_LOOP_INTERVAL = 5
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
