@@ -94,7 +94,9 @@ class BithumbApi(MarketApi):
 
     @staticmethod
     def usec_time():
-        return int(time.time() * 1000)
+        mt = "%f %d" % math.modf(time.time())
+        mt_array = mt.split(" ")[:2]
+        return mt_array[1] + mt_array[0][2:5]
 
     def bithumb_post(self, url_path: str, payload: dict = None):
         if not payload:
@@ -102,7 +104,7 @@ class BithumbApi(MarketApi):
         payload["endpoint"] = url_path
         urlencoded_payload = urlencode(payload)
 
-        nonce = str(self.usec_time())
+        nonce = self.usec_time()
         splinter = chr(0)
         combined_data = url_path + splinter + urlencoded_payload + splinter + nonce
 
@@ -130,7 +132,7 @@ class BithumbApi(MarketApi):
 
         return res_json
 
-    def get_balance(self):
+    def  get_balance(self):
         # ini 파일에 있는 Bithumb거래 코인만 따올수 있음 (b/c 반환되는 데이터가 코인별로 정리 X)
         all_res_json = self.bithumb_post("/info/balance", payload={"currency": "ALL"})
 
