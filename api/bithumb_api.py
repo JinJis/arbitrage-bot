@@ -1,4 +1,4 @@
-import math
+import requests
 import hmac
 import time
 import base64
@@ -227,6 +227,8 @@ class BithumbApi(MarketApi):
 
     @staticmethod
     def filter_successful_response(res: Response):
+        print(res.request.body)
+        print(res.request.headers)
         if res.status_code != 200:
             raise ConnectionError("Network request has failed! (status code: %d)" % res.status_code)
         else:
