@@ -94,7 +94,7 @@ class BithumbApi(MarketApi):
 
     @staticmethod
     def usec_time():
-        mt = "%f %d" % math.modf(time.time() * 1000)
+        mt = "%f %d" % math.modf(time.time())
         mt_array = mt.split(" ")[:2]
         return mt_array[1] + mt_array[0][2:5]
 
