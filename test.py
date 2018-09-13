@@ -1,0 +1,4 @@
+import ccxt
+
+ccxt.bithumb()
+

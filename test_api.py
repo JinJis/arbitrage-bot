@@ -15,6 +15,6 @@ bt_api = BithumbApi.instance(is_public_access_only=False)
 # cn_api = CoinnestApi.instance()
 
 # order = Order(Market.COINONE, CoinoneCurrency.TRON, OrderType.LIMIT_BUY, "70862443", 344300, 0.01)
-result = bt_api.get_past_trades(BithumbCurrency.XRP)
+result = bt_api.get_balance()
 # result = bt_api.order_limit_buy(BithumbCurrency.ETH, 343000, 0.01)
 print(result)
