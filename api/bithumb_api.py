@@ -1,4 +1,4 @@
-import requests
+import math
 import hmac
 import time
 import base64
@@ -132,7 +132,7 @@ class BithumbApi(MarketApi):
 
         return res_json
 
-    def  get_balance(self):
+    def get_balance(self):
         # ini 파일에 있는 Bithumb거래 코인만 따올수 있음 (b/c 반환되는 데이터가 코인별로 정리 X)
         all_res_json = self.bithumb_post("/info/balance", payload={"currency": "ALL"})
 
