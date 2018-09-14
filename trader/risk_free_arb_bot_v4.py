@@ -1,4 +1,3 @@
-import sys
 import logging
 import pymongo
 from pymongo.collection import Collection
@@ -68,16 +67,23 @@ class RiskFreeArbBotV4(BaseArbBot):
         rev_trade = None
 
         # NEW
+
         if new_spread_info.spread_in_unit > 0:
             if new_spread_info.able_to_trade:
                 new_trade = self.execute_trade(new_spread_info, trade_commander_set["mctu_spread_threshold"], "new")
                 self.add_trade(new_trade)
+            else:
+                logging.error("Trade Analyzer decided not to trade NEW.. See following failed reason:\n'%s'"
+                              % new_spread_info.fail_reason)
 
         # REVERSE
         if rev_spread_info.spread_in_unit > 0:
             if rev_spread_info.able_to_trade:
                 rev_trade = self.execute_trade(rev_spread_info, trade_commander_set["mctu_spread_threshold"], "rev")
                 self.add_trade(rev_trade)
+            else:
+                logging.error("Trade Analyzer decided not to trade REV.. See following failed reason:\n'%s'"
+                              % rev_spread_info.fail_reason)
 
         # update balance if there was any trade
         if new_trade or rev_trade:

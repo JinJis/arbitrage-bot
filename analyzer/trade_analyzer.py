@@ -131,7 +131,7 @@ class SpreadInfo:
     # spread_in_unit, spread_to_trade, buy_unit_price, sell_unit_price, buy_amt, sell_amt
     def __init__(self, able_to_trade: bool, spread_in_unit: float, spread_to_trade: float = None,
                  buy_unit_price: float = None, sell_unit_price: float = None,
-                 buy_order_amt: float = None, sell_order_amt: float = None):
+                 buy_order_amt: float = None, sell_order_amt: float = None, fail_reason: str = None):
         self.able_to_trade = able_to_trade
         self.spread_in_unit = spread_in_unit
         self.spread_to_trade = spread_to_trade
@@ -139,6 +139,7 @@ class SpreadInfo:
         self.sell_unit_price = sell_unit_price
         self.buy_order_amt = buy_order_amt
         self.sell_order_amt = sell_order_amt
+        self.fail_reason = fail_reason
 
 
 class ATSAnalyzer:
@@ -234,6 +235,10 @@ class ATSAnalyzer:
 
 
 class MCTSAnalyzer:
+    """
+    This version is Currently used in RFAB v4
+    """
+
     @staticmethod
     def min_coin_tradable_spread_strategy(mm1_orderbook: dict, mm2_orderbook: dict,
                                           mm1_market_fee: float, mm2_market_fee: float,
@@ -270,10 +275,15 @@ class MCTSAnalyzer:
         spread_in_unit = (-1) * buy_unit_price / (1 - buy_fee) + (+1) * sell_unit_price * (1 - sell_fee)
 
         if (tradable_qty > buy_avail_amount) or (tradable_qty > sell_avail_amount):
-            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit,
+                              fail_reason="Not enough mkt amount "
+                                          "-> tradable qty: %.5f, buy_avail_amt: %.5f, sell_avail_amt: %.5f"
+                                          % (tradable_qty, buy_avail_amount, sell_avail_amount))
 
         if tradable_qty < 0:
-            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit,
+                              fail_reason="Tradable qty injected is negative"
+                                          "-> tradable qty: %.5f" % tradable_qty)
 
         # 여기 굉장히 중요!!! trade후 mm1, mm2 코인 수 합 정확히 유지해줘야함
         # buy하면 buy하는 코인 주문 amt에서 fee 차감되어 들어옴
@@ -282,7 +292,10 @@ class MCTSAnalyzer:
         # 1)
         if tradable_qty / (1 - buy_fee) > buy_avail_amount:
             # Don't trade
-            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit,
+                              fail_reason="Buy fee considered tradable qty is bigger than buy avail amt"
+                                          "-> buy feed trdble qty: %.5f, buy_avail_amt: %.5f"
+                                          % ((tradable_qty / (1 - buy_fee)), buy_avail_amount))
 
         buy_amt = tradable_qty / (1 - buy_fee)
         sell_amt = tradable_qty
@@ -292,7 +305,9 @@ class MCTSAnalyzer:
             (-1) * buy_unit_price * buy_amt * (1 - buy_fee) + (+1) * sell_unit_price * sell_amt * (1 - sell_fee)
 
         if spread_to_trade < 0:
-            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit)
+            return SpreadInfo(able_to_trade=False, spread_in_unit=spread_in_unit,
+                              fail_reason="Spread to trade is negative"
+                                          "-> spread_to_trade: %.2f" % spread_to_trade)
 
         return SpreadInfo(able_to_trade=True,
                           spread_in_unit=spread_in_unit, spread_to_trade=spread_to_trade,
