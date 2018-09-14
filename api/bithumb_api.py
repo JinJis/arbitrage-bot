@@ -229,11 +229,6 @@ class BithumbApi(MarketApi):
 
     @staticmethod
     def filter_successful_response(res: Response):
-        print("=======BODY========")
-        print(res.request.body)
-        print("\n\n\n")
-        print("=======HEADERS========")
-        print(res.request.headers)
         if res.status_code != 200:
             raise ConnectionError("Network request has failed! (status code: %d)" % res.status_code)
         else:
