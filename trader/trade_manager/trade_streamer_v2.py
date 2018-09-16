@@ -1,3 +1,4 @@
+import sys
 import time
 import logging
 from config.global_conf import Global
@@ -13,6 +14,8 @@ class TradeStreamerV2(TradeHandlerV2):
 
         # update for the first time
         self.post_empty_trade_commander()
+
+        # check backup
 
         # log when init
         logging.warning("================================")
@@ -54,12 +57,18 @@ class TradeStreamerV2(TradeHandlerV2):
                 if self.settlment_reached:
                     self.settlement_handler()
 
+        except KeyboardInterrupt:
+            # when testing, in order to prevent
+            self.post_backup_to_mongo_when_died(is_accident=False)
+
         except Exception as e:
-            log = "CRITICAL Error occured while executing Trade Streamer.. Not a type occured in Trading Mode.." \
-                  "Stopping Streamer..!!\n" + str(e)
+            # post current time flow & exhaust rate to MongoDB
+            # self.post_latest_rate_info_to_mongo_when_died(is_error=True)
+            log = "CRITICAL Error occured while executing Streamer.. This Error did not occur while looping" \
+                  " Trading Mode..Stopping Streamer..!!\n" + str(e)
             logging.error(log)
             Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
-            raise KeyboardInterrupt
+            sys.exit()
 
     def trading_mode_looper(self):
         """ TRADING MODE """
@@ -71,29 +80,30 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.settlment_reached = True
                 return
 
-            # update balance & time
-            self.update_balance()
-            self.update_revenue_ledger(mode_status="trading")
-            self.trading_mode_now_time = int(time.time())
-
-            # run trading_mode
-            trading_loop_count += 1
             try:
+                # update balance & time
+                self.update_balance()
+                self.update_revenue_ledger(mode_status="trading")
+                self.trading_mode_now_time = int(time.time())
+
+                # run trading_mode
+                trading_loop_count += 1
+
                 self.run_trading_mode_analysis(trading_loop_count)
+
+                # post trade_commander dict to MongoDB
+                self.post_trade_commander_to_mongo()
+
+                # log rev ledger info
+                self.log_rev_ledger()
+
+                # sleep by Trading Mode Loop Interval
+                self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
+                                                     self.TRADING_MODE_LOOP_INTERVAL)
             except Exception as e:
                 log = "Error occured while executing Trade Streamer - Trading mode..\n" + str(e)
                 logging.error(log)
                 Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
-
-            # post trade_commander dict to MongoDB
-            self.post_trade_commander_to_mongo()
-
-            # log rev ledger info
-            self.log_rev_ledger()
-
-            # sleep by Trading Mode Loop Interval
-            self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),
-                                                 self.TRADING_MODE_LOOP_INTERVAL)
 
     def run_initiation_mode_analysis(self):
 
@@ -122,6 +132,9 @@ class TradeStreamerV2(TradeHandlerV2):
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         logging.warning("|| Conducting Trading Mode -- # %4d || " % loop_count)
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+
+        # get latest mm1, mm2 orderbook
+        self.get_latest_orderbook()
 
         # get MTCU
         self.get_min_tradable_coin_unit_spread_list_trading_mode()

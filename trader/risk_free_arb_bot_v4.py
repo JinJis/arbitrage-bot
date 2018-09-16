@@ -1,10 +1,10 @@
 import logging
 import pymongo
-from pymongo.collection import Collection
-from analyzer.trade_analyzer import MCTSAnalyzer
-from analyzer.trade_analyzer import SpreadInfo
 from config.global_conf import Global
+from pymongo.collection import Collection
 from trader.base_arb_bot import BaseArbBot
+from analyzer.trade_analyzer import SpreadInfo
+from analyzer.trade_analyzer import MCTSAnalyzer
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.market_manager.market_manager import MarketManager
 
@@ -15,6 +15,7 @@ class RiskFreeArbBotV4(BaseArbBot):
             self, mm1: MarketManager, mm2: MarketManager, target_currency: str, streamer_db: Collection):
 
         self.trade_commander_col = streamer_db["trade_commander"]
+        self.balance_commander_col = streamer_db["balance_commander"]
         self.trade_strategy = MCTSAnalyzer.min_coin_tradable_spread_strategy
 
         super().__init__(mm1, mm2, target_currency)
@@ -89,6 +90,10 @@ class RiskFreeArbBotV4(BaseArbBot):
         if new_trade or rev_trade:
             self.mm1.update_balance()
             self.mm2.update_balance()
+            self.balance_commander_col.insert_one(dict(is_bal_update=True))
+        else:
+            # post balance_commander empty data to reset
+            self.balance_commander_col.insert_one(dict(is_bal_update=False))
 
     def execute_trade(self, spread_info: SpreadInfo, mctu_spread_threshold: float, trade_type: str = "new" or "rev"):
         if trade_type == "new":

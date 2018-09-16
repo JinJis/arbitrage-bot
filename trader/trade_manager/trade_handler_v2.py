@@ -1,5 +1,6 @@
 import sys
 import time
+import pymongo
 import logging
 from itertools import groupby
 from config.global_conf import Global
@@ -37,6 +38,8 @@ class TradeHandlerV2:
         self.target_settings = None
 
         # MTCU relevant
+        self.mm1_ob = None
+        self.mm2_ob = None
         self.trade_type = None
         self.streamer_min_trading_coin = None
         self.past_spread_to_trade_list = list()
@@ -266,37 +269,35 @@ class TradeHandlerV2:
     =======================
     """
 
-    def get_min_tradable_coin_unit_spread_list_trading_mode(self):
-
+    def get_latest_orderbook(self):
         # get mm1, mm2 collection by target_currency
         mm1_col = getattr(SharedMongoClient, "get_%s_db" % self.mm1_name)()[self.target_currency + "_orderbook"]
         mm2_col = getattr(SharedMongoClient, "get_%s_db" % self.mm2_name)()[self.target_currency + "_orderbook"]
 
         # get latest db
-        mm1_data, mm2_data = SharedMongoClient.get_latest_data_from_db(mm1_col, mm2_col)
-        mm1_rq = Global.convert_epoch_to_local_datetime(mm1_data["requestTime"], timezone="kr")
-        mm2_rq = Global.convert_epoch_to_local_datetime(mm2_data["requestTime"], timezone="kr")
+        self.mm1_ob, self.mm2_ob = SharedMongoClient.get_latest_data_from_db(mm1_col, mm2_col)
+
+    def get_min_tradable_coin_unit_spread_list_trading_mode(self):
+
+        mm1_rq = Global.convert_epoch_to_local_datetime(self.mm1_ob["requestTime"], timezone="kr")
+        mm2_rq = Global.convert_epoch_to_local_datetime(self.mm2_ob["requestTime"], timezone="kr")
 
         logging.warning("[REQUEST TIME] -- mm1: %s, mm2: %s\n" % (mm1_rq, mm2_rq))
 
         # analyze by MCTS
-        spread_info_dict = MCTSAnalyzer.min_coin_tradable_spread_strategy(mm1_data, mm2_data,
-                                                                          self.mm1.taker_fee,
-                                                                          self.mm2.taker_fee,
-                                                                          self.streamer_min_trading_coin)
-        target_spread_info = spread_info_dict[self.trade_type]
+        target_spread_info \
+            = MCTSAnalyzer.min_coin_tradable_spread_strategy(self.mm1_ob, self.mm2_ob,
+                                                             self.mm1.taker_fee,
+                                                             self.mm2.taker_fee,
+                                                             self.streamer_min_trading_coin)[self.trade_type]
 
-        # reformat spread info class to dict
-        current_spread_to_trade_list = [{"spread_to_trade": target_spread_info.spread_to_trade,
-                                         "sell_amt": target_spread_info.sell_order_amt,
-                                         "buy_amt": target_spread_info.buy_order_amt}
-                                        ]
         logging.warning("========= [OPPTY NOTIFIER] ========")
         # if there is no Oppty,
         if target_spread_info.able_to_trade is False:
             self.is_oppty = False
             self.is_royal_spread = False
             logging.error("[WARNING] There is no oppty.. Waiting")
+            logging.error("=> Fail reason: %s\n" % target_spread_info.fail_reason)
             return
 
         # if oppty,
@@ -312,7 +313,9 @@ class TradeHandlerV2:
             self.is_royal_spread = False
 
         # get spread_to_trade list from min_trdble_coin_sprd_list
-        self.present_spread_to_trade_list.extend(current_spread_to_trade_list)
+        self.present_spread_to_trade_list.extend([{"spread_to_trade": target_spread_info.spread_to_trade,
+                                                   "sell_amt": target_spread_info.sell_order_amt,
+                                                   "buy_amt": target_spread_info.buy_order_amt}])
 
     def trade_command_by_comparing_exhaustion_with_flow_time(self):
 
@@ -334,10 +337,8 @@ class TradeHandlerV2:
     def calc_latest_exhaust_rate(self):
 
         # get mid price
-        mm1_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(
-            self.mm1.get_orderbook(self.mm1.get_market_currency(self.target_currency)))
-        mm2_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(
-            self.mm2.get_orderbook(self.mm2.get_market_currency(self.target_currency)))
+        mm1_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(self.mm1_ob)
+        mm2_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(self.mm2_ob)
         mid_price = (mm1_mid_price + mm2_mid_price) / 2
 
         # IF NEW
@@ -435,6 +436,11 @@ class TradeHandlerV2:
         # post settled balance info to MongoDB
         self.update_balance()
         self.update_revenue_ledger(mode_status="settlement")
+
+        # post latest_rate_info
+        self.post_backup_to_mongo_when_died(is_accident=False)
+
+        # finally, halt sys
         sys.exit()
 
     @staticmethod
@@ -449,8 +455,11 @@ class TradeHandlerV2:
         spread_list = [spread_info["spread_to_trade"] for spread_info in spread_to_trade_list]
         spread_list.sort(reverse=True)
 
+        total_count = len(list(spread_list))
         for key, group in groupby(spread_list):
-            result += "* spread: %.2f -- frequency: %.2f%%\n" % (key, (len(list(group)) / len(spread_list)) * 100)
+            cur_group_count = len(list(group))
+            result += "* spread: %.2f -- frequency: %.2f%% -- count: %d out of %d\n" \
+                      % (key, (cur_group_count / total_count) * 100, cur_group_count, total_count)
         return result
 
     def log_rev_ledger(self):
@@ -477,6 +486,17 @@ class TradeHandlerV2:
         logging.warning("------------------------------------\n\n\n")
 
     def update_balance(self):
+
+        # check from Mongo Balance Commander whether to update or not
+        latest_bal_cmd = self.streamer_db["balance_commander"].find_one(
+            sort=[('_id', pymongo.DESCENDING)]
+        )
+
+        # if no command, return
+        if not latest_bal_cmd["is_bal_update"]:
+            return
+
+        # else, update using API
         self.mm1.update_balance()
         self.mm2.update_balance()
 
@@ -544,3 +564,27 @@ class TradeHandlerV2:
 
         # finally post to Mongo DB
         self.streamer_db["revenue_ledger"].insert_one(dict(self.revenue_ledger))
+
+    def post_backup_to_mongo_when_died(self, is_accident: bool):
+        if not is_accident:
+            to_post = {
+                "is_accident": is_accident
+            }
+        else:
+            to_post = {
+                "is_accident": is_accident,
+                "time_died": int(time.time()),
+                "trade_type": self.trade_type,
+                "spread_threshold": self.mctu_spread_threshold,
+                "royal_spread_threshold": self.mctu_royal_spread,
+                "time_flow_rate": {
+                    "bot_start_time": self._bot_start_time if not None else self.streamer_start_time,
+                    "time_dur_of_settlement": self.TIME_DUR_OF_SETTLEMENT
+                },
+                "exhaust_rate": {
+                    "initial_balance": {
+                        "krw": self.revenue_ledger["initial_balance"]
+                    }
+                }
+            }
+        self.streamer_db["backup"].insert_one(to_post)
