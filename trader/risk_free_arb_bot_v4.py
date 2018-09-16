@@ -34,6 +34,9 @@ class RiskFreeArbBotV4(BaseArbBot):
         # check if settlement reached
         if trade_commander_set["settlement"] is True:
             self.is_settlement = True
+
+            # post balance_commander empty data to reset
+            self.balance_commander_col.insert_one(dict(is_bal_update=False))
             return
 
         # check if time flow rate under exhaustion rate
@@ -43,6 +46,9 @@ class RiskFreeArbBotV4(BaseArbBot):
                             % trade_commander_set["is_time_flow_above_exhaust"])
             logging.warning("[Under Opportunity]: %s"
                             % trade_commander_set["is_oppty"])
+
+            # post balance_commander empty data to reset
+            self.balance_commander_col.insert_one(dict(is_bal_update=False))
             return
 
         if trade_commander_set["execute_trade"] is True:

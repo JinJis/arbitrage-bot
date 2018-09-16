@@ -124,8 +124,7 @@ class TradeStreamerV2(TradeHandlerV2):
         # log MCTU info and decide spread threshold
         self.log_past_mctu_info()
 
-        self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
-        self.mctu_royal_spread = float(input("Decide MCTU Royal spread: "))
+        logging.warning("Please launch RFAB v4!")
 
     def run_trading_mode_analysis(self, loop_count: int):
 

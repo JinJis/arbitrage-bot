@@ -16,7 +16,7 @@ from trader.market_manager.market_manager import MarketManager
 class TradeHandlerV2:
     MIN_TRDBLE_COIN_MLTPLIER = None
     TIME_DUR_OF_SETTLEMENT = None
-    TRADING_MODE_LOOP_INTERVAL = 5
+    TRADING_MODE_LOOP_INTERVAL = 3
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
 
@@ -244,6 +244,9 @@ class TradeHandlerV2:
         logging.warning("=========== [MCTU INFO] ==========")
         logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
         logging.warning("\n[SPREAD RECORDER]:\n%s" % self.get_mctu_spread_and_frequency(self.past_spread_to_trade_list))
+
+        self.mctu_spread_threshold = float(input("Decide MCTU spread threshold: "))
+        self.mctu_royal_spread = float(input("Decide MCTU Royal spread: "))
 
     def set_time_relevant_before_trading_mode(self):
         self.trading_mode_now_time = int(time.time())
