@@ -10,6 +10,7 @@ from config.global_conf import Global
 
 class RevLedgerXLXS:
     DEFAULT_DIR = os.path.dirname(__file__) + "/rev_ledger_excel/"
+    BASE_FILE_DIR = DEFAULT_DIR + "base_rev_ledger.xlsx"
     CRITERIA_COLUMN = {
         "time": "B",
         "mode_status": "C",
@@ -36,10 +37,10 @@ class RevLedgerXLXS:
             self.target_wb: Workbook \
                 = load_workbook(self.file_dir)
             self.target_ws: Worksheet = self.target_wb["ledger"]
-        except FileNotFoundError as e:
-            logging.error("Filed Not Found!!"
-                          "-> Please inspect directory to check whether your [combination] excel file exists or not")
-            logging.error(e)
+        except FileNotFoundError:
+            logging.error("Filed Not Found!! Now creating New Rev Ledger xlxs!")
+            self.write_new_ledger()
+            logging.warning("New Rev Ledger created with designated combination")
 
     def run(self, mode_status: str):
         try:
@@ -79,6 +80,17 @@ class RevLedgerXLXS:
 
         self.target_wb.save(self.file_dir)
         logging.critical("Excel Revenue Ledger saved successfully!!")
+
+    def write_new_ledger(self):
+        self.target_wb: Workbook \
+            = load_workbook(self.BASE_FILE_DIR)
+        self.target_ws: Worksheet = self.target_wb["ledger"]
+
+        self.target_ws["C3"] = self.target_currency
+        self.target_ws["D3"] = self.mm1_name
+        self.target_ws["E3"] = self.mm2_name
+
+        self.target_wb.save(self.DEFAULT_DIR + '%s_%s_%s.xlsx' % (self.target_currency, self.mm1_name, self.mm2_name))
 
     def get_latest_mongo_rev_ledger(self, mode_status: str = ("initiation" or "settlement")):
         # sort rev_ledger of MongoDB by target combination
