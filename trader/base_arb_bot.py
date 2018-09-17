@@ -89,7 +89,7 @@ class BaseArbBot(ABC):
 
         # handle other exception
         except Exception as e:
-            log = "Error occured while executing trade loop.. possible reason for Cursor Error" + str(e)
+            log = "Error occured while executing trade loop.." + str(e)
             logging.error(log)
             Global.send_to_slack_channel(Global.SLACK_BOT_STATUS_URL, log)
 
