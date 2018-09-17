@@ -92,7 +92,3 @@ class RevLedgerXLXS:
             return mongo_rev_led
         else:
             raise Exception("There is no such combination queried in MongoDB..Please manually check!")
-
-
-SharedMongoClient.initialize(should_use_localhost_db=False)
-RevLedgerXLXS("xrp", "bithumb", "okcoin").run(mode_status="initiation")

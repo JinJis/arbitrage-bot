@@ -4,6 +4,7 @@ import pymongo
 import logging
 from itertools import groupby
 from config.global_conf import Global
+from collector.rev_ledger_to_xlxs import RevLedgerXLXS
 from analyzer.trade_analyzer import MCTSAnalyzer, BasicAnalyzer
 from collector.oppty_time_collector import OpptyTimeCollector
 from collector.scheduler.otc_scheduler import OTCScheduler
@@ -443,6 +444,9 @@ class TradeHandlerV2:
         # post latest_rate_info
         self.post_backup_to_mongo_when_died(is_accident=False)
 
+        # write RevLedgerXLXS
+        self.launch_rev_ledger_xlxs(mode_status="settlement")
+
         # finally, halt sys
         sys.exit()
 
@@ -568,6 +572,7 @@ class TradeHandlerV2:
         # finally post to Mongo DB
         self.streamer_db["revenue_ledger"].insert_one(dict(self.revenue_ledger))
 
+    # fixme: 이거 제대로 활용하기
     def post_backup_to_mongo_when_died(self, is_accident: bool):
         if not is_accident:
             to_post = {
@@ -591,3 +596,6 @@ class TradeHandlerV2:
                 }
             }
         self.streamer_db["backup"].insert_one(to_post)
+
+    def launch_rev_ledger_xlxs(self, mode_status: str):
+        RevLedgerXLXS(self.target_currency, self.mm1_name, self.mm2_name).run(mode_status=mode_status)

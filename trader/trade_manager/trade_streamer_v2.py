@@ -43,6 +43,9 @@ class TradeStreamerV2(TradeHandlerV2):
                 # init revenue ledger
                 self.update_revenue_ledger(mode_status="initiation")
 
+                # write RevLedgerXLXS
+                self.launch_rev_ledger_xlxs(mode_status="initiation")
+
                 # update time relevant
                 self.set_time_relevant_before_trading_mode()
 
@@ -58,6 +61,7 @@ class TradeStreamerV2(TradeHandlerV2):
                     self.settlement_handler()
 
         except KeyboardInterrupt:
+            # fixme: 이거 제대로 짜기
             # when testing, in order to prevent
             self.post_backup_to_mongo_when_died(is_accident=False)
 
