@@ -24,6 +24,13 @@ class RiskFreeArbBotV4(BaseArbBot):
         while True:
             self.execute_trade_loop()
 
+            if self.is_settlement:
+                # reset bal update commander
+                self.balance_commander_col.insert_one(dict(is_bal_update=False))
+                # handle rest of settlement
+                self.settlement_handler()
+                break
+
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
 
         # get latest trade_commander dict from db
@@ -34,9 +41,6 @@ class RiskFreeArbBotV4(BaseArbBot):
         # check if settlement reached
         if trade_commander_set["settlement"] is True:
             self.is_settlement = True
-
-            # post balance_commander empty data to reset
-            self.balance_commander_col.insert_one(dict(is_bal_update=False))
             return
 
         # check if time flow rate under exhaustion rate

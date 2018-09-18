@@ -1,10 +1,9 @@
-import sys
 import time
 import pymongo
 import logging
 from itertools import groupby
 from config.global_conf import Global
-from collector.rev_ledger_to_xlxs import RevLedgerXLXS
+from collector.rev_ledger_to_xlsx import RevLedgerXLSX
 from analyzer.trade_analyzer import MCTSAnalyzer, BasicAnalyzer
 from collector.oppty_time_collector import OpptyTimeCollector
 from collector.scheduler.otc_scheduler import OTCScheduler
@@ -23,8 +22,6 @@ class TradeHandlerV2:
 
         # steamer init relevant
         self.streamer_db = SharedMongoClient.get_streamer_db()
-        self.is_initiation_mode = True
-        self.is_trading_mode = False
 
         # MARKET relevant
         self.mm1 = mm1
@@ -77,7 +74,7 @@ class TradeHandlerV2:
 
     def launch_inner_outer_ocat(self):
         # run Inner OCAT
-        # decide which market has the most coin and make it as a set point
+        # decide which market has the most coin ad make it as a set poㄷint
         if self.mm1_coin_bal > self.mm2_coin_bal:
             set_point_market = self.mm1_name
         elif self.mm1_coin_bal < self.mm2_coin_bal:
@@ -428,7 +425,7 @@ class TradeHandlerV2:
 
     def settlement_handler(self):
         message = "Settlement reached!! now closing Trade Streamer!!"
-        logging.error(message)
+        logging.warning(message)
         Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, message)
 
         # command Acutal Trader to stop
@@ -441,14 +438,8 @@ class TradeHandlerV2:
         self.update_balance()
         self.update_revenue_ledger(mode_status="settlement")
 
-        # post latest_rate_info
-        self.post_backup_to_mongo_when_died(is_accident=False)
-
         # write RevLedgerXLXS
-        self.launch_rev_ledger_xlxs(mode_status="settlement")
-
-        # finally, halt sys
-        sys.exit()
+        self.launch_rev_ledger_xlsx(mode_status="settlement")
 
     @staticmethod
     def get_mctu_spread_and_frequency(spread_to_trade_list: list):
@@ -549,7 +540,7 @@ class TradeHandlerV2:
         }
 
         # if initiation mdoe, append bal to initial, current balance
-        if self.is_initiation_mode:
+        if mode_status == "initiation":
             self.revenue_ledger = {
                 "time": self.streamer_start_time,
                 "mode_status": mode_status,
@@ -561,13 +552,13 @@ class TradeHandlerV2:
             }
 
         # if trading mdoe, only append to current balance
-        elif self.is_trading_mode:
+        elif mode_status == "trading" or "settlement":
             self.revenue_ledger["time"] = self.trading_mode_now_time
             self.revenue_ledger["mode_status"] = mode_status
             self.revenue_ledger["current_bal"] = bal_to_append
 
         else:
-            raise Exception("Something went wrong while appending conducting Revenue Ledger!")
+            raise Exception("Mode status injected is invalid for Revenue Ledger!")
 
         # finally post to Mongo DB
         self.streamer_db["revenue_ledger"].insert_one(dict(self.revenue_ledger))
@@ -597,5 +588,5 @@ class TradeHandlerV2:
             }
         self.streamer_db["backup"].insert_one(to_post)
 
-    def launch_rev_ledger_xlxs(self, mode_status: str):
-        RevLedgerXLXS(self.target_currency, self.mm1_name, self.mm2_name).run(mode_status=mode_status)
+    def launch_rev_ledger_xlsx(self, mode_status: str):
+        RevLedgerXLSX(self.target_currency, self.mm1_name, self.mm2_name).run(mode_status=mode_status)

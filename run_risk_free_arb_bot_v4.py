@@ -12,5 +12,4 @@ RiskFreeArbBotV4(
     target_currency="xrp",
     mm1=BithumbMarketManager(),
     mm2=OkcoinMarketManager(),
-    streamer_db=SharedMongoClient.get_streamer_db()
-).run()
+    streamer_db=SharedMongoClient.get_streamer_db()).run()

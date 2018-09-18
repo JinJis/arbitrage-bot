@@ -1,4 +1,3 @@
-import sys
 import time
 import logging
 from config.global_conf import Global
@@ -28,61 +27,50 @@ class TradeStreamerV2(TradeHandlerV2):
                                                                self.target_currency.upper(),
                                                                self.mm2_coin_bal))
 
-    def run(self):
+    def run(self, use_ocat: bool):
+        self.launch_initiation_mode(use_ocat)
+        self.trading_mode_looper()
+        return
 
-        """ INITIATION MODE """
-        try:
-            if self.is_initiation_mode:
+    def launch_initiation_mode(self, use_ocat: bool):
+        # set initial trade settings
+        self.set_initial_trade_setting()
 
-                # set initial trade settings
-                self.set_initial_trade_setting()
+        if use_ocat:
+            self.launch_inner_outer_ocat()
 
-                # run initiation mode
-                self.run_initiation_mode_analysis()
+        # check whether to proceed to next step
+        self.to_proceed_handler_for_initiation_mode()
 
-                # init revenue ledger
-                self.update_revenue_ledger(mode_status="initiation")
+        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        logging.warning("||| Conducting Initiation Mode |||")
+        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
-                # write RevLedgerXLXS
-                self.launch_rev_ledger_xlxs(mode_status="initiation")
+        # # save spread_to_trade list & amount of krw_earend
+        self.get_min_tradable_coin_unit_spread_list_init_mode(self.ocat_rewind_time, self.streamer_start_time)
 
-                # update time relevant
-                self.set_time_relevant_before_trading_mode()
+        # log MCTU info and decide spread threshold
+        self.log_past_mctu_info()
 
-                # reset mode relevant
-                self.is_initiation_mode = False
-                self.is_trading_mode = True
+        # init revenue ledger
+        self.update_revenue_ledger(mode_status="initiation")
 
-                # launch trading mode
-                self.trading_mode_looper()
+        # write RevLedgerXLXS
+        self.launch_rev_ledger_xlsx(mode_status="initiation")
 
-                # if reached settlement
-                if self.settlment_reached:
-                    self.settlement_handler()
-
-        except KeyboardInterrupt:
-            # fixme: 이거 제대로 짜기
-            # when testing, in order to prevent
-            self.post_backup_to_mongo_when_died(is_accident=False)
-
-        except Exception as e:
-            # post current time flow & exhaust rate to MongoDB
-            # self.post_latest_rate_info_to_mongo_when_died(is_error=True)
-            log = "CRITICAL Error occured while executing Streamer.. This Error did not occur while looping" \
-                  " Trading Mode..Stopping Streamer..!!\n" + str(e)
-            logging.error(log)
-            Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
-            sys.exit()
+        # update time relevant
+        self.set_time_relevant_before_trading_mode()
 
     def trading_mode_looper(self):
-        """ TRADING MODE """
+
         trading_loop_count = 0
         while True:
 
             # check if reached settlement time
             if self.trading_mode_now_time > self._settlement_time:
                 self.settlment_reached = True
-                return
+                self.settlement_handler()
+                break
 
             try:
                 # update balance & time
@@ -108,27 +96,6 @@ class TradeStreamerV2(TradeHandlerV2):
                 log = "Error occured while executing Trade Streamer - Trading mode..\n" + str(e)
                 logging.error(log)
                 Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, log)
-
-    def run_initiation_mode_analysis(self):
-
-        # run inner & outer OCAT
-        # fixme: 필요하다면 사용!
-        # self.launch_inner_outer_ocat()
-
-        # check whether to proceed to next step
-        self.to_proceed_handler_for_initiation_mode()
-
-        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        logging.warning("||| Conducting Initiation Mode |||")
-        logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
-
-        # # save spread_to_trade list & amount of krw_earend
-        self.get_min_tradable_coin_unit_spread_list_init_mode(self.ocat_rewind_time, self.streamer_start_time)
-
-        # log MCTU info and decide spread threshold
-        self.log_past_mctu_info()
-
-        logging.warning("Please launch RFAB v4!")
 
     def run_trading_mode_analysis(self, loop_count: int):
 
