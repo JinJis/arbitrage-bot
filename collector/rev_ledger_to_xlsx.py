@@ -1,19 +1,26 @@
 import os
 import logging
 import pymongo
+from config.global_conf import Global
+from openpyxl.styles import Font
 from openpyxl import load_workbook
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from config.shared_mongo_client import SharedMongoClient
-from config.global_conf import Global
 
 
 class RevLedgerXLSX:
     DEFAULT_DIR = os.path.dirname(__file__) + "/rev_ledger_excel/"
     BASE_FILE_DIR = DEFAULT_DIR + "base_rev_ledger.xlsx"
+    FIRST_ROW = "11"
     CRITERIA_COLUMN = {
         "time": "B",
         "mode_status": "C",
+        "brief_rev": {
+            "total_krw_earned": "C5",
+            "total_coin_loss": "C6",
+            "agg_yield": "C7"
+        },
         "krw": {
             "mm1": "D",
             "mm2": "F",
@@ -23,6 +30,12 @@ class RevLedgerXLSX:
             "mm1": "E",
             "mm2": "G",
             "total": "I"
+        },
+        "yield": {
+            "krw_earned": "J",
+            "coin_loss": "K",
+            "yield": "L",
+            "agg_yield": "M"
         }
     }
 
@@ -41,10 +54,7 @@ class RevLedgerXLSX:
             self.write_new_ledger()
 
     def run(self, mode_status: str):
-        try:
-            self.write_latest_ledger(mode_status=mode_status)
-        except Exception as e:
-            logging.error("Something went wrong in RevLedgerXLXS!! -> %s" % e)
+        self.write_latest_ledger(mode_status=mode_status)
 
     def write_latest_ledger(self, mode_status: str):
         if self.target_ws is None:
@@ -57,7 +67,6 @@ class RevLedgerXLSX:
         target_row = str(self.target_ws.max_row + 1)
 
         # write data from mongo rev_ledger to excel
-
         # append time
         self.target_ws[self.CRITERIA_COLUMN["time"] + target_row].value = Global.convert_epoch_to_local_datetime(
             mongo_rev_ledger["time"], timezone="kr")
@@ -77,6 +86,50 @@ class RevLedgerXLSX:
                 for key2 in ["mm1", "mm2", "total"]:
                     self.target_ws[self.CRITERIA_COLUMN[key1][key2] + target_row].value \
                         = mongo_rev_ledger["current_bal"][key1][key2]
+
+        # write function
+        logic_test_cell = self.CRITERIA_COLUMN["mode_status"] + target_row
+
+        # krw_earned, coin loss
+        for target_colmn, currency_key in zip(["krw_earned", "coin_loss"], ["krw", "coin"]):
+            self.target_ws[self.CRITERIA_COLUMN["yield"][target_colmn] + target_row].value = \
+                '=IF(%s="settlement", %s-%s, "")' % (
+                    logic_test_cell,
+                    self.CRITERIA_COLUMN[currency_key]["total"] + target_row,
+                    self.CRITERIA_COLUMN[currency_key]["total"] + str(int(target_row) - 1))
+
+        # calc yield %
+        yield_cell = self.target_ws[self.CRITERIA_COLUMN["yield"]["yield"] + target_row]
+        yield_cell.value = '=IF(%s="settlement", %s/%s, "")' % (
+            logic_test_cell,
+            self.CRITERIA_COLUMN["yield"]["krw_earned"] + target_row,
+            self.CRITERIA_COLUMN["krw"]["total"] + str(int(target_row) - 1))
+        # format to percentage
+        yield_cell.number_format = '0.0000%'
+
+        # calc agg. yield
+        agg_yield_cell = self.target_ws[self.CRITERIA_COLUMN["yield"]["agg_yield"] + target_row]
+        agg_yield_cell.value = '=IF(%s="settlement", SUM(%s:%s)/%s, "")' % (
+            logic_test_cell,
+            "$" + self.CRITERIA_COLUMN["yield"]["krw_earned"] + "$" + self.FIRST_ROW,
+            self.CRITERIA_COLUMN["yield"]["krw_earned"] + target_row,
+            "$" + self.CRITERIA_COLUMN["krw"]["total"] + "$" + self.FIRST_ROW)
+        # format to percentage
+        agg_yield_cell.number_format = '0.0000%'
+        # make it bold
+        agg_yield_cell.font = Font(bold=True)
+
+        # write brief rev status
+        # total_krw_earned , total coin loss
+        for column, crit_key in zip(["total_krw_earned", "total_coin_loss"], ["krw_earned", "coin_loss"]):
+            self.target_ws[self.CRITERIA_COLUMN["brief_rev"][column]].value = \
+                '=SUM(%s:%s)' % (
+                    self.CRITERIA_COLUMN["yield"][crit_key] + self.FIRST_ROW,
+                    self.CRITERIA_COLUMN["yield"][crit_key] + target_row)
+
+        # write agg. yield
+        self.target_ws[self.CRITERIA_COLUMN["brief_rev"]["agg_yield"]].value = \
+            '=%s' % self.CRITERIA_COLUMN["yield"]["agg_yield"] + target_row
 
         # save to existing file
         self.target_wb.save(self.file_dir)

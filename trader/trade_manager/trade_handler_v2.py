@@ -6,7 +6,6 @@ from config.global_conf import Global
 from collector.rev_ledger_to_xlsx import RevLedgerXLSX
 from analyzer.trade_analyzer import MCTSAnalyzer, BasicAnalyzer
 from collector.oppty_time_collector import OpptyTimeCollector
-from collector.scheduler.otc_scheduler import OTCScheduler
 from config.config_market_manager import ConfigMarketManager
 from config.shared_mongo_client import SharedMongoClient
 from config.trade_setting_config import TradeSettingConfig
@@ -72,88 +71,45 @@ class TradeHandlerV2:
         self.TIME_DUR_OF_SETTLEMENT = settle_hour * 60 * 60 + settle_min * 60
         self.ocat_rewind_time = int(self.streamer_start_time - self.TIME_DUR_OF_SETTLEMENT)
 
-    def launch_inner_outer_ocat(self):
-        # run Inner OCAT
-        # decide which market has the most coin ad make it as a set poㄷint
-        if self.mm1_coin_bal > self.mm2_coin_bal:
-            set_point_market = self.mm1_name
-        elif self.mm1_coin_bal < self.mm2_coin_bal:
-            set_point_market = self.mm2_name
-        else:
-            logging.critical("Coin Balances for both are market same. Plz manually transfer coin")
-            set_point_market = str(input("Manual coin transfer done, set_point_market is:"))
-        self.run_inner_or_outer_ocat(set_point_market, self.target_currency, is_inner_ocat=True)
+    def run_inner_ocat(self):
+        # create combination of coin that is injected by validating if the exchange has that coin
+        logging.critical("--------Conducting Inner OCAT--------")
+        ocat_result = self.launch_ocat(self.target_currency, [self.mm1_name, self.mm2_name])
 
-        # run Outer OCAT
-        self.run_inner_or_outer_ocat(set_point_market, self.target_currency, is_inner_ocat=False)
+        new_percent = (ocat_result["new"] / self.TIME_DUR_OF_SETTLEMENT) * 100
+        rev_percent = (ocat_result["rev"] / self.TIME_DUR_OF_SETTLEMENT) * 100
+        new_spread_strength = ocat_result["new_spread_ratio"] * 100
+        rev_spread_strength = ocat_result["rev_spread_ratio"] * 100
 
-        logging.warning("Inner & Outer OCAT finished.")
+        logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
+                        % (ocat_result["combination"], new_percent, rev_percent,
+                           new_spread_strength, rev_spread_strength))
 
-    def run_inner_or_outer_ocat(self, set_point_market: str, target_currency: str, is_inner_ocat: bool):
-        if is_inner_ocat:
-            # create combination of coin that is injected by validating if the exchange has that coin
-            logging.critical("Set Point Market is: [%s]" % set_point_market.upper())
-            inner_ocat_list = Global.get_inner_ocat_combination(set_point_market, target_currency)
-            logging.critical("--------Conducting Inner OCAT--------")
-            ocat_final_result = self.otc_all_combination_by_one_coin(target_currency, inner_ocat_list)
+    def launch_ocat(self, target_currency: str, combination_list: list):
 
-        elif not is_inner_ocat:
-            logging.critical("--------Conducting Outer OCAT--------")
-            ocat_final_result = []
-            for outer_ocat_coin in list(Global.read_avail_coin_in_list()):
-                logging.warning("Now conducting [%s]" % outer_ocat_coin.upper())
-                outer_ocat_list = Global.get_rfab_combination_list(outer_ocat_coin)
-                ocat_result = self.otc_all_combination_by_one_coin(outer_ocat_coin, outer_ocat_list)
-                ocat_final_result.extend(ocat_result)
+        # draw iyo_config for settings
+        iyo_config = Global.read_iyo_setting_config(target_currency)
 
-        else:
-            raise Exception("Please indicate if it is Inner OCAT or not")
+        settings = TradeSettingConfig.get_settings(mm1_name=combination_list[0],
+                                                   mm2_name=combination_list[1],
+                                                   target_currency=target_currency,
+                                                   start_time=self.ocat_rewind_time,
+                                                   end_time=self.streamer_start_time,
+                                                   division=iyo_config["division"],
+                                                   depth=iyo_config["depth"],
+                                                   consecution_time=iyo_config["consecution_time"],
+                                                   is_virtual_mm=True)
 
-        descending_order_result = OTCScheduler.sort_by_logest_oppty_time_to_lowest(ocat_final_result)
-        top_ten_descend_order_result = descending_order_result[:10]
+        otc_result_dict = OpptyTimeCollector.run(settings=settings)
+        total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
+        total_dur_dict["new_spread_ratio"] = otc_result_dict["new_spread_ratio"]
+        total_dur_dict["rev_spread_ratio"] = otc_result_dict["rev_spread_ratio"]
+        total_dur_dict["new_max_unit_spread"] = otc_result_dict["new_max_unit_spread"]
+        total_dur_dict["rev_max_unit_spread"] = otc_result_dict["rev_max_unit_spread"]
+        total_dur_dict["combination"] = "%s-%s-%s" % (
+            target_currency.upper(), str(combination_list[0]).upper(), str(combination_list[1]).upper())
 
-        for result in top_ten_descend_order_result:
-            new_percent = (result["new"] / self.TIME_DUR_OF_SETTLEMENT) * 100
-            rev_percent = (result["rev"] / self.TIME_DUR_OF_SETTLEMENT) * 100
-            new_spread_strength = result["new_spread_ratio"] * 100
-            rev_spread_strength = result["rev_spread_ratio"] * 100
-
-            logging.warning("[%s] NEW: %.2f%%, REV: %.2f%% // NEW_SPREAD_STRENGTH: %.2f%%, REV_SPREAD_STRENGTH: %.2f%%"
-                            % (result["combination"], new_percent, rev_percent,
-                               new_spread_strength, rev_spread_strength))
-
-    def otc_all_combination_by_one_coin(self, target_currency: str, combination_list: list):
-        all_ocat_result_by_one_coin = []
-        for _combi in combination_list:
-            # draw iyo_config for settings
-            iyo_config = Global.read_iyo_setting_config(target_currency)
-
-            settings = TradeSettingConfig.get_settings(mm1_name=_combi[0],
-                                                       mm2_name=_combi[1],
-                                                       target_currency=target_currency,
-                                                       start_time=self.ocat_rewind_time,
-                                                       end_time=self.streamer_start_time,
-                                                       division=iyo_config["division"],
-                                                       depth=iyo_config["depth"],
-                                                       consecution_time=iyo_config["consecution_time"],
-                                                       is_virtual_mm=True)
-
-            try:
-                otc_result_dict = OpptyTimeCollector.run(settings=settings)
-                total_dur_dict = OpptyTimeCollector.get_total_duration_time(otc_result_dict)
-                total_dur_dict["new_spread_ratio"] = otc_result_dict["new_spread_ratio"]
-                total_dur_dict["rev_spread_ratio"] = otc_result_dict["rev_spread_ratio"]
-                total_dur_dict["new_max_unit_spread"] = otc_result_dict["new_max_unit_spread"]
-                total_dur_dict["rev_max_unit_spread"] = otc_result_dict["rev_max_unit_spread"]
-                total_dur_dict["combination"] = \
-                    "%s-%s-%s" % (target_currency.upper(), str(_combi[0]).upper(), str(_combi[1]).upper())
-                all_ocat_result_by_one_coin.append(total_dur_dict)
-
-            except TypeError as e:
-                logging.error("Something went wrong in OTC scheduler", e)
-                continue
-
-        return all_ocat_result_by_one_coin
+        return total_dur_dict
 
     def to_proceed_handler_for_initiation_mode(self):
 

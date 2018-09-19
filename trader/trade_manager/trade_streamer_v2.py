@@ -27,17 +27,17 @@ class TradeStreamerV2(TradeHandlerV2):
                                                                self.target_currency.upper(),
                                                                self.mm2_coin_bal))
 
-    def run(self, use_ocat: bool):
-        self.launch_initiation_mode(use_ocat)
+    def run(self, use_inner_ocat: bool):
+        self.launch_initiation_mode(use_inner_ocat)
         self.trading_mode_looper()
         return
 
-    def launch_initiation_mode(self, use_ocat: bool):
+    def launch_initiation_mode(self, use_inner_ocat: bool):
         # set initial trade settings
         self.set_initial_trade_setting()
 
-        if use_ocat:
-            self.launch_inner_outer_ocat()
+        if use_inner_ocat:
+            self.run_inner_ocat()
 
         # check whether to proceed to next step
         self.to_proceed_handler_for_initiation_mode()

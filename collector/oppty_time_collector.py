@@ -130,13 +130,14 @@ class OpptyTimeCollector:
         # mm2 price
         mm2_minask_price, mm2_maxbid_price = BasicAnalyzer.get_price_of_minask_maxbid(mm2_orderbook)
 
+        # calc new, rev mid price
+        new_mid_price = np.average([mm1_minask_price, mm2_maxbid_price])
+        rev_mid_price = np.average([mm1_maxbid_price, mm2_minask_price])
+
         # new => buy in mm1, sell in mm2
         new_unit_spread = cls.get_unit_spread_info(mm1_minask_price, mm1_taker_fee, mm2_maxbid_price, mm2_taker_fee)
         # rev => buy in mm2, sell in mm1
         rev_unit_spread = cls.get_unit_spread_info(mm2_minask_price, mm2_taker_fee, mm1_maxbid_price, mm1_taker_fee)
-
-        new_mid_price = np.average([mm1_minask_price, mm2_maxbid_price])
-        rev_mid_price = np.average([mm1_maxbid_price, mm2_minask_price])
 
         new_spread_ratio = new_unit_spread / new_mid_price
         rev_spread_ratio = rev_unit_spread / rev_mid_price
