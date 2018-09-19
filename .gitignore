@@ -225,6 +225,7 @@ pip-selfcheck.json
 # End of https://www.gitignore.io/api/jupyternotebook
 
 config/conf_user.ini
+collector/rev_ledger_excel
 ticker/*
 log/*
 stat/*
