@@ -11,7 +11,7 @@ from config.trade_setting_config import TradeSettingConfig
 from trader.market_manager.market_manager import MarketManager
 from optimizer.base_optimizer import BaseOptimizer
 from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
-from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
+from temp.arbbot_ideas.trade_stat_formula import TradeFormulaApplied
 
 
 class TestTradeHandler:

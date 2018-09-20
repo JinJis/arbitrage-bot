@@ -22,8 +22,6 @@ class OpptyTimeCollector:
         raw_rq_time_dict = dict(new=[], rev=[], new_spread_ratio=[], rev_spread_ratio=[])
 
         # to get biggest new & rev spread for IYO config
-        max_new_unit_spread = None
-        max_rev_unit_spread = None
         new_mid_price_list = []
         rev_mid_price_list = []
 
@@ -44,31 +42,19 @@ class OpptyTimeCollector:
 
             # collect requestTime when NEW
             if new_unit_spread > 0:
-                # save the biggest unit new spread
-                if max_new_unit_spread is None:
-                    max_new_unit_spread = new_unit_spread
-                elif new_unit_spread > max_new_unit_spread:
-                    max_new_unit_spread = new_unit_spread
-
                 new_mid_price_list.append(new_mid_price)
                 raw_rq_time_dict["new"].append(mm1_data["requestTime"])
                 raw_rq_time_dict["new_spread_ratio"].append(new_spread_ratio)
 
             # collect requestTime when NEW
             if rev_unit_spread > 0:
-                # save the biggest unit rev spread
-                if max_rev_unit_spread is None:
-                    max_rev_unit_spread = rev_unit_spread
-                elif rev_unit_spread > max_rev_unit_spread:
-                    max_rev_unit_spread = rev_unit_spread
-
                 rev_mid_price_list.append(rev_mid_price)
                 raw_rq_time_dict["rev"].append(mm1_data["requestTime"])
                 raw_rq_time_dict["rev_spread_ratio"].append(rev_spread_ratio)
 
         # sort raw rq time into duration
-        new_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["new"])
-        rev_oppty_duration = OpptyTimeCollector.sort_by_consecutive_time_duration(raw_rq_time_dict["rev"])
+        new_oppty_duration = cls.sort_by_consecutive_time_duration(raw_rq_time_dict["new"])
+        rev_oppty_duration = cls.sort_by_consecutive_time_duration(raw_rq_time_dict["rev"])
 
         # calc avg spread ratio
         if len(raw_rq_time_dict["new_spread_ratio"]) > 0:
@@ -90,16 +76,9 @@ class OpptyTimeCollector:
         else:
             avg_rev_mid_price = 0
 
-        # reformat max_unit_spread if none
-        if max_new_unit_spread is None:
-            max_new_unit_spread = 0
-        if max_rev_unit_spread is None:
-            max_rev_unit_spread = 0
-
         # make final dict result
         final_result = dict(new=new_oppty_duration, rev=rev_oppty_duration,
                             new_spread_ratio=avg_new_spread_ratio, rev_spread_ratio=avg_rev_spread_ratio,
-                            new_max_unit_spread=max_new_unit_spread, rev_max_unit_spread=max_rev_unit_spread,
                             avg_new_mid_price=avg_new_mid_price, avg_rev_mid_price=avg_rev_mid_price)
 
         # log opprt_dur in hour & minute

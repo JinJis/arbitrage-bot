@@ -12,7 +12,7 @@ from collector.scheduler.otc_scheduler import OTCScheduler
 from collector.oppty_time_collector import OpptyTimeCollector
 from optimizer.integrated_yield_optimizer import IntegratedYieldOptimizer
 from trader.market_manager.market_manager import MarketManager
-from trader.trade_manager.trade_stat_formula import TradeFormulaApplied
+from temp.arbbot_ideas.trade_stat_formula import TradeFormulaApplied
 
 
 class TradeHandler:

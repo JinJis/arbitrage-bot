@@ -1,5 +1,3 @@
-from config.shared_mongo_client import SharedMongoClient
-from collector.rev_ledger_to_xlsx import RevLedgerXLSX
+cond = False or False
 
-SharedMongoClient.initialize(should_use_localhost_db=False)
-RevLedgerXLSX("trx", "coinone", "okcoin").run(mode_status="settlement")
+print(cond)

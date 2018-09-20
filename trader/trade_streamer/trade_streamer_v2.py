@@ -1,7 +1,7 @@
 import time
 import logging
 from config.global_conf import Global
-from trader.trade_manager.trade_handler_v2 import TradeHandlerV2
+from trader.trade_streamer.trade_handler_v2 import TradeHandlerV2
 from trader.market_manager.market_manager import MarketManager
 
 
@@ -50,7 +50,7 @@ class TradeStreamerV2(TradeHandlerV2):
         self.get_min_tradable_coin_unit_spread_list_init_mode(self.ocat_rewind_time, self.streamer_start_time)
 
         # log MCTU info and decide spread threshold
-        self.log_past_mctu_info()
+        self.log_init_mode_mctu_info()
 
         # init revenue ledger
         self.update_revenue_ledger(mode_status="initiation")
@@ -110,7 +110,7 @@ class TradeStreamerV2(TradeHandlerV2):
         self.get_min_tradable_coin_unit_spread_list_trading_mode()
 
         # log MCTU
-        self.log_present_mctu_info(self.streamer_start_time, self.trading_mode_now_time)
+        self.log_trading_mode_mctu_info(self.streamer_start_time, self.trading_mode_now_time)
 
         # trade command by comparing current flowed time with exhaustion rate
         self.trade_command_by_comparing_exhaustion_with_flow_time()

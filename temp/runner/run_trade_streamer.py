@@ -1,7 +1,7 @@
 import logging
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
-from trader.trade_manager.trade_streamer import TradeStreamer
+from temp.arbbot_ideas.trade_streamer import TradeStreamer
 from trader.market_manager.market_manager import MarketManager
 from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
 from trader.market_manager.bithumb_market_manager import BithumbMarketManager
