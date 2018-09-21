@@ -60,6 +60,7 @@ class TradeHandlerV2:
     || INITIATION MODE ONLY ||
     ==========================
     """
+
     def set_initial_trade_setting(self):
         # set streamer_min_trading_coin
         self.MIN_TRDBLE_COIN_MLTPLIER = float(input("Please indicate Min Tradable Coin Multiplier (gte 1.0) "))
@@ -108,41 +109,30 @@ class TradeHandlerV2:
                         "buy_amt": target_spread_info.buy_order_amt})
         return
 
-    def log_init_mode_mctu_info(self):
-        local_anal_st = Global.convert_epoch_to_local_datetime(self.ocat_rewind_time, timezone="kr")
-        local_anal_et = Global.convert_epoch_to_local_datetime(self.streamer_start_time, timezone="kr")
-
-        logging.warning("=========== [MCTU INFO] ==========")
-        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
-
-        target_dict = self.rec_instance.spread_dict["init"]
-        for trade_type in target_dict.keys():
-            logging.warning("['%s' SPREAD RECORDER]:\n%s"
-                            % (trade_type.upper(),
-                               self.get_mctu_spread_and_frequency(target_dict[trade_type])))
-
-        self.th_instance.NEW["normal"] = float(input("Decide [NEW] MCTU spread threshold: "))
-        self.th_instance.NEW["royal"] = float(input("Decide [NEW] MCTU Royal spread: "))
-        self.th_instance.REV["normal"] = float(input("Decide [REV] MCTU spread threshold: "))
-        self.th_instance.REV["royal"] = float(input("Decide [REV] MCTU Royal spread: "))
-
     def set_time_relevant_before_trading_mode(self):
         self.trading_mode_now_time = int(time.time())
         self._bot_start_time = self.trading_mode_now_time
         self._settlement_time = self._bot_start_time + self.TIME_DUR_OF_SETTLEMENT
 
-    def post_empty_trade_commander(self):
-        self.streamer_db["trade_commander"].insert_one(
-            TradeCommander.to_dict(
-                time=self.streamer_start_time,
-                streamer_mctu=self.streamer_min_trading_coin,
-                condition=self.cond_instance,
-                threshold=self.th_instance
-            )
-        )
+    def get_otc_result_init_mode(self, rewined_time: int, anal_end_time: int):
+        # OTC target combination
+        iyo_config = Global.read_iyo_setting_config(self.target_currency)
 
-    def post_empty_bal_commander(self):
-        self.streamer_db["balance_commander"].insert_one(dict(is_bal_update=False))
+        target_settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
+                                                          mm2_name=self.mm2_name,
+                                                          target_currency=self.target_currency,
+                                                          start_time=rewined_time,
+                                                          end_time=anal_end_time,
+                                                          division=iyo_config["division"],
+                                                          depth=iyo_config["depth"],
+                                                          consecution_time=iyo_config["consecution_time"],
+                                                          is_virtual_mm=True)
+        target_settings["mm1"]["krw_balance"] = self.mm1_krw_bal
+        target_settings["mm1"]["coin_balance"] = self.mm1_coin_bal
+        target_settings["mm2"]["krw_balance"] = self.mm2_krw_bal
+        target_settings["mm2"]["coin_balance"] = self.mm2_coin_bal
+
+        return OpptyTimeCollector.run(settings=target_settings)
 
     """
     =======================
@@ -178,7 +168,7 @@ class TradeHandlerV2:
 
         logging.warning("========= [OPPTY NOTIFIER] ========")
         # if there is no Oppty,
-        if not new_cond and not rev_cond:
+        if new_cond is False and rev_cond is False:
             self.cond_instance.NEW["is_oppty"] = False
             self.cond_instance.NEW["is_royal"] = False
             self.cond_instance.REV["is_oppty"] = False
@@ -192,10 +182,14 @@ class TradeHandlerV2:
         # if oppty (NEW or REV)
         for trade_type in spread_info_dict.keys():
             if not spread_info_dict[trade_type].able_to_trade:
+                getattr(self.cond_instance, trade_type.upper())["is_oppty"] = False
+                getattr(self.cond_instance, trade_type.upper())["is_royal"] = False
                 continue
 
-            logging.critical("[HOORAY] [%s] Oppty detected!!! now evaluating spread infos.." % trade_type)
+            logging.critical("[HOORAY] [%s] Oppty detected!!! now evaluating spread infos.." % trade_type.upper())
             logging.critical("[SPREAD TO TRADE]: %.4f\n" % spread_info_dict[trade_type].spread_to_trade)
+
+            getattr(self.cond_instance, trade_type.upper())["is_oppty"] = True
 
             # if gte royal spread,
             if spread_info_dict[trade_type].spread_to_trade >= getattr(self.th_instance, trade_type.upper())["royal"]:
@@ -229,6 +223,32 @@ class TradeHandlerV2:
             else:
                 getattr(self.cond_instance, trade_type.upper())["is_time_flow_above_exhaust"] = False
 
+    @staticmethod
+    def trading_mode_loop_sleep_handler(mode_start_time: int, mode_end_time: int, mode_loop_interval: int):
+        run_time = mode_end_time - mode_start_time
+        time_to_wait = int(mode_loop_interval - run_time)
+        if time_to_wait > 0:
+            time.sleep(time_to_wait)
+
+    """
+    ============================
+    || Mongo Post % Universal ||
+    ============================
+    """
+
+    def post_empty_trade_commander(self):
+        self.streamer_db["trade_commander"].insert_one(
+            TradeCommander.to_dict(
+                time=self.streamer_start_time,
+                streamer_mctu=self.streamer_min_trading_coin,
+                condition=self.cond_instance,
+                threshold=self.th_instance
+            )
+        )
+
+    def post_empty_bal_commander(self):
+        self.streamer_db["balance_commander"].insert_one(dict(is_bal_update=False))
+
     def post_trade_commander_to_mongo(self):
 
         self.streamer_db["trade_commander"].insert_one(
@@ -240,26 +260,6 @@ class TradeHandlerV2:
             )
         )
 
-    def log_trading_mode_mctu_info(self, anal_start_time: int, anal_end_time: int):
-        local_anal_st = Global.convert_epoch_to_local_datetime(anal_start_time, timezone="kr")
-        local_anal_et = Global.convert_epoch_to_local_datetime(anal_end_time, timezone="kr")
-
-        logging.warning("=========== [MCTU INFO] ==========")
-        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
-
-        target_dict = self.rec_instance.spread_dict["trade"]
-        for trade_type in target_dict.keys():
-            logging.warning("\n\n[ '%s' SPREAD RECORDER]:\n%s"
-                            % (trade_type.upper(),
-                               self.get_mctu_spread_and_frequency(target_dict[trade_type])))
-
-    @staticmethod
-    def trading_mode_loop_sleep_handler(mode_start_time: int, mode_end_time: int, mode_loop_interval: int):
-        run_time = mode_end_time - mode_start_time
-        time_to_wait = int(mode_loop_interval - run_time)
-        if time_to_wait > 0:
-            time.sleep(time_to_wait)
-
     def post_settlement_commander(self):
         self.streamer_db["trade_commander"].insert_one(TradeCommander.to_dict(
             time=self.trading_mode_now_time,
@@ -268,16 +268,13 @@ class TradeHandlerV2:
             threshold=self.th_instance
         ))
 
-    """
-    ======================
-    || UNIVERSALLY USED ||
-    ======================
-    """
-
     def settlement_handler(self):
         message = "Settlement reached!! now closing Trade Streamer!!"
         logging.warning(message)
         Global.send_to_slack_channel(Global.SLACK_STREAM_STATUS_URL, message)
+
+        # set settle cond True
+        self.cond_instance.is_settlement = True
 
         # command Acutal Trader to stop
         self.post_settlement_commander()
@@ -311,29 +308,6 @@ class TradeHandlerV2:
                       % (key, (cur_group_count / total_count) * 100, cur_group_count, total_count)
         return result
 
-    def log_rev_ledger(self):
-        logging.warning("========= [REVENUE LEDGER INFO] ========")
-        logging.warning("------------------------------------")
-        target_data = self.rec_instance.rev_ledger["initial_bal"]
-        logging.warning("<<< Initial Balance >>>")
-        logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
-                                                         self.target_currency, target_data["coin"]["mm1"]))
-        logging.warning("[ mm2 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
-                                                         self.target_currency, target_data["coin"]["mm2"]))
-        logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
-                                                         self.target_currency, target_data["coin"]["total"]))
-        logging.warning("------------------------------------")
-
-        target_data = self.rec_instance.rev_ledger["current_bal"]
-        logging.warning("<<< Current Balance >>>")
-        logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
-                                                         self.target_currency, target_data["coin"]["mm1"]))
-        logging.warning("[ mm2 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
-                                                         self.target_currency, target_data["coin"]["mm2"]))
-        logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
-                                                         self.target_currency, target_data["coin"]["total"]))
-        logging.warning("------------------------------------\n\n\n")
-
     def update_balance(self, mode_status: str):
 
         # check from Mongo Balance Commander whether to update or not
@@ -355,26 +329,6 @@ class TradeHandlerV2:
         self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
         self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(self.target_currency))
         self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(self.target_currency))
-
-    def get_otc_result_init_mode(self, rewined_time: int, anal_end_time: int):
-        # OTC target combination
-        iyo_config = Global.read_iyo_setting_config(self.target_currency)
-
-        target_settings = TradeSettingConfig.get_settings(mm1_name=self.mm1_name,
-                                                          mm2_name=self.mm2_name,
-                                                          target_currency=self.target_currency,
-                                                          start_time=rewined_time,
-                                                          end_time=anal_end_time,
-                                                          division=iyo_config["division"],
-                                                          depth=iyo_config["depth"],
-                                                          consecution_time=iyo_config["consecution_time"],
-                                                          is_virtual_mm=True)
-        target_settings["mm1"]["krw_balance"] = self.mm1_krw_bal
-        target_settings["mm1"]["coin_balance"] = self.mm1_coin_bal
-        target_settings["mm2"]["krw_balance"] = self.mm2_krw_bal
-        target_settings["mm2"]["coin_balance"] = self.mm2_coin_bal
-
-        return OpptyTimeCollector.run(settings=target_settings)
 
     def update_revenue_ledger(self, mode_status: str):
 
@@ -418,3 +372,63 @@ class TradeHandlerV2:
 
     def launch_rev_ledger_xlsx(self, mode_status: str):
         RevLedgerXLSX(self.target_currency, self.mm1_name, self.mm2_name).run(mode_status=mode_status)
+
+    """
+    ============
+    || Logger ||
+    ============
+    """
+
+    def log_init_mode_mctu_info(self):
+        local_anal_st = Global.convert_epoch_to_local_datetime(self.ocat_rewind_time, timezone="kr")
+        local_anal_et = Global.convert_epoch_to_local_datetime(self.streamer_start_time, timezone="kr")
+
+        logging.warning("=========== [MCTU INFO] ==========")
+        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
+
+        target_dict = self.rec_instance.spread_dict["init"]
+        for trade_type in target_dict.keys():
+            logging.warning("['%s' SPREAD RECORDER]:\n%s"
+                            % (trade_type.upper(),
+                               self.get_mctu_spread_and_frequency(target_dict[trade_type])))
+
+        self.th_instance.NEW["normal"] = float(input("Decide [NEW] MCTU spread threshold: "))
+        self.th_instance.NEW["royal"] = float(input("Decide [NEW] MCTU Royal spread: "))
+        self.th_instance.REV["normal"] = float(input("Decide [REV] MCTU spread threshold: "))
+        self.th_instance.REV["royal"] = float(input("Decide [REV] MCTU Royal spread: "))
+
+    def log_trading_mode_mctu_info(self, anal_start_time: int, anal_end_time: int):
+        local_anal_st = Global.convert_epoch_to_local_datetime(anal_start_time, timezone="kr")
+        local_anal_et = Global.convert_epoch_to_local_datetime(anal_end_time, timezone="kr")
+
+        logging.warning("=========== [MCTU INFO] ==========")
+        logging.warning("[Anal Duration]: %s - %s" % (local_anal_st, local_anal_et))
+
+        target_dict = self.rec_instance.spread_dict["trade"]
+        for trade_type in target_dict.keys():
+            logging.warning("\n\n[ '%s' SPREAD RECORDER]:\n%s"
+                            % (trade_type.upper(),
+                               self.get_mctu_spread_and_frequency(target_dict[trade_type])))
+
+    def log_rev_ledger(self):
+        logging.warning("========= [REVENUE LEDGER INFO] ========")
+        logging.warning("------------------------------------")
+        target_data = self.rec_instance.rev_ledger["initial_bal"]
+        logging.warning("<<< Initial Balance >>>")
+        logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
+                                                         self.target_currency, target_data["coin"]["mm1"]))
+        logging.warning("[ mm2 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
+                                                         self.target_currency, target_data["coin"]["mm2"]))
+        logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
+                                                         self.target_currency, target_data["coin"]["total"]))
+        logging.warning("------------------------------------")
+
+        target_data = self.rec_instance.rev_ledger["current_bal"]
+        logging.warning("<<< Current Balance >>>")
+        logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
+                                                         self.target_currency, target_data["coin"]["mm1"]))
+        logging.warning("[ mm2 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm2"],
+                                                         self.target_currency, target_data["coin"]["mm2"]))
+        logging.warning("[total] krw: %.5f, %s: %.5f" % (target_data["krw"]["total"],
+                                                         self.target_currency, target_data["coin"]["total"]))
+        logging.warning("------------------------------------\n\n\n")

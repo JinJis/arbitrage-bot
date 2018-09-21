@@ -85,6 +85,13 @@ class Exhaustion:
             rev_init_bal = rev_ledger["initial_bal"]["krw"]["mm2"]
             rev_cur_bal = rev_ledger["current_bal"]["krw"]["mm2"]
 
+        # in case cur bal > init bal (in case of inflow of new investment)
+        if new_cur_bal > new_init_bal:
+            new_cur_bal = new_init_bal
+
+        if rev_cur_bal > rev_init_bal:
+            rev_cur_bal = rev_init_bal
+
         return {
             "new": round(float(1 - (new_cur_bal / new_init_bal)), 5) if not new_init_bal == 0 else 1,
             "rev": round(float(1 - (rev_cur_bal / rev_init_bal)), 5) if not rev_init_bal == 0 else 1
