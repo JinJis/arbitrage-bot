@@ -7,12 +7,13 @@ from trader.market_manager.market_manager import MarketManager
 
 class TradeStreamerV2(TradeHandlerV2):
 
-    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager):
+    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager, is_test: bool):
 
-        super().__init__(target_currency, mm1, mm2)
+        super().__init__(target_currency, mm1, mm2, is_test)
 
         # update for the first time
         self.post_empty_trade_commander()
+        self.post_empty_bal_commander()
 
         # check backup
 
@@ -27,27 +28,22 @@ class TradeStreamerV2(TradeHandlerV2):
                                                                self.target_currency.upper(),
                                                                self.mm2_coin_bal))
 
-    def run(self, use_inner_ocat: bool):
-        self.launch_initiation_mode(use_inner_ocat)
+    def run(self):
+        self.launch_initiation_mode()
         self.trading_mode_looper()
         return
 
-    def launch_initiation_mode(self, use_inner_ocat: bool):
+    def launch_initiation_mode(self):
         # set initial trade settings
         self.set_initial_trade_setting()
-
-        if use_inner_ocat:
-            self.run_inner_ocat()
-
-        # check whether to proceed to next step
-        self.to_proceed_handler_for_initiation_mode()
 
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         logging.warning("||| Conducting Initiation Mode |||")
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # # save spread_to_trade list & amount of krw_earend
-        self.get_min_tradable_coin_unit_spread_list_init_mode(self.ocat_rewind_time, self.streamer_start_time)
+        logging.warning("Now analyzing past spread infos..plz wait!!\n")
+        self.get_past_mctu_spread_info_init_mode(self.ocat_rewind_time, self.streamer_start_time)
 
         # log MCTU info and decide spread threshold
         self.log_init_mode_mctu_info()
@@ -68,13 +64,12 @@ class TradeStreamerV2(TradeHandlerV2):
 
             # check if reached settlement time
             if self.trading_mode_now_time > self._settlement_time:
-                self.settlment_reached = True
                 self.settlement_handler()
                 break
 
             try:
                 # update balance & time
-                self.update_balance()
+                self.update_balance(mode_status="trading")
                 self.update_revenue_ledger(mode_status="trading")
                 self.trading_mode_now_time = int(time.time())
 
@@ -107,10 +102,10 @@ class TradeStreamerV2(TradeHandlerV2):
         self.get_latest_orderbook()
 
         # get MTCU
-        self.get_min_tradable_coin_unit_spread_list_trading_mode()
+        self.update_trade_condition_by_mctu_analyzer()
 
         # log MCTU
         self.log_trading_mode_mctu_info(self.streamer_start_time, self.trading_mode_now_time)
 
         # trade command by comparing current flowed time with exhaustion rate
-        self.trade_command_by_comparing_exhaustion_with_flow_time()
+        self.renew_exhaust_condition_by_time_flow()

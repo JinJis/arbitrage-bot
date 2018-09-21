@@ -695,3 +695,37 @@ class TradeHandler:
             return Global.find_middle_of_list(min_ti_sorted_fti_iyo_list)
         else:
             return final_opted_fti_iyo_list[0]
+
+
+    def to_proceed_handler_for_initiation_mode(self):
+
+        to_proceed = str(input("Do you want to change any market settings? (Y/n)"))
+        if to_proceed == "Y":
+
+            # set settings accordingly
+            self.target_currency = str(input("Insert Target Currency: "))
+            self.mm1: MarketManager = getattr(ConfigMarketManager, input("Insert mm1: ").upper()).value
+            self.mm2: MarketManager = getattr(ConfigMarketManager, input("Insert mm2: ").upper()).value
+            self.mm1_name = self.mm1.get_market_name().lower()
+            self.mm2_name = self.mm2.get_market_name().lower()
+
+        elif to_proceed == "n":
+            pass
+
+        else:
+            logging.error("Irrelevant command. Please try again")
+            return self.to_proceed_handler_for_initiation_mode()
+
+        # update trading env setting
+
+
+
+        logging.warning("================ [INITIAL BALANCE] ================")
+        logging.warning("[%s Balance] >> KRW: %f, %s: %f" % (self.mm1_name.upper(), self.mm1_krw_bal,
+                                                             self.target_currency.upper(),
+                                                             self.mm1_coin_bal))
+        logging.warning("[%s Balance] >> KRW: %f, %s: %f\n" % (self.mm2_name.upper(), self.mm2_krw_bal,
+                                                               self.target_currency.upper(),
+                                                               self.mm2_coin_bal))
+        logging.warning("Now initiating with typed settings!!")
+        return True

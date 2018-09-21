@@ -1,21 +1,25 @@
 import logging
 import pymongo
 from config.global_conf import Global
-from pymongo.collection import Collection
 from trader.base_arb_bot import BaseArbBot
 from analyzer.trade_analyzer import SpreadInfo
 from analyzer.trade_analyzer import MCTSAnalyzer
+from config.shared_mongo_client import SharedMongoClient
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.market_manager.market_manager import MarketManager
 
 
 class RiskFreeArbBotV4(BaseArbBot):
 
-    def __init__(
-            self, mm1: MarketManager, mm2: MarketManager, target_currency: str, streamer_db: Collection):
+    def __init__(self, mm1: MarketManager, mm2: MarketManager, target_currency: str, is_test: bool):
 
-        self.trade_commander_col = streamer_db["trade_commander"]
-        self.balance_commander_col = streamer_db["balance_commander"]
+        if is_test:
+            self.trade_commander_col = SharedMongoClient.get_test_streamer_db()["trade_commander"]
+            self.balance_commander_col = SharedMongoClient.get_test_streamer_db()["balance_commander"]
+        if not is_test:
+            self.trade_commander_col = SharedMongoClient.get_streamer_db()["trade_commander"]
+            self.balance_commander_col = SharedMongoClient.get_streamer_db()["balance_commander"]
+
         self.trade_strategy = MCTSAnalyzer.min_coin_tradable_spread_strategy
 
         super().__init__(mm1, mm2, target_currency)
@@ -25,8 +29,6 @@ class RiskFreeArbBotV4(BaseArbBot):
             self.execute_trade_loop()
 
             if self.is_settlement:
-                # reset bal update commander
-                self.balance_commander_col.insert_one(dict(is_bal_update=False))
                 # handle rest of settlement
                 self.settlement_handler()
                 break
@@ -34,30 +36,32 @@ class RiskFreeArbBotV4(BaseArbBot):
     def actual_trade_loop(self, mm1_data=None, mm2_data=None):
 
         # get latest trade_commander dict from db
-        trade_commander_set = self.trade_commander_col.find_one(
+        trade_commander = self.trade_commander_col.find_one(
             sort=[('_id', pymongo.DESCENDING)]
         )
 
         # check if settlement reached
-        if trade_commander_set["settlement"] is True:
+        if trade_commander["condition"]["is_settlement"] is True:
             self.is_settlement = True
             return
 
-        # check if time flow rate under exhaustion rate
-        if trade_commander_set["execute_trade"] is False:
+        # if not execute trade, return
+        execute_cond = trade_commander["execute_trade"]
+        if (execute_cond["new"] is False) and (execute_cond["rev"] is False):
             logging.warning("Trade Streamer decided not to trade.. check below to see what caused this decision")
-            logging.warning("[TimeFlow > Exhaust]: %s"
-                            % trade_commander_set["is_time_flow_above_exhaust"])
-            logging.warning("[Under Opportunity]: %s"
-                            % trade_commander_set["is_oppty"])
+
+            logging.warning("[TimeFlow > Exhaust] -> NEW: %s, REV: %s"
+                            % (trade_commander["condition"]["new"]["is_time_flow_above_exhaust"],
+                               trade_commander["condition"]["rev"]["is_time_flow_above_exhaust"]))
+            logging.warning("[Under Opportunity] -> NEW: %s, REV: %s"
+                            % (trade_commander["condition"]["new"]["is_oppty"],
+                               trade_commander["condition"]["rev"]["is_oppty"]))
 
             # post balance_commander empty data to reset
             self.balance_commander_col.insert_one(dict(is_bal_update=False))
             return
 
-        if trade_commander_set["execute_trade"] is True:
-            pass
-
+        # when execute trade
         # get orderbook data
         mm1_data = self.mm1.get_orderbook(self.mm1_currency)
         mm2_data = self.mm2.get_orderbook(self.mm2_currency)
@@ -68,7 +72,7 @@ class RiskFreeArbBotV4(BaseArbBot):
             mm2_data,
             self.mm1.taker_fee,
             self.mm2.taker_fee,
-            trade_commander_set["streamer_mctu"]
+            trade_commander["streamer_mctu"]
         )
         new_spread_info: SpreadInfo = result["new"]
         rev_spread_info: SpreadInfo = result["rev"]
@@ -78,10 +82,9 @@ class RiskFreeArbBotV4(BaseArbBot):
         rev_trade = None
 
         # NEW
-
         if new_spread_info.spread_in_unit > 0:
             if new_spread_info.able_to_trade:
-                new_trade = self.execute_trade(new_spread_info, trade_commander_set["mctu_spread_threshold"], "new")
+                new_trade = self.execute_trade(new_spread_info, trade_commander["threshold"]["new"], "new")
                 self.add_trade(new_trade)
             else:
                 logging.error("Trade Analyzer decided not to trade NEW.. See following failed reason:\n'%s'"
@@ -90,7 +93,7 @@ class RiskFreeArbBotV4(BaseArbBot):
         # REVERSE
         if rev_spread_info.spread_in_unit > 0:
             if rev_spread_info.able_to_trade:
-                rev_trade = self.execute_trade(rev_spread_info, trade_commander_set["mctu_spread_threshold"], "rev")
+                rev_trade = self.execute_trade(rev_spread_info, trade_commander["threshold"]["rev"], "rev")
                 self.add_trade(rev_trade)
             else:
                 logging.error("Trade Analyzer decided not to trade REV.. See following failed reason:\n'%s'"
@@ -105,7 +108,7 @@ class RiskFreeArbBotV4(BaseArbBot):
             # post balance_commander empty data to reset
             self.balance_commander_col.insert_one(dict(is_bal_update=False))
 
-    def execute_trade(self, spread_info: SpreadInfo, mctu_spread_threshold: float, trade_type: str = "new" or "rev"):
+    def execute_trade(self, spread_info: SpreadInfo, mctu_threshold_dict: dict, trade_type: str = "new" or "rev"):
         if trade_type == "new":
             buying_mkt = self.mm1
             selling_mkt = self.mm2
@@ -134,14 +137,15 @@ class RiskFreeArbBotV4(BaseArbBot):
                                            Global.read_min_order_digit(selling_mkt.get_market_name()))
 
         # check condition
-        threshold_cond = spread_info.spread_to_trade >= mctu_spread_threshold
+        threshold_cond = spread_info.spread_to_trade >= mctu_threshold_dict["normal"]
 
         # quit if conditions don't meet
         if not threshold_cond:
             logging.warning("< Spread threshold condition not met! >")
             logging.warning("---------------------------------------------------------")
-            logging.warning("Spread Traded: %.2f" % spread_info.spread_to_trade)
-            logging.warning("Spread Threshold: %.2f" % mctu_spread_threshold)
+            logging.critical("Spread To Trade: %.2f" % spread_info.spread_to_trade)
+            logging.warning("MCTU Normal Threshold: %.2f" % mctu_threshold_dict["normal"])
+            logging.warning("MCTU Royal Threshold: %.2f" % mctu_threshold_dict["royal"])
             logging.warning("---------------------------------------------------------")
             return None
 
@@ -163,8 +167,9 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # make buy & sell order
         logging.critical("========[ Successful Trade INFO ]========================")
-        logging.critical("Spread To Trade: %.2f" % spread_info.spread_to_trade)
-        logging.critical("Spread Threshold: %.2f" % mctu_spread_threshold)
+        logging.critical("Traded Spread: %.2f" % spread_info.spread_to_trade)
+        logging.warning("MCTU Normal Threshold: %.2f" % mctu_threshold_dict["normal"])
+        logging.warning("MCTU Royal Threshold: %.2f" % mctu_threshold_dict["royal"])
         logging.critical("---------------------------------------------------------")
         logging.critical("Buying Price: %.2f" % spread_info.buy_unit_price)
         logging.critical("Buying Amount: %f" % spread_info.buy_order_amt)
