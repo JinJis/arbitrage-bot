@@ -35,10 +35,6 @@ class Condition:
             "is_oppty": False,
             "is_royal": False
         }
-        self.exeute_trade = {
-            "new": self.trade_execution_decider(self.NEW),
-            "rev": self.trade_execution_decider(self.REV)
-        }
 
     @staticmethod
     def trade_execution_decider(cond_dict: dict):
@@ -105,8 +101,8 @@ class TradeCommander:
             "time": time,
             "streamer_mctu": streamer_mctu,
             "execute_trade": {
-                "new": condition.exeute_trade["new"],
-                "rev": condition.exeute_trade["rev"]
+                "new": condition.trade_execution_decider(condition.NEW),
+                "rev": condition.trade_execution_decider(condition.REV)
             },
             "condition": {
                 "is_settlement": condition.is_settlement,
