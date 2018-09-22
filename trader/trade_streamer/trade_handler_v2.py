@@ -359,7 +359,7 @@ class TradeHandlerV2:
             }
 
         # if trading mdoe, only append to current balance
-        elif mode_status == "trading" or "settlement":
+        elif mode_status == "trading" or mode_status == "settlement":
             self.rec_instance.rev_ledger["time"] = self.trading_mode_now_time
             self.rec_instance.rev_ledger["mode_status"] = mode_status
             self.rec_instance.rev_ledger["current_bal"] = bal_to_append

@@ -103,6 +103,7 @@ class RiskFreeArbBotV4(BaseArbBot):
         if new_trade or rev_trade:
             self.mm1.update_balance()
             self.mm2.update_balance()
+            # fixme: 이게 스트리머가 못읽고 넘어갈수도 있음..
             self.balance_commander_col.insert_one(dict(is_bal_update=True))
         else:
             # post balance_commander empty data to reset
@@ -165,8 +166,12 @@ class RiskFreeArbBotV4(BaseArbBot):
             logging.warning("Not enough COIN in selling market!")
             return None
 
+        buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
+        sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
+
         # make buy & sell order
         logging.critical("========[ Successful Trade INFO ]========================")
+        logging.critical("Trade Type: %s" % trade_type.upper())
         logging.critical("Traded Spread: %.2f" % spread_info.spread_to_trade)
         logging.warning("MCTU Normal Threshold: %.2f" % mctu_threshold_dict["normal"])
         logging.warning("MCTU Royal Threshold: %.2f" % mctu_threshold_dict["royal"])
@@ -177,6 +182,4 @@ class RiskFreeArbBotV4(BaseArbBot):
         logging.critical("Selling Price: %f" % spread_info.sell_order_amt)
         logging.critical("---------------------------------------------------------")
 
-        buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
-        sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
         return Trade(getattr(TradeTag, trade_type.upper()), [buy_order, sell_order], TradeMeta({}))

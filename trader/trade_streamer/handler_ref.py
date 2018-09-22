@@ -53,44 +53,44 @@ class Exhaustion:
     def rate_to_dict(mm1_ob: dict, mm2_ob: dict, rev_ledger: dict):
 
         # get mid price
-        mm1_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(mm1_ob)
-        mm2_mid_price, _, _ = BasicAnalyzer.get_orderbook_mid_price(mm2_ob)
-        mid_price = (mm1_mid_price + mm2_mid_price) / 2
+        _, mm1_mb = BasicAnalyzer.get_price_of_minask_maxbid(mm1_ob)
+        _, mm2_mb = BasicAnalyzer.get_price_of_minask_maxbid(mm2_ob)
 
         # calc remaining currency bal to exhaust further
-        new_krw_to_exhaust = rev_ledger["current_bal"]["krw"]["mm1"]
-        new_coin_to_exhaust = rev_ledger["current_bal"]["coin"]["mm2"] * mid_price
-        rev_krw_to_exhaust = rev_ledger["current_bal"]["krw"]["mm2"]
-        rev_coin_to_exhaust = rev_ledger["current_bal"]["coin"]["mm1"] * mid_price
+        cur_bal_dict = rev_ledger["current_bal"]
+        new_krw_to_exhaust = cur_bal_dict["krw"]["mm1"]
+        new_coin_to_exhaust = cur_bal_dict["coin"]["mm2"] * mm2_mb
+        rev_krw_to_exhaust = cur_bal_dict["krw"]["mm2"]
+        rev_coin_to_exhaust = cur_bal_dict["coin"]["mm1"] * mm1_mb
 
         # NEW exhaust
         # if krw bal is larger than coin converted to krw by real exchange rate,
         if new_krw_to_exhaust >= new_coin_to_exhaust:
-            new_init_bal = rev_ledger["initial_bal"]["coin"]["mm2"]
-            new_cur_bal = rev_ledger["current_bal"]["coin"]["mm2"]
+            new_total_bal = cur_bal_dict["coin"]["total"]
+            new_cur_bal = cur_bal_dict["coin"]["mm2"]
         else:
-            new_init_bal = rev_ledger["initial_bal"]["krw"]["mm1"]
-            new_cur_bal = rev_ledger["current_bal"]["krw"]["mm1"]
+            new_total_bal = cur_bal_dict["krw"]["total"]
+            new_cur_bal = cur_bal_dict["krw"]["mm1"]
 
         # REV exhaust
         # if krw bal is larger than coin converted to krw by real exchange rate,
         if rev_krw_to_exhaust >= rev_coin_to_exhaust:
-            rev_init_bal = rev_ledger["initial_bal"]["coin"]["mm1"]
-            rev_cur_bal = rev_ledger["current_bal"]["coin"]["mm1"]
+            rev_total_bal = cur_bal_dict["coin"]["total"]
+            rev_cur_bal = cur_bal_dict["coin"]["mm1"]
         else:
-            rev_init_bal = rev_ledger["initial_bal"]["krw"]["mm2"]
-            rev_cur_bal = rev_ledger["current_bal"]["krw"]["mm2"]
+            rev_total_bal = cur_bal_dict["krw"]["total"]
+            rev_cur_bal = cur_bal_dict["krw"]["mm2"]
 
         # in case cur bal > init bal (in case of inflow of new investment)
-        if new_cur_bal > new_init_bal:
-            new_cur_bal = new_init_bal
+        if new_cur_bal > new_total_bal:
+            new_cur_bal = new_total_bal
 
-        if rev_cur_bal > rev_init_bal:
-            rev_cur_bal = rev_init_bal
+        if rev_cur_bal > rev_total_bal:
+            rev_cur_bal = rev_total_bal
 
         return {
-            "new": round(float(1 - (new_cur_bal / new_init_bal)), 5) if not new_init_bal == 0 else 1,
-            "rev": round(float(1 - (rev_cur_bal / rev_init_bal)), 5) if not rev_init_bal == 0 else 1
+            "new": round(float(1 - (new_cur_bal / new_total_bal)), 5) if not new_total_bal == 0 else 1,
+            "rev": round(float(1 - (rev_cur_bal / rev_total_bal)), 5) if not rev_total_bal == 0 else 1
         }
 
 
