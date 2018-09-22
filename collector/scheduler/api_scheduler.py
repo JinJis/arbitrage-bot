@@ -47,7 +47,7 @@ class ApiScheduler(BaseScheduler):
         # init collector
         self.bt_collector = Collector(
             bithumb_api, bithumb_currency, bithumb_db
-        # )
+        )
         # self.co_collector = Collector(
         #     coinone_api, coinone_currency, coinone_db
         # )
