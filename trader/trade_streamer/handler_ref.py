@@ -71,16 +71,16 @@ class Exhaustion:
             new_init_bal = init_bal_dict["coin"]["mm2"]
             new_cur_bal = cur_bal_dict["coin"]["mm2"]
         else:
-            new_init_bal = cur_bal_dict["krw"]["mm1"]
+            new_init_bal = init_bal_dict["krw"]["mm1"]
             new_cur_bal = cur_bal_dict["krw"]["mm1"]
 
         # REV exhaust
         # if krw bal is larger than coin converted to krw by real exchange rate,
         if rev_krw_to_exhaust >= rev_coin_to_exhaust:
-            rev_init_bal = cur_bal_dict["coin"]["mm1"]
+            rev_init_bal = init_bal_dict["coin"]["mm1"]
             rev_cur_bal = cur_bal_dict["coin"]["mm1"]
         else:
-            rev_init_bal = cur_bal_dict["krw"]["mm2"]
+            rev_init_bal = init_bal_dict["krw"]["mm2"]
             rev_cur_bal = cur_bal_dict["krw"]["mm2"]
 
         # in case cur bal > init bal (in case of inflow of new investment)
