@@ -109,11 +109,10 @@ class RevLedgerXLSX:
 
         # calc agg. yield
         agg_yield_cell = self.target_ws[self.CRITERIA_COLUMN["yield"]["agg_yield"] + target_row]
-        agg_yield_cell.value = '=IF(%s="settlement", SUM(%s:%s)/%s, "")' % (
+        agg_yield_cell.value = '=IF(%s="settlement", SUM(%s:%s), "")' % (
             logic_test_cell,
-            "$" + self.CRITERIA_COLUMN["yield"]["krw_earned"] + "$" + self.FIRST_ROW,
-            self.CRITERIA_COLUMN["yield"]["krw_earned"] + target_row,
-            "$" + self.CRITERIA_COLUMN["krw"]["total"] + "$" + self.FIRST_ROW)
+            "$" + self.CRITERIA_COLUMN["yield"]["yield"] + "$" + self.FIRST_ROW,
+            self.CRITERIA_COLUMN["yield"]["yield"] + target_row)
         # format to percentage
         agg_yield_cell.number_format = '0.0000%'
         # make it bold
