@@ -69,9 +69,9 @@ class TradeHandlerV2:
                   Global.read_min_trading_coin(self.mm2_name, self.target_currency)) * self.MIN_TRDBLE_COIN_MLTPLIER
 
         # set settlement related var
-        settle_hour = int(input("Please indicate settlement hour (int only)"))
-        settle_min = int(input("Please indicate settlement minute (int only)"))
-        anal_rewind_hr = int(input("Please indicate [Initiation Mode] Rewind hour (int only)"))
+        settle_hour = int(input("Please type settlement hour (int only)"))
+        settle_min = int(input("Please type settlement minute (int only)"))
+        anal_rewind_hr = int(input("Please type [Initiation Mode] Rewind hour (int only)"))
         self.TIME_DUR_OF_SETTLEMENT = settle_hour * 60 * 60 + settle_min * 60
 
         # set rewind time for MCTU anal init mode

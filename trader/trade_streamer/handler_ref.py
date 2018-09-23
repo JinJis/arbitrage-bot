@@ -57,7 +57,9 @@ class Exhaustion:
         _, mm2_mb = BasicAnalyzer.get_price_of_minask_maxbid(mm2_ob)
 
         # calc remaining currency bal to exhaust further
+        init_bal_dict = rev_ledger["initial_bal"]
         cur_bal_dict = rev_ledger["current_bal"]
+
         new_krw_to_exhaust = cur_bal_dict["krw"]["mm1"]
         new_coin_to_exhaust = cur_bal_dict["coin"]["mm2"] * mm2_mb
         rev_krw_to_exhaust = cur_bal_dict["krw"]["mm2"]
@@ -66,31 +68,31 @@ class Exhaustion:
         # NEW exhaust
         # if krw bal is larger than coin converted to krw by real exchange rate,
         if new_krw_to_exhaust >= new_coin_to_exhaust:
-            new_total_bal = cur_bal_dict["coin"]["total"]
+            new_init_bal = init_bal_dict["coin"]["mm2"]
             new_cur_bal = cur_bal_dict["coin"]["mm2"]
         else:
-            new_total_bal = cur_bal_dict["krw"]["total"]
+            new_init_bal = cur_bal_dict["krw"]["mm1"]
             new_cur_bal = cur_bal_dict["krw"]["mm1"]
 
         # REV exhaust
         # if krw bal is larger than coin converted to krw by real exchange rate,
         if rev_krw_to_exhaust >= rev_coin_to_exhaust:
-            rev_total_bal = cur_bal_dict["coin"]["total"]
+            rev_init_bal = cur_bal_dict["coin"]["mm1"]
             rev_cur_bal = cur_bal_dict["coin"]["mm1"]
         else:
-            rev_total_bal = cur_bal_dict["krw"]["total"]
+            rev_init_bal = cur_bal_dict["krw"]["mm2"]
             rev_cur_bal = cur_bal_dict["krw"]["mm2"]
 
         # in case cur bal > init bal (in case of inflow of new investment)
-        if new_cur_bal > new_total_bal:
-            new_cur_bal = new_total_bal
+        if new_cur_bal > new_init_bal:
+            new_cur_bal = new_init_bal
 
-        if rev_cur_bal > rev_total_bal:
-            rev_cur_bal = rev_total_bal
+        if rev_cur_bal > rev_init_bal:
+            rev_cur_bal = rev_init_bal
 
         return {
-            "new": round(float(1 - (new_cur_bal / new_total_bal)), 5) if not new_total_bal == 0 else 1,
-            "rev": round(float(1 - (rev_cur_bal / rev_total_bal)), 5) if not rev_total_bal == 0 else 1
+            "new": round(float(1 - (new_cur_bal / new_init_bal)), 5) if not new_init_bal == 0 else 1,
+            "rev": round(float(1 - (rev_cur_bal / rev_init_bal)), 5) if not rev_init_bal == 0 else 1
         }
 
 
