@@ -1,6 +1,6 @@
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
-from trader.stat_arb_bot import StatArbBot
+from temp.arbbot_ideas.stat_arb_bot import StatArbBot
 import logging
 
 Global.configure_default_root_logging(log_level=logging.CRITICAL, should_log_to_file=True)

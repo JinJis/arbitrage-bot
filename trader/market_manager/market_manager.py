@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 from abc import ABC, abstractmethod
 from api.currency import Currency
 from api.market_api import MarketApi
@@ -30,22 +31,20 @@ class MarketManager(ABC):
     def get_market_name(self):
         return str(self.market_tag.value)
 
-    def order_buy(self, currency: Currency, price: (int or float), amount: float):
+    def order_buy(self, currency: Currency, price: Union[int, float], amount: float):
         if not self.has_enough_coin("krw", amount * price):
             raise Exception("[%s] Could not order_buy" % self.get_market_name())
 
         res_json = self.market_api.order_limit_buy(currency, price, amount)
-        logging.info(res_json)
         order_id = res_json["orderId"]
         new_order = Order(self.market_tag, currency, OrderType.LIMIT_BUY, order_id, price, amount)
         return new_order
 
-    def order_sell(self, currency: Currency, price: (int or float), amount: float):
+    def order_sell(self, currency: Currency, price: Union[int, float], amount: float):
         if not self.has_enough_coin(currency.name.lower(), amount):
             raise Exception("[%s] Could not order_sell" % self.get_market_name())
 
         res_json = self.market_api.order_limit_sell(currency, price, amount)
-        logging.info(res_json)
         order_id = res_json["orderId"]
         new_order = Order(self.market_tag, currency, OrderType.LIMIT_SELL, order_id, price, amount)
         return new_order

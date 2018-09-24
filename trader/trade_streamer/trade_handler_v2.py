@@ -15,7 +15,7 @@ from trader.trade_streamer.handler_ref import *
 
 
 class TradeHandlerV2:
-    MIN_TRDBLE_COIN_MLTPLIER = None
+    MIN_TRDBLE_COIN_MULTIPLIER = None
     TIME_DUR_OF_SETTLEMENT = None
     TRADING_MODE_LOOP_INTERVAL = 3
 
@@ -63,10 +63,10 @@ class TradeHandlerV2:
 
     def set_initial_trade_setting(self):
         # set streamer_min_trading_coin
-        self.MIN_TRDBLE_COIN_MLTPLIER = float(input("Please indicate Min Tradable Coin Multiplier (gte 1.0) "))
+        self.MIN_TRDBLE_COIN_MULTIPLIER = float(input("Please indicate Min Tradable Coin Multiplier (gte 1.0) "))
         self.streamer_min_trading_coin \
             = max(Global.read_min_trading_coin(self.mm1_name, self.target_currency),
-                  Global.read_min_trading_coin(self.mm2_name, self.target_currency)) * self.MIN_TRDBLE_COIN_MLTPLIER
+                  Global.read_min_trading_coin(self.mm2_name, self.target_currency)) * self.MIN_TRDBLE_COIN_MULTIPLIER
 
         # set settlement related var
         settle_hour = int(input("Please type settlement hour (int only)"))
@@ -80,6 +80,8 @@ class TradeHandlerV2:
     def get_past_mctu_spread_info_init_mode(self, anal_start_time: int, anal_end_time: int):
         """mtcu: Min Tradable Coin Unit
         """
+
+        logging.warning("Now analyzing past spread infos..plz wait!!\n")
 
         # get OTC from determined combination
         otc_result_dict = self.get_otc_result_init_mode(anal_start_time, anal_end_time)

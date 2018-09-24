@@ -1,3 +1,4 @@
+from typing import Union
 from enum import Enum
 from bson import Decimal128
 from .market import Market
@@ -35,7 +36,7 @@ class OrderStatus(Enum):
     UNKNOWN = "unknown"
 
     @classmethod
-    def get(cls, order_status: (str or int)):
+    def get(cls, order_status: Union[str, int]):
         # for coinone
 
         _status = "unfilled" if order_status == "live" else order_status

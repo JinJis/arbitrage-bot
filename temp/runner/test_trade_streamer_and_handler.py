@@ -2,7 +2,7 @@ import logging
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from trader.market_manager.market_manager import MarketManager
-from trader.trade_manager.tester.test_trade_streamer import TestTradeStreamer
+from trader.trade_streamer.tester import TestTradeStreamer
 from trader.market_manager.bithumb_market_manager import BithumbMarketManager
 from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
 

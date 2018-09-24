@@ -1,8 +1,9 @@
-import time
 import logging
+import time
+
 from config.global_conf import Global
-from trader.trade_streamer.trade_handler_v2 import TradeHandlerV2
 from trader.market_manager.market_manager import MarketManager
+from trader.trade_streamer.trade_handler_v2 import TradeHandlerV2
 
 
 class TradeStreamerV2(TradeHandlerV2):
@@ -42,7 +43,6 @@ class TradeStreamerV2(TradeHandlerV2):
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # # save spread_to_trade list & amount of krw_earend
-        logging.warning("Now analyzing past spread infos..plz wait!!\n")
         self.get_past_mctu_spread_info_init_mode(self.ocat_rewind_time, self.streamer_start_time)
 
         # log MCTU info and decide spread threshold

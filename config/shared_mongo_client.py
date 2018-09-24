@@ -19,6 +19,7 @@ class SharedMongoClient:
 
     STREAMER_DB_NAME = "[RFAB]streamer"
     TEST_STREAMER_DB_NAME = "[TEST]streamer"
+    USER_DB_NAME = "[RFAB]user"
 
     __singleton_instance = None
 
@@ -78,6 +79,10 @@ class SharedMongoClient:
     @classmethod
     def get_test_streamer_db(cls) -> "Database":
         return cls.instance()[cls.TEST_STREAMER_DB_NAME]
+
+    @classmethod
+    def get_user_db(cls) -> "Database":
+        return cls.instance()[cls.USER_DB_NAME]
 
     @classmethod
     def _async_insert(cls, target_col: Collection, doc: dict):

@@ -1,10 +1,12 @@
 import logging
+
 import pymongo
-from config.global_conf import Global
-from trader.base_arb_bot import BaseArbBot
-from analyzer.trade_analyzer import SpreadInfo
+
 from analyzer.trade_analyzer import MCTSAnalyzer
+from analyzer.trade_analyzer import SpreadInfo
+from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
+from trader.base_arb_bot import BaseArbBot
 from trader.market.trade import Trade, TradeTag, TradeMeta
 from trader.market_manager.market_manager import MarketManager
 
@@ -109,7 +111,7 @@ class RiskFreeArbBotV4(BaseArbBot):
             # post balance_commander empty data to reset
             self.balance_commander_col.insert_one(dict(is_bal_update=False))
 
-    def execute_trade(self, spread_info: SpreadInfo, mctu_threshold_dict: dict, trade_type: str = "new" or "rev"):
+    def execute_trade(self, spread_info: SpreadInfo, mctu_threshold_dict: dict, trade_type: str):
         if trade_type == "new":
             buying_mkt = self.mm1
             selling_mkt = self.mm2
@@ -163,9 +165,12 @@ class RiskFreeArbBotV4(BaseArbBot):
 
         # not enough coin
         if not has_enough_coin:
-            logging.warning("Not enough COIN in selling market!")
+            logging.warning("Not enough %s in selling market!" % self.target_currency.upper())
             return None
 
+        # fixme: 이부분 고쳐야함 --> buy오더 먼저했을때 실패하면 exception일어나서 sell오더 안하고 스킵..
+        # fixme: 그러나 buy오더 성공하고 sell오더 실패했을때는 한쪽만 성공하게됨..
+        # fixme: 또 이쪽 tread로 run해야하지 않나?
         buy_order = buying_mkt.order_buy(buying_currency, spread_info.buy_unit_price, spread_info.buy_order_amt)
         sell_order = selling_mkt.order_sell(selling_currency, spread_info.sell_unit_price, spread_info.sell_order_amt)
 
@@ -173,8 +178,8 @@ class RiskFreeArbBotV4(BaseArbBot):
         logging.critical("========[ Successful Trade INFO ]========================")
         logging.critical("Trade Type: %s" % trade_type.upper())
         logging.critical("Traded Spread: %.2f" % spread_info.spread_to_trade)
-        logging.warning("MCTU Normal Threshold: %.2f" % mctu_threshold_dict["normal"])
-        logging.warning("MCTU Royal Threshold: %.2f" % mctu_threshold_dict["royal"])
+        logging.critical("MCTU Normal Threshold: %.2f" % mctu_threshold_dict["normal"])
+        logging.critical("MCTU Royal Threshold: %.2f" % mctu_threshold_dict["royal"])
         logging.critical("---------------------------------------------------------")
         logging.critical("Buying Price: %.2f" % spread_info.buy_unit_price)
         logging.critical("Buying Amount: %f" % spread_info.buy_order_amt)
