@@ -1,10 +1,20 @@
-import logging
+from trader.user_manager.usermanager import UserManager
 from config.global_conf import Global
-from trader.market_manager.okcoin_market_manager import OkcoinMarketManager, OkcoinCurrency
-from trader.market_manager.bithumb_market_manager import BithumbMarketManager, BithumbCurrency
+import logging
+from trader.trade_streamer.balance_updater import BalanceUpdater
+from trader.market_manager.bithumb_market_manager import BithumbMarketManager
+from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
+from config.shared_mongo_client import SharedMongoClient
+
+Global.configure_default_root_logging(log_level=logging.INFO, should_log_to_file=False)
+SharedMongoClient.initialize(should_use_localhost_db=False)
+
+# test Balance Updater
+
+a = BalanceUpdater("chungjin93", "xrp", BithumbMarketManager(), OkcoinMarketManager())
+#
+a.update_balance_looper()
 
 
-Global.configure_default_root_logging(log_level=logging.WARNING, should_log_to_file=False)
-ok = OkcoinMarketManager()
-bt = BithumbMarketManager()
-bt.order_buy(BithumbCurrency.XRP, 200, 10)
+# test User
+

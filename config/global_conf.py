@@ -160,7 +160,7 @@ class Global:
             config.write(configfile)
 
     @staticmethod
-    def read_avail_coin_in_list():
+    def get_avail_coin_in_list():
         config = configparser.ConfigParser()
         config.read(Global.RFAB_COMBINATION_CONFIG_LOCATION)
         result = []
@@ -171,7 +171,7 @@ class Global:
         return result
 
     @staticmethod
-    def get_rfab_combination_list(target_currency: str):
+    def get_rfab_combination_tuples(target_currency: str):
         """
         :param target_currency: bch, btc, tron...
         :return: [('bithumb', 'coinone'), ('bithumb', 'okcoin')...]
@@ -191,7 +191,7 @@ class Global:
 
     @staticmethod
     def get_inner_ocat_combination(target_market: str, target_currency: str):
-        all_combi_list = Global.get_rfab_combination_list(target_currency)
+        all_combi_list = Global.get_rfab_combination_tuples(target_currency)
         inner_ocat_list = []
         for combi in all_combi_list:
             if target_market in combi:

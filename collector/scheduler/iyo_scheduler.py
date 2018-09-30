@@ -15,7 +15,7 @@ class IYOScheduler(BaseScheduler):
         start_time = int(time.time()) - self.interval_time_sec
         end_time = int(time.time())
 
-        for target_currency in list(Global.read_avail_coin_in_list()):
+        for target_currency in list(Global.get_avail_coin_in_list()):
             self.iyo_result_to_mongo_db(target_currency, start_time, end_time)
 
     @staticmethod
@@ -29,7 +29,7 @@ class IYOScheduler(BaseScheduler):
         local_et = Global.convert_epoch_to_local_datetime(end_time, timezone="kr")
 
         # create combination of coin that is injected by validating if the exchange has that coin
-        rfab_combi_list = Global.get_rfab_combination_list(coin_name)
+        rfab_combi_list = Global.get_rfab_combination_tuples(coin_name)
 
         for _combi in rfab_combi_list:
             logging.critical("[%s-%s-%s] IYO conducting -> start_time: %s, end_time: %s" % (

@@ -18,3 +18,4 @@ bt_api = BithumbApi.instance(is_public_access_only=False)
 result = bt_api.get_past_trades(BithumbCurrency.XRP)
 # result = bt_api.order_limit_buy(BithumbCurrency.ETH, 343000, 0.01)
 print(result)
+

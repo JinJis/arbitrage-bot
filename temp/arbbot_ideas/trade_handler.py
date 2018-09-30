@@ -107,9 +107,9 @@ class TradeHandler:
         elif not is_inner_ocat:
             logging.critical("--------Conducting Outer OCAT--------")
             ocat_final_result = []
-            for outer_ocat_coin in list(Global.read_avail_coin_in_list()):
+            for outer_ocat_coin in list(Global.get_avail_coin_in_list()):
                 logging.warning("Now conducting [%s]" % outer_ocat_coin.upper())
-                outer_ocat_list = Global.get_rfab_combination_list(outer_ocat_coin)
+                outer_ocat_list = Global.get_rfab_combination_tuples(outer_ocat_coin)
                 ocat_result = self.otc_all_combination_by_one_coin(outer_ocat_coin, outer_ocat_list)
                 ocat_final_result.extend(ocat_result)
 

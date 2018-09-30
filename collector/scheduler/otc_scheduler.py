@@ -35,7 +35,7 @@ class OTCScheduler(BaseScheduler):
                 logging.critical("OTC activated start_time: %d" % now_date)
                 # loop through all possible coins and run
                 final_result = []
-                for target_currency in list(Global.read_avail_coin_in_list()):
+                for target_currency in list(Global.get_avail_coin_in_list()):
                     logging.critical("Now conducting %s" % target_currency.upper())
                     result_by_one_coin = self.otc_all_mm_comb_by_one_coin(target_currency, start_time, end_time)
                     final_result.extend(result_by_one_coin)
@@ -65,7 +65,7 @@ class OTCScheduler(BaseScheduler):
     def otc_all_mm_comb_by_one_coin(coin_name: str, start_time: int, end_time: int) -> list:
 
         # create combination of coin that is injected by validating if the exchange has that coin
-        rfab_combi_list = Global.get_rfab_combination_list(coin_name)
+        rfab_combi_list = Global.get_rfab_combination_tuples(coin_name)
 
         all_comb_result_by_one_coin = []
         for _combi in rfab_combi_list:
