@@ -2,7 +2,7 @@ import logging
 import time
 
 from trader.market_manager.market_manager import MarketManager
-from trader.user_manager.usermanager import UserManager
+from temp.trade_manager.user_manager import UserManager
 
 
 class BalanceUpdater:

@@ -1,7 +1,6 @@
-from trader.user_manager.usermanager import UserManager
 from config.global_conf import Global
 import logging
-from trader.trade_streamer.balance_updater import BalanceUpdater
+from temp.trade_manager.trade_streamer_test.balance_updater import BalanceUpdater
 from trader.market_manager.bithumb_market_manager import BithumbMarketManager
 from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
 from config.shared_mongo_client import SharedMongoClient
