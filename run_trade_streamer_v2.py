@@ -8,8 +8,8 @@ from trader.trade_streamer.trade_streamer_v2 import TradeStreamerV2
 
 
 def main(target_currency: str, mm1_name: str, mm2_name: str):
-    Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
-    SharedMongoClient.initialize(should_use_localhost_db=False)
+    Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.WARNING)
+    SharedMongoClient.initialize(should_use_localhost_db=True)
 
     mm1 = getattr(ConfigMarketManager, mm1_name.upper()).value
     mm2 = getattr(ConfigMarketManager, mm2_name.upper()).value
