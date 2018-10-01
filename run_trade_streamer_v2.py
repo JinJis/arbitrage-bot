@@ -15,7 +15,7 @@ def main(target_currency: str, mm1_name: str, mm2_name: str):
     mm2 = getattr(ConfigMarketManager, mm2_name.upper()).value
 
     # run TradeStreamer
-    TradeStreamerV2(mm1=mm1, mm2=mm2, target_currency=target_currency, is_test=True).run()
+    TradeStreamerV2(mm1=mm1, mm2=mm2, target_currency=target_currency, is_test=False).run()
 
 
 if __name__ == '__main__':
