@@ -78,7 +78,7 @@ class RiskFreeArbBotV4(BaseArbBot):
             mm2_data,
             self.mm1.taker_fee,
             self.mm2.taker_fee,
-            trade_commander["streamer_mctu"]
+            trade_commander["streamer_mtcu"]
         )
         new_spread_info: SpreadInfo = result["new"]
         rev_spread_info: SpreadInfo = result["rev"]
@@ -115,7 +115,7 @@ class RiskFreeArbBotV4(BaseArbBot):
             # post balance_commander empty data to reset
             self.balance_commander_col.insert_one(dict(is_bal_update=False))
 
-    def execute_trade(self, spread_info: SpreadInfo, mctu_threshold_dict: dict, trade_type: str):
+    def execute_trade(self, spread_info: SpreadInfo, mtcu_threshold_dict: dict, trade_type: str):
         if trade_type == "new":
             buying_mkt = self.mm1
             selling_mkt = self.mm2
@@ -144,15 +144,15 @@ class RiskFreeArbBotV4(BaseArbBot):
                                            Global.read_min_order_digit(selling_mkt.get_market_name()))
 
         # check condition
-        threshold_cond = spread_info.spread_to_trade >= mctu_threshold_dict["normal"]
+        threshold_cond = spread_info.spread_to_trade >= mtcu_threshold_dict["normal"]
 
         # quit if conditions don't meet
         if not threshold_cond:
             logging.warning("< Spread threshold condition not met! >")
             logging.warning("---------------------------------------------------------")
             logging.critical("Spread To Trade: %.2f" % spread_info.spread_to_trade)
-            logging.warning("MCTU Normal Threshold: %.2f" % mctu_threshold_dict["normal"])
-            logging.warning("MCTU Royal Threshold: %.2f" % mctu_threshold_dict["royal"])
+            logging.warning("MTCU Normal Threshold: %.2f" % mtcu_threshold_dict["normal"])
+            logging.warning("MTCU Royal Threshold: %.2f" % mtcu_threshold_dict["royal"])
             logging.warning("---------------------------------------------------------")
             return None
 
@@ -182,8 +182,8 @@ class RiskFreeArbBotV4(BaseArbBot):
         logging.critical("========[ Successful Trade INFO ]========================")
         logging.critical("Trade Type: %s" % trade_type.upper())
         logging.critical("Traded Spread: %.2f" % spread_info.spread_to_trade)
-        logging.critical("MCTU Normal Threshold: %.2f" % mctu_threshold_dict["normal"])
-        logging.critical("MCTU Royal Threshold: %.2f" % mctu_threshold_dict["royal"])
+        logging.critical("MTCU Normal Threshold: %.2f" % mtcu_threshold_dict["normal"])
+        logging.critical("MTCU Royal Threshold: %.2f" % mtcu_threshold_dict["royal"])
         logging.critical("---------------------------------------------------------")
         logging.critical("Buying Price: %.2f" % spread_info.buy_unit_price)
         logging.critical("Buying Amount: %f" % spread_info.buy_order_amt)
