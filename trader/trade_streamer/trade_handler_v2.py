@@ -21,12 +21,6 @@ class TradeHandlerV2:
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager, is_test: bool):
 
-        # steamer init relevant
-        if is_test:
-            self.streamer_db = SharedMongoClient.get_test_streamer_db()
-        if not is_test:
-            self.streamer_db = SharedMongoClient.get_streamer_db()
-
         # make instance of handler ref
         self.th_instance = Threshold()
         self.cond_instance = Condition()
@@ -42,6 +36,12 @@ class TradeHandlerV2:
         self.mm2_krw_bal = float(self.mm2.balance.get_available_coin("krw"))
         self.mm1_coin_bal = float(self.mm1.balance.get_available_coin(target_currency))
         self.mm2_coin_bal = float(self.mm2.balance.get_available_coin(target_currency))
+
+        # steamer init relevant
+        if is_test:
+            self.streamer_db = SharedMongoClient.get_test_streamer_db()
+        if not is_test:
+            self.streamer_db = SharedMongoClient.get_streamer_db(self.target_currency, self.mm1_name, self.mm2_name)
 
         # MCTU relevant
         self.mm1_ob = None

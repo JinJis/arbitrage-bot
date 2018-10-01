@@ -17,7 +17,6 @@ class SharedMongoClient:
     OKCOIN_DB_NAME = "okcoin"
     COINNEST_DB_NAME = "coinnest"
 
-    STREAMER_DB_NAME = "[RFAB]streamer"
     TEST_STREAMER_DB_NAME = "[TEST]streamer"
     USER_DB_NAME = "[RFAB]user"
 
@@ -73,8 +72,8 @@ class SharedMongoClient:
         return cls.instance()[target_db_name][cls.p_db]
 
     @classmethod
-    def get_streamer_db(cls) -> "Database":
-        return cls.instance()[cls.STREAMER_DB_NAME]
+    def get_streamer_db(cls, target_currency: str, mm1_name: str, mm2_name: str) -> "Database":
+        return cls.instance()["%s_%s_%s" % (target_currency, mm1_name, mm2_name)]
 
     @classmethod
     def get_test_streamer_db(cls) -> "Database":

@@ -14,13 +14,17 @@ from trader.market_manager.market_manager import MarketManager
 class RiskFreeArbBotV4(BaseArbBot):
 
     def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager, is_test: bool):
+        mm1_name = mm1.get_market_name().lower()
+        mm2_name = mm2.get_market_name().lower()
 
         if is_test:
             self.trade_commander_col = SharedMongoClient.get_test_streamer_db()["trade_commander"]
             self.balance_commander_col = SharedMongoClient.get_test_streamer_db()["balance_commander"]
         if not is_test:
-            self.trade_commander_col = SharedMongoClient.get_streamer_db()["trade_commander"]
-            self.balance_commander_col = SharedMongoClient.get_streamer_db()["balance_commander"]
+            self.trade_commander_col = SharedMongoClient.get_streamer_db(
+                target_currency, mm1_name, mm2_name)["trade_commander"]
+            self.balance_commander_col = SharedMongoClient.get_streamer_db(
+                target_currency, mm1_name, mm2_name)["balance_commander"]
 
         self.trade_strategy = MCTSAnalyzer.min_coin_tradable_spread_strategy
 
