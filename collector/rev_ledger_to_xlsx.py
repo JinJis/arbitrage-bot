@@ -45,7 +45,7 @@ class RevLedgerXLSX:
         self.mm1_name = mm1_name
         self.mm2_name = mm2_name
         self.target_currency = target_currency
-        self.rev_ledger_col = SharedMongoClient.get_streamer_db()["revenue_ledger"]
+        self.rev_ledger_col = SharedMongoClient.get_streamer_db(target_currency, mm1_name, mm2_name)["revenue_ledger"]
 
         try:
             self.file_dir = self.DEFAULT_DIR + '%s_%s_%s.xlsx' % (target_currency, mm1_name, mm2_name)
