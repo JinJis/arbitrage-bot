@@ -11,8 +11,8 @@ def main(target_currency: str, mm1_name: str, mm2_name: str):
     Global.configure_default_root_logging(should_log_to_file=True, log_level=logging.INFO)
     SharedMongoClient.initialize(should_use_localhost_db=True)
 
-    mm1 = getattr(ConfigMarketManager, mm1_name.upper())
-    mm2 = getattr(ConfigMarketManager, mm2_name.upper())
+    mm1 = getattr(ConfigMarketManager, mm1_name.upper()).value
+    mm2 = getattr(ConfigMarketManager, mm2_name.upper()).value
 
     RiskFreeArbBotV4(target_currency, mm1, mm2, is_test=False).run()
 

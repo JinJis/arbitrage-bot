@@ -11,8 +11,8 @@ def main(target_currency: str, mm1_name: str, mm2_name: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.WARNING)
     SharedMongoClient.initialize(should_use_localhost_db=False)
 
-    mm1 = getattr(ConfigMarketManager, mm1_name.upper())
-    mm2 = getattr(ConfigMarketManager, mm2_name.upper())
+    mm1 = getattr(ConfigMarketManager, mm1_name.upper()).value
+    mm2 = getattr(ConfigMarketManager, mm2_name.upper()).value
 
     # run TradeStreamer
     TradeStreamerV2(mm1=mm1, mm2=mm2, target_currency=target_currency, is_test=True).run()
