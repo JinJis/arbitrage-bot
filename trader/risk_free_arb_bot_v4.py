@@ -13,7 +13,7 @@ from trader.market_manager.market_manager import MarketManager
 
 class RiskFreeArbBotV4(BaseArbBot):
 
-    def __init__(self, mm1: MarketManager, mm2: MarketManager, target_currency: str, is_test: bool):
+    def __init__(self, target_currency: str, mm1: MarketManager, mm2: MarketManager, is_test: bool):
 
         if is_test:
             self.trade_commander_col = SharedMongoClient.get_test_streamer_db()["trade_commander"]

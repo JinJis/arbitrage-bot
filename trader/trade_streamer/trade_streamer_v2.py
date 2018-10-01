@@ -43,10 +43,10 @@ class TradeStreamerV2(TradeHandlerV2):
         logging.warning("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # # save spread_to_trade list & amount of krw_earend
-        self.get_past_mctu_spread_info_init_mode(self.ocat_rewind_time, self.streamer_start_time)
+        self.get_past_mtcu_spread_info_init_mode(self.ocat_rewind_time, self.streamer_start_time)
 
         # log MCTU info and decide spread threshold
-        self.log_init_mode_mctu_info()
+        self.log_init_mode_mtcu_info()
 
         # init revenue ledger
         self.update_revenue_ledger(mode_status="initiation")
@@ -102,10 +102,10 @@ class TradeStreamerV2(TradeHandlerV2):
         self.get_latest_orderbook()
 
         # get MTCU
-        self.update_trade_condition_by_mctu_analyzer()
+        self.update_trade_condition_by_mtcu_analyzer()
 
         # log MCTU
-        self.log_trading_mode_mctu_info(self.streamer_start_time, self.trading_mode_now_time)
+        self.log_trading_mode_mtcu_info(self.streamer_start_time, self.trading_mode_now_time)
 
         # trade command by comparing current flowed time with exhaustion rate
         self.renew_exhaust_condition_by_time_flow()

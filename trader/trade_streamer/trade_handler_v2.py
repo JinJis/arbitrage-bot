@@ -77,7 +77,7 @@ class TradeHandlerV2:
         # set rewind time for MCTU anal init mode
         self.ocat_rewind_time = int(self.streamer_start_time - anal_rewind_hr * 60 * 60)
 
-    def get_past_mctu_spread_info_init_mode(self, anal_start_time: int, anal_end_time: int):
+    def get_past_mtcu_spread_info_init_mode(self, anal_start_time: int, anal_end_time: int):
         """mtcu: Min Tradable Coin Unit
         """
 
@@ -150,7 +150,7 @@ class TradeHandlerV2:
         # get latest db
         self.mm1_ob, self.mm2_ob = SharedMongoClient.get_latest_data_from_db(mm1_col, mm2_col)
 
-    def update_trade_condition_by_mctu_analyzer(self):
+    def update_trade_condition_by_mtcu_analyzer(self):
         """mtcu: Min Tradable Coin Unit
         """
 
@@ -242,7 +242,7 @@ class TradeHandlerV2:
         self.streamer_db["trade_commander"].insert_one(
             TradeCommander.to_dict(
                 time=self.streamer_start_time,
-                streamer_mctu=self.streamer_min_trading_coin,
+                streamer_mtcu=self.streamer_min_trading_coin,
                 condition=self.cond_instance,
                 threshold=self.th_instance
             )
@@ -256,7 +256,7 @@ class TradeHandlerV2:
         self.streamer_db["trade_commander"].insert_one(
             TradeCommander.to_dict(
                 time=self.trading_mode_now_time,
-                streamer_mctu=self.streamer_min_trading_coin,
+                streamer_mtcu=self.streamer_min_trading_coin,
                 condition=self.cond_instance,
                 threshold=self.th_instance
             )
@@ -265,7 +265,7 @@ class TradeHandlerV2:
     def post_settlement_commander(self):
         self.streamer_db["trade_commander"].insert_one(TradeCommander.to_dict(
             time=self.trading_mode_now_time,
-            streamer_mctu=self.streamer_min_trading_coin,
+            streamer_mtcu=self.streamer_min_trading_coin,
             condition=self.cond_instance,
             threshold=self.th_instance
         ))
@@ -292,7 +292,7 @@ class TradeHandlerV2:
         self.launch_rev_ledger_xlsx(mode_status="settlement")
 
     @staticmethod
-    def get_mctu_spread_and_frequency(spread_to_trade_list: list):
+    def get_mtcu_spread_and_frequency(spread_to_trade_list: list):
         result = str()
 
         if len(spread_to_trade_list) == 0:
@@ -381,7 +381,7 @@ class TradeHandlerV2:
     ============
     """
 
-    def log_init_mode_mctu_info(self):
+    def log_init_mode_mtcu_info(self):
         local_anal_st = Global.convert_epoch_to_local_datetime(self.ocat_rewind_time, timezone="kr")
         local_anal_et = Global.convert_epoch_to_local_datetime(self.streamer_start_time, timezone="kr")
 
@@ -392,14 +392,14 @@ class TradeHandlerV2:
         for trade_type in target_dict.keys():
             logging.warning("['%s' SPREAD RECORDER]:\n%s"
                             % (trade_type.upper(),
-                               self.get_mctu_spread_and_frequency(target_dict[trade_type])))
+                               self.get_mtcu_spread_and_frequency(target_dict[trade_type])))
 
         self.th_instance.NEW["normal"] = float(input("Decide [NEW] MCTU spread threshold: "))
         self.th_instance.NEW["royal"] = float(input("Decide [NEW] MCTU Royal spread: "))
         self.th_instance.REV["normal"] = float(input("Decide [REV] MCTU spread threshold: "))
         self.th_instance.REV["royal"] = float(input("Decide [REV] MCTU Royal spread: "))
 
-    def log_trading_mode_mctu_info(self, anal_start_time: int, anal_end_time: int):
+    def log_trading_mode_mtcu_info(self, anal_start_time: int, anal_end_time: int):
         local_anal_st = Global.convert_epoch_to_local_datetime(anal_start_time, timezone="kr")
         local_anal_et = Global.convert_epoch_to_local_datetime(anal_end_time, timezone="kr")
 
@@ -410,7 +410,7 @@ class TradeHandlerV2:
         for trade_type in target_dict.keys():
             logging.warning("\n\n[ '%s' SPREAD RECORDER]:\n%s"
                             % (trade_type.upper(),
-                               self.get_mctu_spread_and_frequency(target_dict[trade_type])))
+                               self.get_mtcu_spread_and_frequency(target_dict[trade_type])))
 
     def log_rev_ledger(self):
         logging.warning("========= [REVENUE LEDGER INFO] ========")

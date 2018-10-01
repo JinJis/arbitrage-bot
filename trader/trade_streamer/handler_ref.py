@@ -98,10 +98,10 @@ class Exhaustion:
 
 class TradeCommander:
     @staticmethod
-    def to_dict(time: int, streamer_mctu: float, condition: Condition, threshold: Threshold):
+    def to_dict(time: int, streamer_mtcu: float, condition: Condition, threshold: Threshold):
         return {
             "time": time,
-            "streamer_mctu": streamer_mctu,
+            "streamer_mtcu": streamer_mtcu,
             "execute_trade": {
                 "new": condition.trade_execution_decider(condition.NEW),
                 "rev": condition.trade_execution_decider(condition.REV)
