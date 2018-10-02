@@ -172,8 +172,18 @@ class BithumbApi(MarketApi):
         }
 
     def cancel_order(self, currency: BithumbCurrency, order: Order):
+        # reformat order type by Bithumb API rule
+        if order.order_type.value == "limit_buy":
+            order_type = "bid"
+        elif order.order_type.value == "limit_sell":
+            order_type = "ask"
+        else:
+            raise Exception(
+                "Injected Order type is not one of 'bid' or 'ask' in effort to cancel order -> Order info: %s"
+                % order.to_dict())
+
         return self.bithumb_post("/trade/cancel", payload={
-            "type": order.order_type,
+            "type": order_type,
             "order_id": order.order_id,
             "currency": currency.value})
 
