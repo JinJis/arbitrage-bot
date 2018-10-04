@@ -1,3 +1,4 @@
+import sys
 import logging
 
 from config.global_conf import Global
@@ -17,4 +18,4 @@ def main(target_currency: str, mm1_name: str, mm2_name: str):
 
 
 if __name__ == '__main__':
-    main("xrp", "bithumb", "okcoin")
+    main(sys.argv[1], sys.argv[2], sys.argv[3])
