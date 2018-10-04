@@ -14,6 +14,13 @@ import requests
 import scipy.stats as st
 from pymongo.cursor import Cursor
 
+from trader.market_manager.bithumb_market_manager import BithumbMarketManager
+from trader.market_manager.coinnest_market_manager import CoinnestMarketManager
+from trader.market_manager.coinone_market_manager import CoinoneMarketManager
+from trader.market_manager.gopax_market_manager import GopaxMarketManager
+from trader.market_manager.korbit_market_manager import KorbitMarketManager
+from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
+
 
 class Global:
     USER_CONFIG_LOCATION = "config/conf_user.ini"
@@ -282,3 +289,14 @@ class Global:
             return input_list[int(middle - .5)]
         else:
             return input_list[int(middle)]
+
+    @staticmethod
+    def get_market_manager(name: str):
+        return {
+            "bithumb": BithumbMarketManager,
+            "coinone": CoinoneMarketManager,
+            "korbit": KorbitMarketManager,
+            "gopax": GopaxMarketManager,
+            "okcoin": OkcoinMarketManager,
+            "coinnest": CoinnestMarketManager
+        }[name.lower()]()

@@ -63,15 +63,15 @@ class TradeHandlerV2:
 
     def set_initial_trade_setting(self):
         # set streamer_min_trading_coin
-        self.MIN_TRDBLE_COIN_MULTIPLIER = float(input("Please indicate Min Tradable Coin Multiplier (gte 1.0) "))
+        self.MIN_TRDBLE_COIN_MULTIPLIER = float(input("Please indicate Min Tradable Coin Multiplier (gte 1.0): "))
         self.streamer_min_trading_coin \
             = max(Global.read_min_trading_coin(self.mm1_name, self.target_currency),
                   Global.read_min_trading_coin(self.mm2_name, self.target_currency)) * self.MIN_TRDBLE_COIN_MULTIPLIER
 
         # set settlement related var
-        settle_hour = int(input("Please type settlement hour (int only)"))
-        settle_min = int(input("Please type settlement minute (int only)"))
-        anal_rewind_hr = int(input("Please type [Initiation Mode] Rewind hour (int only)"))
+        settle_hour = int(input("Please type settlement hour (int only): "))
+        settle_min = int(input("Please type settlement minute (int only): "))
+        anal_rewind_hr = int(input("Please type [Initiation Mode] Rewind hour (int only): "))
         self.TIME_DUR_OF_SETTLEMENT = settle_hour * 60 * 60 + settle_min * 60
 
         # set rewind time for MCTU anal init mode
