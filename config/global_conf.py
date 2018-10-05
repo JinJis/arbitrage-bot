@@ -14,12 +14,7 @@ import requests
 import scipy.stats as st
 from pymongo.cursor import Cursor
 
-from trader.market_manager.bithumb_market_manager import BithumbMarketManager
-from trader.market_manager.coinnest_market_manager import CoinnestMarketManager
-from trader.market_manager.coinone_market_manager import CoinoneMarketManager
-from trader.market_manager.gopax_market_manager import GopaxMarketManager
-from trader.market_manager.korbit_market_manager import KorbitMarketManager
-from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
+
 
 
 class Global:
@@ -292,6 +287,12 @@ class Global:
 
     @staticmethod
     def get_market_manager(name: str):
+        from trader.market_manager.bithumb_market_manager import BithumbMarketManager
+        from trader.market_manager.coinnest_market_manager import CoinnestMarketManager
+        from trader.market_manager.coinone_market_manager import CoinoneMarketManager
+        from trader.market_manager.gopax_market_manager import GopaxMarketManager
+        from trader.market_manager.korbit_market_manager import KorbitMarketManager
+        from trader.market_manager.okcoin_market_manager import OkcoinMarketManager
         return {
             "bithumb": BithumbMarketManager,
             "coinone": CoinoneMarketManager,

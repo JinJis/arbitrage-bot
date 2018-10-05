@@ -266,7 +266,8 @@ class CoinoneApi(MarketApi):
         else:
             res_json = res.json()
             # fixme: to check coinone V2 access token error
-            logging.error("this is res_json:", res_json)
+            logging.error("this is res_json: %s" % res_json)
+            logging.error("this is res_json result: %s" % res_json["result"])
             if res_json["result"] == "error":
                 try:
                     raise CoinoneError(int(res_json["errorCode"]))
