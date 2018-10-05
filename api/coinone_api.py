@@ -6,6 +6,7 @@ import hashlib
 from operator import itemgetter
 from requests import Response
 import configparser
+import logging
 from bson import Decimal128
 from datetime import datetime
 from .market_api import MarketApi
@@ -167,7 +168,7 @@ class CoinoneApi(MarketApi):
         if payload is None:
             payload = dict()
         payload["access_token"] = self.get_access_token()
-        payload["nonce"] = int(time.time())
+        payload["nonce"] = int(time.time() * 1000)  # 코인원 api_v2에서 1000 곱하기로 업뎃 (18.10.05 기준)
         encoded_payload = self.encode_payload(payload)
         signature = self.get_signature(encoded_payload)
 
@@ -180,6 +181,7 @@ class CoinoneApi(MarketApi):
         return res_json
 
     def get_balance(self):
+        logging.info("i am doing Coinone get_balance")
         res_json = self.coinone_post(self.BASE_URL + "/v2/account/balance")
 
         result = dict()
@@ -202,6 +204,7 @@ class CoinoneApi(MarketApi):
         return result
 
     def order_limit_buy(self, currency: CoinoneCurrency, price: int, amount: float):
+        logging.info("i am doing Coinone order_limit_buy")
         # {"errorCode": "0","orderId": "8a82c561-40b4-4cb3-9bc0-9ac9ffc1d63b","result": "success"}
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_buy", payload={
             "price": price,
@@ -210,6 +213,7 @@ class CoinoneApi(MarketApi):
         })
 
     def order_limit_sell(self, currency: CoinoneCurrency, price: int, amount: float):
+        logging.info("i am doing Coinone order_limit_sell")
         return self.coinone_post(self.BASE_URL + "/v2/order/limit_sell", payload={
             "price": price,
             "qty": amount,
@@ -226,6 +230,7 @@ class CoinoneApi(MarketApi):
         })
 
     def get_order_info(self, currency: CoinoneCurrency, order: Order):
+        logging.info("i am doing Coinone get_order_info")
         res_json = self.coinone_post(self.BASE_URL + "/v2/order/order_info", payload={
             "order_id": order.order_id,
             "currency": currency.value
@@ -260,6 +265,8 @@ class CoinoneApi(MarketApi):
             raise ConnectionError("Network request has failed! (status code: %d)" % res.status_code)
         else:
             res_json = res.json()
+            # fixme: to check coinone V2 access token error
+            logging.error("this is res_json:", res_json)
             if res_json["result"] == "error":
                 try:
                     raise CoinoneError(int(res_json["errorCode"]))
