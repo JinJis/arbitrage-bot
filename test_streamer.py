@@ -7,7 +7,7 @@ from trader.trade_streamer.trade_streamer_v2 import TradeStreamerV2
 
 def main(target_currency: str, mm1_name: str, mm2_name: str):
     Global.configure_default_root_logging(should_log_to_file=False, log_level=logging.INFO)
-    SharedMongoClient.initialize(should_use_localhost_db=True)
+    SharedMongoClient.initialize(should_use_localhost_db=False)
 
     mm1 = Global.get_market_manager(mm1_name)
     mm2 = Global.get_market_manager(mm2_name)

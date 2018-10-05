@@ -29,6 +29,7 @@ class TradeHandlerV2:
         # MARKET relevant
         self.mm1 = mm1
         self.mm2 = mm2
+        self.is_test = is_test
         self.target_currency = target_currency
         self.mm1_name = self.mm1.get_market_name().lower()
         self.mm2_name = self.mm2.get_market_name().lower()
@@ -373,7 +374,7 @@ class TradeHandlerV2:
         self.streamer_db["revenue_ledger"].insert_one(dict(self.rec_instance.rev_ledger))
 
     def launch_rev_ledger_xlsx(self, mode_status: str):
-        RevLedgerXLSX(self.target_currency, self.mm1_name, self.mm2_name).run(mode_status=mode_status)
+        RevLedgerXLSX(self.target_currency, self.mm1_name, self.mm2_name, self.is_test).run(mode_status=mode_status)
 
     """
     ============

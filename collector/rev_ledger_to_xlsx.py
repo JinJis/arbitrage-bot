@@ -41,11 +41,15 @@ class RevLedgerXLSX:
         }
     }
 
-    def __init__(self, target_currency: str, mm1_name: str, mm2_name: str):
+    def __init__(self, target_currency: str, mm1_name: str, mm2_name: str, is_test: bool):
         self.mm1_name = mm1_name
         self.mm2_name = mm2_name
         self.target_currency = target_currency
-        self.rev_ledger_col = SharedMongoClient.get_streamer_db(target_currency, mm1_name, mm2_name)["revenue_ledger"]
+        if is_test:
+            self.rev_ledger_col = SharedMongoClient.get_test_streamer_db()["revenue_ledger"]
+        else:
+            self.rev_ledger_col \
+                = SharedMongoClient.get_streamer_db(target_currency, mm1_name, mm2_name)["revenue_ledger"]
 
         try:
             self.file_dir = self.DEFAULT_DIR + '%s_%s_%s.xlsx' % (target_currency, mm1_name, mm2_name)
