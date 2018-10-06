@@ -289,9 +289,6 @@ class TradeHandlerV2:
         self.update_balance(mode_status="settlement")
         self.update_and_post_all_ledgers(mode_status="settlement")
 
-        # write RevLedgerXLXS
-        self.launch_balance_ledger_xlsx(mode_status="settlement")
-
     @staticmethod
     def get_mtcu_spread_and_frequency(spread_to_trade_list: list):
         result = str()

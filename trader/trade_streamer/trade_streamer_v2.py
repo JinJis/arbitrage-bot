@@ -51,9 +51,6 @@ class TradeStreamerV2(TradeHandlerV2):
         # init balance ledger
         self.update_and_post_all_ledgers(mode_status="initiation")
 
-        # init excel ledger
-        self.launch_balance_ledger_xlsx(mode_status="initiation")
-
         # update time relevant
         self.set_time_relevant_before_trading_mode()
 
