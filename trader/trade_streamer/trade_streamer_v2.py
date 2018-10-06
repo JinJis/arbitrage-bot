@@ -48,11 +48,11 @@ class TradeStreamerV2(TradeHandlerV2):
         # log MCTU info and decide spread threshold
         self.log_init_mode_mtcu_info()
 
-        # init revenue ledger
-        self.update_revenue_ledger(mode_status="initiation")
+        # init balance ledger
+        self.update_and_post_all_ledgers(mode_status="initiation")
 
-        # write RevLedgerXLXS
-        self.launch_rev_ledger_xlsx(mode_status="initiation")
+        # init excel ledger
+        self.launch_balance_ledger_xlsx(mode_status="initiation")
 
         # update time relevant
         self.set_time_relevant_before_trading_mode()
@@ -70,7 +70,7 @@ class TradeStreamerV2(TradeHandlerV2):
             try:
                 # update balance & time
                 self.update_balance(mode_status="trading")
-                self.update_revenue_ledger(mode_status="trading")
+                self.update_and_post_all_ledgers(mode_status="trading")
                 self.trading_mode_now_time = int(time.time())
 
                 # run trading_mode
@@ -82,7 +82,7 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.post_trade_commander_to_mongo()
 
                 # log rev ledger info
-                self.log_rev_ledger()
+                self.log_balance_ledger()
 
                 # sleep by Trading Mode Loop Interval
                 self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),

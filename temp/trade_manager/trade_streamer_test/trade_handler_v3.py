@@ -209,7 +209,7 @@ class TradeHandlerV2:
         time_flowed_rate = (self.trading_mode_now_time - self._bot_start_time) / self.TIME_DUR_OF_SETTLEMENT
 
         # calc current exhaust rate
-        exhaust_rate_dict = Exhaustion.rate_to_dict(self.mm1_ob, self.mm2_ob, self.rec_instance.rev_ledger)
+        exhaust_rate_dict = Exhaustion.rate_to_dict(self.mm1_ob, self.mm2_ob, self.rec_instance.balance_ledger)
 
         for trade_type in exhaust_rate_dict.keys():
             logging.warning("========== [ '%s' EXHAUST INFO] =========" % trade_type.upper())
@@ -316,7 +316,7 @@ class TradeHandlerV2:
         logging.warning("========= [REVENUE LEDGER INFO] ========")
         logging.warning("------------------------------------")
         # fixme: 여기 몽고디비에서 따오게끔
-        target_data = self.rec_instance.rev_ledger["initial_bal"]
+        target_data = self.rec_instance.balance_ledger["initial_bal"]
         logging.warning("<<< Initial Balance >>>")
         logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
                                                          self.target_currency, target_data["coin"]["mm1"]))
@@ -326,7 +326,7 @@ class TradeHandlerV2:
                                                          self.target_currency, target_data["coin"]["total"]))
         logging.warning("------------------------------------")
 
-        target_data = self.rec_instance.rev_ledger["current_bal"]
+        target_data = self.rec_instance.balance_ledger["current_bal"]
         logging.warning("<<< Current Balance >>>")
         logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
                                                          self.target_currency, target_data["coin"]["mm1"]))

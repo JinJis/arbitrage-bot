@@ -13,7 +13,7 @@ from config.shared_mongo_client import SharedMongoClient
 
 class RevLedgerXLSX:
     DEFAULT_DIR = os.path.dirname(__file__) + "/rev_ledger_excel/"
-    BASE_FILE_DIR = DEFAULT_DIR + "base_rev_ledger.xlsx"
+    BASE_LEDGER_DIR = DEFAULT_DIR + "base_rev_ledger.xlsx"
     FIRST_ROW = "11"
     CRITERIA_COLUMN = {
         "time": "B",
@@ -141,7 +141,7 @@ class RevLedgerXLSX:
         logging.warning("Excel Revenue Ledger saved successfully!!")
 
     def write_new_ledger(self):
-        self.target_wb: Workbook = load_workbook(self.BASE_FILE_DIR)
+        self.target_wb: Workbook = load_workbook(self.BASE_LEDGER_DIR)
         self.target_ws: Worksheet = self.target_wb["ledger"]
 
         # after doing this, excel funxction will automatically change table names
