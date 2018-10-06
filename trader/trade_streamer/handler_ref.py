@@ -3,32 +3,32 @@ from analyzer.trade_analyzer import BasicAnalyzer
 
 class Recorder:
     def __init__(self):
-        self.balance_ledger = None
+        self.balance_tracker = None
         self.spread_dict = {
             "init": dict(new=[], rev=[]),
             "trade": dict(new=[], rev=[])
         }
 
-    def get_profit_ledger(self):
-        if self.balance_ledger is None:
+    def get_rfab_ledger(self):
+        if self.balance_tracker is None:
             raise Exception("Balacne ledger is none.. Please check this error")
         return {
-            "combination": "%s_%s_%s" % (self.balance_ledger["target_currency"],
-                                         self.balance_ledger["mm1_name"],
-                                         self.balance_ledger["mm2_name"]),
-            "date": self.balance_ledger["time"],
-            "status": self.balance_ledger["mode_status"],
+            "combination": "%s_%s_%s" % (self.balance_tracker["target_currency"],
+                                         self.balance_tracker["mm1_name"],
+                                         self.balance_tracker["mm2_name"]),
+            "time": self.balance_tracker["time"],
+            "mode_status": self.balance_tracker["mode_status"],
             "mm1": {
-                "krw": self.balance_ledger["current_bal"]["krw"]["mm1"],
-                "coin": self.balance_ledger["current_bal"]["coin"]["mm1"]
+                "krw": self.balance_tracker["current_bal"]["krw"]["mm1"],
+                "coin": self.balance_tracker["current_bal"]["coin"]["mm1"]
             },
             "mm2": {
-                "krw": self.balance_ledger["current_bal"]["krw"]["mm2"],
-                "coin": self.balance_ledger["current_bal"]["coin"]["mm2"]
+                "krw": self.balance_tracker["current_bal"]["krw"]["mm2"],
+                "coin": self.balance_tracker["current_bal"]["coin"]["mm2"]
             },
             "total": {
-                "krw": self.balance_ledger["current_bal"]["krw"]["total"],
-                "coin": self.balance_ledger["current_bal"]["coin"]["total"]
+                "krw": self.balance_tracker["current_bal"]["krw"]["total"],
+                "coin": self.balance_tracker["current_bal"]["coin"]["total"]
             }
 
         }

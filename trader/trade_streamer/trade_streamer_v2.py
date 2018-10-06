@@ -16,8 +16,6 @@ class TradeStreamerV2(TradeHandlerV2):
         self.post_empty_trade_commander()
         self.post_empty_bal_commander()
 
-        # check backup
-
         # log when init
         logging.warning("================================")
         logging.warning("|| Trade Streamer Launched!!! || ")
@@ -48,7 +46,7 @@ class TradeStreamerV2(TradeHandlerV2):
         # log MCTU info and decide spread threshold
         self.log_init_mode_mtcu_info()
 
-        # init balance ledger
+        # run balance tracker
         self.update_and_post_all_ledgers(mode_status="initiation")
 
         # update time relevant
@@ -78,8 +76,8 @@ class TradeStreamerV2(TradeHandlerV2):
                 # post trade_commander dict to MongoDB
                 self.post_trade_commander_to_mongo()
 
-                # log rev ledger info
-                self.log_balance_ledger()
+                # log current balance info
+                self.log_balance_tracker()
 
                 # sleep by Trading Mode Loop Interval
                 self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),

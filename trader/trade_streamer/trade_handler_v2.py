@@ -6,7 +6,6 @@ import pymongo
 
 from analyzer.trade_analyzer import MCTSAnalyzer
 from collector.oppty_time_collector import OpptyTimeCollector
-from collector.rev_ledger_to_xlsx import RevLedgerXLSX
 from config.global_conf import Global
 from config.shared_mongo_client import SharedMongoClient
 from config.trade_setting_config import TradeSettingConfig
@@ -213,7 +212,7 @@ class TradeHandlerV2:
         time_flowed_rate = (self.trading_mode_now_time - self._bot_start_time) / self.TIME_DUR_OF_SETTLEMENT
 
         # calc current exhaust rate
-        exhaust_rate_dict = Exhaustion.rate_to_dict(self.mm1_ob, self.mm2_ob, self.rec_instance.balance_ledger)
+        exhaust_rate_dict = Exhaustion.rate_to_dict(self.mm1_ob, self.mm2_ob, self.rec_instance.balance_tracker)
 
         for trade_type in exhaust_rate_dict.keys():
             logging.warning("========== [ '%s' EXHAUST INFO] =========" % trade_type.upper())
@@ -348,7 +347,7 @@ class TradeHandlerV2:
 
         # if initiation mdoe, append bal to initial, current balance
         if mode_status == "initiation":
-            self.rec_instance.balance_ledger = {
+            self.rec_instance.balance_tracker = {
                 "time": self.streamer_start_time,
                 "mode_status": mode_status,
                 "target_currency": self.target_currency,
@@ -357,24 +356,21 @@ class TradeHandlerV2:
                 "initial_bal": bal_to_append,
                 "current_bal": bal_to_append
             }
-            # also post to profit ledger (initiation)
-            self.streamer_db["profit_ledger"].insert_one(self.rec_instance.get_profit_ledger())
+            # also post to rfab ledger (initiation)
+            self.streamer_db["rfab_ledger"].insert_one(self.rec_instance.get_rfab_ledger())
 
         # if trading or settlement mode, append only to current balance
         else:
-            self.rec_instance.balance_ledger["time"] = self.trading_mode_now_time
-            self.rec_instance.balance_ledger["mode_status"] = mode_status
-            self.rec_instance.balance_ledger["current_bal"] = bal_to_append
+            self.rec_instance.balance_tracker["time"] = self.trading_mode_now_time
+            self.rec_instance.balance_tracker["mode_status"] = mode_status
+            self.rec_instance.balance_tracker["current_bal"] = bal_to_append
 
-            # if it is settlement, post to profit ledger (settlement)
+            # if it is settlement, post to rfab ledger (settlement)
             if mode_status == "settlement":
-                self.streamer_db["profit_ledger"].insert_one(self.rec_instance.get_profit_ledger())
+                self.streamer_db["rfab_ledger"].insert_one(self.rec_instance.get_rfab_ledger())
 
         # finally post to Mongo DB
-        self.streamer_db["balance_ledger"].insert_one(dict(self.rec_instance.balance_ledger))
-
-    def launch_balance_ledger_xlsx(self, mode_status: str):
-        RevLedgerXLSX(self.target_currency, self.mm1_name, self.mm2_name, self.is_test).run(mode_status=mode_status)
+        self.streamer_db["balance_tracker"].insert_one(dict(self.rec_instance.balance_tracker))
 
     """
     ============
@@ -413,10 +409,10 @@ class TradeHandlerV2:
                             % (trade_type.upper(),
                                self.get_mtcu_spread_and_frequency(target_dict[trade_type])))
 
-    def log_balance_ledger(self):
+    def log_balance_tracker(self):
         logging.warning("========= [BALANCE LEDGER INFO] ========")
         logging.warning("------------------------------------")
-        target_data = self.rec_instance.balance_ledger["initial_bal"]
+        target_data = self.rec_instance.balance_tracker["initial_bal"]
         logging.warning("<<< Initial Balance >>>")
         logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
                                                          self.target_currency, target_data["coin"]["mm1"]))
@@ -426,7 +422,7 @@ class TradeHandlerV2:
                                                          self.target_currency, target_data["coin"]["total"]))
         logging.warning("------------------------------------")
 
-        target_data = self.rec_instance.balance_ledger["current_bal"]
+        target_data = self.rec_instance.balance_tracker["current_bal"]
         logging.warning("<<< Current Balance >>>")
         logging.warning("[ mm1 ] krw: %.5f, %s: %.5f" % (target_data["krw"]["mm1"],
                                                          self.target_currency, target_data["coin"]["mm1"]))

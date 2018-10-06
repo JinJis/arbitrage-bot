@@ -68,7 +68,7 @@ class TradeStreamerV2(TradeHandlerV2):
                 self.run_trading_mode_analysis(trading_loop_count)
 
                 # log rev ledger info
-                self.log_balance_ledger()
+                self.log_balance_tracker()
 
                 # sleep by Trading Mode Loop Interval
                 self.trading_mode_loop_sleep_handler(self.trading_mode_now_time, int(time.time()),

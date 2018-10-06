@@ -17,4 +17,4 @@ def main(target_currency: str, mm1_name: str, mm2_name: str):
 
 
 if __name__ == '__main__':
-    main("xrp", "bithumb", "okcoin")
+    main("eos", "coinone", "gopax")
