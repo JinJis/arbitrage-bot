@@ -42,12 +42,12 @@ class OTCScheduler(BaseScheduler):
 
                 # sort by highest to lowest oppty duration
                 descending_order_result = self.sort_by_logest_oppty_time_to_lowest(final_result)
-                top_ten_descend_order_result = descending_order_result[:10]
+                top_twenty_descend_order_result = descending_order_result[:20]
 
                 # send this final result to slack in form of str
                 start_local_date = Global.convert_epoch_to_local_datetime(start_time)
                 publish_local_date = Global.convert_epoch_to_local_datetime(publish_epoch_date, timezone="kr")
-                self.send_result_nicely_to_slack(top_ten_descend_order_result, start_local_date, publish_local_date)
+                self.send_result_nicely_to_slack(top_twenty_descend_order_result, start_local_date, publish_local_date)
             else:
                 continue
         pass
