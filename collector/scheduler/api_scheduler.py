@@ -26,7 +26,7 @@ class ApiScheduler(BaseScheduler):
 		korbit_db = db_client["korbit"]
 		gopax_db = db_client["gopax"]
 		okcoin_db = db_client["okcoin"]
-		coinnest_db = db_client["coinnest"]
+		# coinnest_db = db_client["coinnest"]
 
 		# init api
 		bithumb_api = BithumbApi.instance(True)
@@ -34,7 +34,7 @@ class ApiScheduler(BaseScheduler):
 		korbit_api = KorbitApi.instance(True)
 		gopax_api = GopaxApi.instance(True)
 		okcoin_api = OkcoinApi.instance(True)
-		coinnest_api = CoinnestApi.instance(True)
+		# coinnest_api = CoinnestApi.instance(True)
 
 		# init currency
 		bithumb_currency = BithumbCurrency[currency.upper()]
@@ -42,7 +42,7 @@ class ApiScheduler(BaseScheduler):
 		korbit_currency = KorbitCurrency[currency.upper()]
 		goapx_currency = GopaxCurrency[currency.upper()]
 		okcoin_currency = OkcoinCurrency[currency.upper()]
-		coinnest_currency = CoinnestCurrency[currency.upper()]
+		# coinnest_currency = CoinnestCurrency[currency.upper()]
 
 		# init collector
 		self.bt_collector = Collector(
@@ -60,9 +60,9 @@ class ApiScheduler(BaseScheduler):
 		self.oc_collector = Collector(
 			okcoin_api, okcoin_currency, okcoin_db
 		)
-		self.cn_collector = Collector(
-			coinnest_api, coinnest_currency, coinnest_db
-		)
+		# self.cn_collector = Collector(
+		# 	coinnest_api, coinnest_currency, coinnest_db
+		# )
 
 	@abstractmethod
 	def _actual_run_in_loop(self):
