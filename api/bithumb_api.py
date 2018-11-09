@@ -195,7 +195,7 @@ class BithumbApi(MarketApi):
         elif (order.order_type.value == "limit_buy") or (order.order_type.value == "market_buy"):
             order_type = "bid"
         else:
-            raise BithumbError("Unknow order_type doesn't exist %s" % order.order_type.value)
+            raise BithumbError("Unknown order_type doesn't exist %s" % order.order_type.value)
 
         # if no trade_info --> {'status': '5600', 'message': '거래 체결내역이 존재하지 않습니다.'}
         res_json = self.bithumb_post("/info/order_detail", payload={"order_id": order.order_id,
