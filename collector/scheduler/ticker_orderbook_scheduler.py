@@ -19,11 +19,12 @@ class TickerOrderbookScheduler(ApiScheduler):
 
         Global.run_threaded(self.bt_collector.collect_orderbook, [request_time])
         Global.run_threaded(self.co_collector.collect_orderbook, [request_time])
-        # Global.run_threaded(self.kb_collector.collect_orderbook, [request_time])
+        Global.run_threaded(self.kb_collector.collect_orderbook, [request_time])
         Global.run_threaded(self.go_collector.collect_orderbook, [request_time])
         Global.run_threaded(self.oc_collector.collect_orderbook, [request_time])
-        # Global.run_threaded(self.cn_collector.collect_orderbook, [request_time])
+        Global.run_threaded(self.cn_collector.collect_orderbook, [request_time])
 
 
 if __name__ == "__main__":
     TickerOrderbookScheduler(sys.argv[1]).run()
+
