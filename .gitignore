@@ -238,3 +238,4 @@ config/conf_db_localhost.ini
 .idea/.workspace(1).xml.icloud
 .idea/.workspace(2).xml.icloud
 .idea/.vcs.xml.icloud
+*.xml
