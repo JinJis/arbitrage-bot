@@ -23,5 +23,5 @@ result2 = oc_api.get_balance()["krw"]["available"]
 result3 = bt_api.get_balance()["xrp"]["available"]
 result4 = oc_api.get_balance()["xrp"]["available"]
 # result = bt_api.order_limit_buy(BithumbCurrency.ETH, 343000, 0.01)
-print(result + result2)
+print(float(result) + float(result2))
 print(float(result3) + float(result4))
