@@ -81,7 +81,7 @@ secret_key = <secret_key>
    ```
 * Run RFAB Trader
    ```sh
-   python -m ./run_risk_free_arb_bot_v4.py
+   python -m ./run_risk_free_arb_bot_v2.py
    ```
 
 
@@ -105,7 +105,7 @@ Following is the lists of what has been included as a part of algorithms.
 * Make use of **Bollinger band** to determine extreme point
 
 <p align="center">
-  <img src="https://github.com/JinJis/arbitrage-bot/blob/master/rfab_v1_photo.png" width="350" title="hover text">
+  <img src="https://github.com/JinJis/arbitrage-bot/blob/master/photo/rfab_v1_photo.png" width="350" title="hover text">
 </p>
 
 ### [RFAB V2](https://drive.google.com/file/d/1Nh_9iAocirJ2eWBpoN2p3k16iius6aZ2/view?usp=sharing)
@@ -122,7 +122,7 @@ These new features allowed the bot to broaden oppotunity of trading by maxmizing
 As a result, the bot was able to execute trade on even smaller volumes of currency while maximizing profit.
 
 <p align="center">
-  <img src="https://github.com/JinJis/arbitrage-bot/blob/master/rfab_v2_photo.png" width="550" title="hover text">
+  <img src="https://github.com/JinJis/arbitrage-bot/blob/master/photo/rfab_v2_photo.png" width="550" title="hover text">
 </p>
 
 ### [ACO](https://drive.google.com/file/d/1UGUAO8pydmXChAib3ugcDScHtQn7QAv5/view?usp=sharing)
@@ -137,7 +137,7 @@ With this ACO backtester, it consistently analyzes the past traded spreads and m
 * **IYO (Integrated Yield Optimizer)**
 
 <p align="center">
-  <img src="https://github.com/JinJis/arbitrage-bot/blob/master/aco_photo.png" width="550" title="hover text">
+  <img src="https://github.com/JinJis/arbitrage-bot/blob/master/photo/aco_photo.png" width="550" title="hover text">
 </p>
 
 <!-- ROADMAP -->
