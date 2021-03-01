@@ -36,7 +36,7 @@ Cryptocurrency Arbitrage Bot is a python-based trading system that collects real
 The bot analyzes spreads and condition of arbitrage oppotunities using its own algorithms like `basic arbitrage strategy`, `RFAB v1`, `RFAB v2`, and `ACO`.
 These are further enhanced using stat analyzer that acts as a middleware between the raw data coming in and the decision tree made by algorithms that leads to actual execution of trades. 
 
-The bot is designed in **multi-threading architecture** and **asynchronous programming** to boost up computation and the network I/O for collecting market data.
+The bot is designed in **asynchronous architecture** to boost up computation and the network I/O for collecting market data.
 
 
 <!-- GETTING STARTED -->
