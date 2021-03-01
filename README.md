@@ -81,7 +81,7 @@ secret_key = <secret_key>
    ```
 * Run RFAB Trader
    ```sh
-   python -m ./run_risk_free_arb_bot_v4.py
+   python -m ./run_risk_free_arb_bot_v2.py
    ```
 
 
